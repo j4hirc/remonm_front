@@ -1,0 +1,36 @@
+<div class="toolbar">
+  <button type="button" [disabled]="busy()" (click)="changePeriod(-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+  <div class="date-label"><small>{{ report().label }}</small><strong>{{ report().date }}</strong></div>
+  <button class="pdf-button" type="button" [disabled]="busy() || empty()" (click)="exportPdf()"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ exporting() ? 'Generando...' : 'PDF' }}</button>
+  <button type="button" [disabled]="busy()" (click)="changePeriod(1)">Siguiente <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+</div>
+@if (downloadUrl(); as url) {
+  <div class="download-actions"><a [href]="url" [download]="filename()">Descargar PDF</a><a [href]="url" target="_blank" rel="noopener">Abrir PDF</a></div>
+}
+@if (error()) {
+  <div class="empty"><p>{{ error() }}</p><button type="button" [disabled]="busy()" (click)="load()">Reintentar carga</button></div>
+}
+
+@if (loading()) { <p class="empty" role="status">Cargando órdenes de bodega globales...</p> }
+@else if (!error()) {
+  @if (empty()) { <p class="empty">No hay trabajos programados para este día.</p> }
+  @else {
+    <div class="report-list">
+      @for (order of report().orders; track order.jobId) {
+        <article class="order">
+          <div class="order-header"><strong>{{ order.clientName }}</strong><span class="badge" [class.progress]="order.status === 'IN_PROGRESS'">{{ order.status === 'PENDING' ? 'Pendiente' : 'En Progreso' }}</span><strong class="gold">{{ order.employeeName }}</strong></div>
+          <p class="manager"><i class="fa-solid fa-user-shield" aria-hidden="true"></i> Manager: {{ order.managerName }}</p>
+          @if (order.description) { <p class="description">{{ order.description }}</p> }
+          @if (order.materials.length) {
+            <ul>@for (material of order.materials; track material.materialId) {
+              <li><strong>{{ material.name }}</strong> — {{ material.quantity }} {{ material.unit }}
+                @if (material.added) { <span class="added"> (agregado por subcontratista)</span> }
+              </li>
+            }</ul>
+          } @else { <p class="empty-materials">Sin materiales registrados</p> }
+        </article>
+      }
+    </div>
+  }
+}
+<div class="pdf-stage" aria-hidden="true" inert><app-bodega-pdf [report]="pdfSnapshot()" [generatedAt]="generatedAt()" /></div>

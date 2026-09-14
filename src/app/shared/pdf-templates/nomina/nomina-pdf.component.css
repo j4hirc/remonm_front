@@ -1,0 +1,21 @@
+:host { display: block; width: 680px; font-family: 'Poppins', Arial, sans-serif; color: #0f172a; background: white; }
+.pdf-page { padding: 30px; break-after: page; page-break-after: always; }
+.pdf-page:last-child { break-after: auto; page-break-after: auto; }
+header { display: flex; gap: 14px; align-items: center; border-bottom: 3px solid #12cff4; padding-bottom: 16px; margin-bottom: 24px; break-inside: avoid; }
+header img { height: 52px; width: auto; max-width: 100px; object-fit: contain; }
+h1 { margin: 0; font-size: 20px; font-weight: 800; color: #0b0b0d; text-transform: uppercase; letter-spacing: .5px; }
+.subtitle { margin: 3px 0 0; color: #12cff4; font-size: 11px; font-weight: 700; letter-spacing: .8px; }
+.period { margin-left: auto; text-align: right; min-width: 125px; }
+.period small { color: #64748b; font-size: 10px; }
+.period p { margin: 2px 0; font-size: 13px; font-weight: 700; color: #0f2d4a; }
+.group-title { background: #0f2d4a; color: white; padding: 10px 14px; font-size: 14px; font-weight: 700; border-radius: 8px 8px 0 0; break-after: avoid; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th { background: #f1f5f9; color: #475569; padding: 8px 14px; text-align: left; }
+td { padding: 7px 14px; border-bottom: 1px solid #f1f5f9; overflow-wrap: anywhere; }
+tr { break-inside: avoid; page-break-inside: avoid; }
+.money { text-align: right; white-space: nowrap; }
+tfoot { font-weight: 700; background: #f8fafc; }
+.gold { color: #d97706; }
+.grand-total { margin-top: 24px; display: flex; justify-content: space-between; gap: 15px; background: #e8f5e9; border: 1px solid #a5d6a7; padding: 14px 18px; border-radius: 8px; color: #1b5e20; font-size: 13px; break-inside: avoid; }
+.grand-total strong:last-child { font-size: 20px; color: #2e7d32; }
+footer { margin-top: 36px; padding-top: 12px; border-top: 1px dashed #cbd5e1; text-align: center; font-size: 9.5px; color: #94a3b8; }

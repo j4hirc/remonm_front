@@ -1,0 +1,18 @@
+:host { display: block; width: 680px; background: white; color: #0f2d4a; font-family: 'Poppins', Arial, sans-serif; }
+.pdf-page { padding: 30px; break-after: page; page-break-after: always; }
+.pdf-page:last-child { break-after: auto; page-break-after: auto; }
+header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #12cff4; padding-bottom: 15px; break-inside: avoid; }
+h1 { margin: 0; color: #0b0b0d; font-size: 28px; }
+p { margin: 8px 0; font-size: 13px; }
+.cyan { color: #12cff4; font-weight: 700; }
+.order { padding: 14px; background: #f8faff; border-bottom: 1px solid #eee; }
+.line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.gold { color: #f4a300; }
+.badge { background: #fff3e0; color: #ff9800; padding: 3px 8px; font-size: 11px; border-radius: 4px; font-weight: 700; }
+.progress { background: #e3f2fd; color: #1e88e5; }
+.manager { color: #0f4c81; font-weight: 600; font-size: 12px; }
+.description { color: #777; font-style: italic; white-space: pre-wrap; overflow-wrap: anywhere; }
+ul { padding-left: 20px; margin: 6px 0; }
+li { font-size: 13px; margin: 5px 0; break-inside: avoid; overflow-wrap: anywhere; }
+.added { color: #e65100; font-size: 11px; font-weight: 600; }
+footer { margin-top: 40px; text-align: center; font-size: 11px; color: #888; }

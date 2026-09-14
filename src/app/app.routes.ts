@@ -101,6 +101,30 @@ export const routes: Routes = [
                     )
             },
             {
+                path: 'bodega',
+                canActivate: [roleGuard],
+                data: {
+                    role: 'ROLE_ADMIN',
+                    heading: 'Resumen de Bodega Global'
+                },
+                loadComponent: () =>
+                    import('./admin/bodega/bodega.component').then(
+                        (component) => component.BodegaComponent
+                    )
+            },
+            {
+                path: 'nomina',
+                canActivate: [roleGuard],
+                data: {
+                    role: 'ROLE_ADMIN',
+                    heading: 'Nómina Quincenal Global'
+                },
+                loadComponent: () =>
+                    import('./admin/nomina/nomina.component').then(
+                        (component) => component.NominaComponent
+                    )
+            },
+            {
                 path: '',
                 redirectTo: 'dashboard',
                 pathMatch: 'full'

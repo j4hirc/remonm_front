@@ -3,13 +3,14 @@ import {
     DestroyRef,
     inject,
     OnInit,
-    signal
+    signal, computed, viewChild
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import Swal from 'sweetalert2';
+import { SwalComponent, SwalPortalDirective, SwalPortalTargets } from '@sweetalert2/ngx-sweetalert2';
 
 import { Job, JobUpdate } from '../../core/models/job.model';
 import { User } from '../../core/models/user.model';
@@ -19,7 +20,7 @@ import { UsersService } from '../../core/services/users.service';
 @Component({
     selector: 'app-evidencias',
     standalone: true,
-    imports: [],
+    imports: [SwalComponent, SwalPortalDirective],
     templateUrl: './evidencias.component.html',
     styleUrl: './evidencias.component.css'
 })
@@ -42,7 +43,17 @@ export class EvidenciasComponent implements OnInit {
     readonly priorityFilter = signal('');
 
     readonly selectedJob = signal<Job | null>(null);
-    readonly modalOpen = signal(false);
+    readonly swalTargets = inject(SwalPortalTargets);
+    private readonly historyModal = viewChild.required<SwalComponent>('historyModal');
+    readonly photoUrl = signal<string | null>(null);
+    readonly photoLoading = signal(false);
+    readonly photoError = signal(false);
+    readonly failedImages = signal<ReadonlySet<string>>(new Set());
+    readonly loadedImages = signal<ReadonlySet<string>>(new Set());
+    readonly selectedUpdates = computed(() => {
+        const job = this.selectedJob();
+        return job ? this.orderedUpdates(job) : [];
+    });
 
     ngOnInit(): void {
         void this.bootstrap();
@@ -60,7 +71,7 @@ export class EvidenciasComponent implements OnInit {
                 const job = this.jobs().find((j) => j.jobId === id);
                 if (job) {
                     if (job.updateJob && job.updateJob.length > 0) {
-                        setTimeout(() => this.openModal(job), 200);
+                        if (!this.destroyRef.destroyed) this.openModal(job);
                     } else {
                         await Swal.fire({
                             icon: 'info',
@@ -103,6 +114,7 @@ export class EvidenciasComponent implements OnInit {
     }
 
     async loadJobs(): Promise<void> {
+        this.isLoading.set(true);
         this.loadError.set(false);
         try {
             const jobs = await firstValueFrom(
@@ -110,6 +122,7 @@ export class EvidenciasComponent implements OnInit {
             );
             this.jobs.set(jobs);
         } catch (error: unknown) {
+            if (this.destroyRef.destroyed) return;
             this.loadError.set(true);
             await Swal.fire({
                 icon: 'error',
@@ -117,10 +130,12 @@ export class EvidenciasComponent implements OnInit {
                 text: this.getErrorMessage(error),
                 confirmButtonColor: '#12CFF4'
             });
+        } finally {
+            this.isLoading.set(false);
         }
     }
 
-    readonly filteredJobs = () => {
+    readonly filteredJobs = computed(() => {
         const text = this.searchText().trim().toLowerCase();
         const managerId = this.managerFilter();
         const status = this.statusFilter();
@@ -161,7 +176,7 @@ export class EvidenciasComponent implements OnInit {
         });
 
         return list;
-    };
+    });
 
     onSearch(e: Event): void {
         this.searchText.set((e.target as HTMLInputElement).value);
@@ -206,12 +221,27 @@ export class EvidenciasComponent implements OnInit {
             return;
         }
         this.selectedJob.set(job);
-        this.modalOpen.set(true);
+        this.backToHistory();
+        void this.historyModal().fire();
     }
 
-    closeModal(): void {
-        this.modalOpen.set(false);
+    onModalClosed(): void {
         this.selectedJob.set(null);
+        this.backToHistory();
+    }
+
+    backToHistory(): void {
+        this.photoUrl.set(null);
+        this.photoLoading.set(false);
+        this.photoError.set(false);
+    }
+
+    imageLoaded(url: string): void {
+        this.loadedImages.update(values => new Set([...values, url]));
+    }
+
+    imageFailed(url: string): void {
+        this.failedImages.update(values => new Set([...values, url]));
     }
 
     orderedUpdates(job: Job): JobUpdate[] {
@@ -231,9 +261,10 @@ export class EvidenciasComponent implements OnInit {
                 date[4] || 0
             );
         } else {
-            d = new Date(date);
+            d = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00`) : new Date(date);
         }
-        return d.toLocaleDateString('es-ES', {
+        if (Number.isNaN(d.getTime())) return 'Sin fecha';
+        return d.toLocaleString('es-ES', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -246,64 +277,17 @@ export class EvidenciasComponent implements OnInit {
         return (url || '').toLowerCase().includes('.pdf');
     }
 
-    preload(url: string): void {
-        if (!url) return;
-        const img = new Image();
-        img.src = url;
-    }
-
-
     viewPhoto(url: string): void {
-  void Swal.fire({
-    title: 'Cargando imagen...',
-    html: `
-      <div class="evidencia-loader">
-        <div class="evidencia-spinner"></div>
-      </div>
-    `,
-    showConfirmButton: false,
-    showCloseButton: true,
-    background: 'rgba(0,0,0,0.9)',
-    color: '#fff',
-    backdrop: 'rgba(0, 0, 0, 0.85)',
-    allowOutsideClick: true,
-    didOpen: () => {
-      const img = new Image();
-
-      img.onload = () => {
-        Swal.close();
-        void Swal.fire({
-          imageUrl: url,
-          imageAlt: 'Evidencia del Trabajo',
-          width: 'auto',
-          padding: '0.5rem',
-          showConfirmButton: false,
-          showCloseButton: true,
-          background: 'transparent',
-          backdrop: 'rgba(0, 0, 0, 0.85)',
-          customClass: {
-            popup: 'swal-evidencia-popup',
-            image: 'img-evidencia-full',
-            closeButton: 'swal-evidencia-close'
-          }
-        });
-      };
-
-      img.onerror = () => {
-        Swal.close();
-        void Swal.fire({
-          icon: 'error',
-          title: 'No se pudo cargar la imagen',
-          showConfirmButton: true,
-          confirmButtonText: 'Cerrar',
-          confirmButtonColor: '#0f4c81'
-        });
-      };
-
-      img.src = url;
+        this.photoLoading.set(true);
+        this.photoError.set(false);
+        this.photoUrl.set(url);
     }
-  });
-}
+
+    photoLoaded(): void { this.photoLoading.set(false); }
+    photoFailed(): void {
+        this.photoLoading.set(false);
+        this.photoError.set(true);
+    }
 
     statusBadge(status: string): { label: string; className: string } {
         switch (status) {
@@ -313,8 +297,10 @@ export class EvidenciasComponent implements OnInit {
                 return { label: 'En Progreso', className: 'badge badge-progress' };
             case 'COMPLETED':
                 return { label: 'Completado', className: 'badge badge-done' };
-            default:
+            case 'CANCELLED':
                 return { label: 'Cancelado', className: 'badge badge-cancel' };
+            default:
+                return { label: status || 'Sin estado', className: 'badge badge-low' };
         }
     }
 
@@ -350,7 +336,7 @@ export class EvidenciasComponent implements OnInit {
             const [y, m, d] = fecha;
             return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}/${y}`;
         }
-        const parts = String(fecha).split('-');
+        const parts = String(fecha).slice(0, 10).split('-');
         if (parts.length === 3) return `${parts[1]}/${parts[2]}/${parts[0]}`;
         return String(fecha);
     }
@@ -366,7 +352,7 @@ export class EvidenciasComponent implements OnInit {
     }
 
     fullUserName(u: User): string {
-        return u.name || `${u.firstName} ${u.lastName}`.trim();
+        return u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Sin nombre';
     }
 
     private jobTime(fecha: string | number[] | null | undefined): number {
@@ -374,7 +360,8 @@ export class EvidenciasComponent implements OnInit {
         if (Array.isArray(fecha)) {
             return new Date(fecha[0], fecha[1] - 1, fecha[2]).getTime();
         }
-        return new Date(fecha).getTime();
+        const value = /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? `${fecha}T00:00:00` : fecha;
+        return new Date(value).getTime() || 0;
     }
 
     private updateTime(date: string | number[]): number {

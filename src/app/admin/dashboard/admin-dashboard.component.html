@@ -3,7 +3,8 @@
     <button
       type="button"
       [class]="card.className"
-      [disabled]="card.route === null"
+      [disabled]="card.route === null && !card.action"
+      (click)="openReport(card.action)"
       [routerLink]="card.route"
     >
       <span class="card-icon-container">
@@ -17,3 +18,12 @@
     </button>
   }
 </section>
+
+<swal #bodegaModal [width]="800" confirmButtonText="Cerrar" confirmButtonColor="#12CFF4" [allowOutsideClick]="false">
+  <span *swalPortal="swalTargets.title"><i class="fa-solid fa-truck-fast" aria-hidden="true"></i> Órdenes de Bodega (Global)</span>
+  <app-bodega *swalPortal="swalTargets.content" />
+</swal>
+<swal #nominaModal [width]="650" confirmButtonText="Cerrar" confirmButtonColor="#12CFF4" [allowOutsideClick]="false">
+  <span *swalPortal="swalTargets.title"><i class="fa-solid fa-money-check-dollar" aria-hidden="true"></i> Nómina Quincenal Global</span>
+  <app-nomina *swalPortal="swalTargets.content" />
+</swal>

@@ -60,38 +60,48 @@ export class AdminLayoutComponent {
     { initialValue: 'Resumen del Sistema' }
   );
 
-  readonly menuItems: readonly AdminMenuItem[] = [
-    {
-      label: 'Inicio',
-      icon: 'fa-solid fa-house',
-      route: '/admin/dashboard'
-    },
-    {
-      label: 'Usuarios',
-      icon: 'fa-solid fa-users-gear',
-      route: '/admin/usuarios'
-    },
-    {
-      label: 'Trabajos',
-      icon: 'fa-solid fa-hammer',
-      route: '/admin/trabajos'
-    },
-    {
-      label: 'Evidencias',
-      icon: 'fa-solid fa-camera',
-      route: '/admin/evidencias'
-    },
-    {
-      label: 'Categorías',
-      icon: 'fa-solid fa-tags',
-      route: '/admin/categorias'
-    },
-    {
-      label: 'Materiales',
-      icon: 'fa-solid fa-boxes-stacked',
-      route: '/admin/materiales'
-    }
-  ];
+readonly menuItems: readonly AdminMenuItem[] = [
+  {
+    label: 'Inicio',
+    icon: 'fa-solid fa-house',
+    route: '/admin/dashboard'
+  },
+  {
+    label: 'Usuarios',
+    icon: 'fa-solid fa-users-gear',
+    route: '/admin/usuarios'
+  },
+  {
+    label: 'Trabajos',
+    icon: 'fa-solid fa-hammer',
+    route: '/admin/trabajos'
+  },
+  {
+    label: 'Evidencias',
+    icon: 'fa-solid fa-camera',
+    route: '/admin/evidencias'
+  },
+  {
+    label: 'Categorías',
+    icon: 'fa-solid fa-tags',
+    route: '/admin/categorias'
+  },
+  {
+    label: 'Materiales',
+    icon: 'fa-solid fa-boxes-stacked',
+    route: '/admin/materiales'
+  },
+  {
+    label: 'Bodega',
+    icon: 'fa-solid fa-truck-fast',
+    route: '/admin/bodega'
+  },
+  {
+    label: 'Nómina',
+    icon: 'fa-solid fa-money-check-dollar',
+    route: '/admin/nomina'
+  }
+];
 
   async openExitDialog(): Promise<void> {
     if (this.isLeaving()) {

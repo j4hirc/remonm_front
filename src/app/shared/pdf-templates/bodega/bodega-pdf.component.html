@@ -1,0 +1,28 @@
+@for (order of report().orders; track order.jobId) {
+  <section class="pdf-page">
+    <header>
+      <h1>ORDEN DE BODEGA</h1>
+      <p class="cyan">Copia de trabajo — Subcontratista</p>
+      <p>{{ report().date }}</p>
+    </header>
+    <article class="order">
+      <div class="line">
+        <strong>{{ order.clientName }}</strong>
+        <span class="badge" [class.progress]="order.status === 'IN_PROGRESS'">{{ order.status === 'PENDING' ? 'Pendiente' : 'En Progreso' }}</span>
+        <strong class="gold">{{ order.employeeName }}</strong>
+      </div>
+      <p class="manager">Manager: {{ order.managerName }}</p>
+      @if (order.description) { <p class="description">{{ order.description }}</p> }
+      @if (order.materials.length) {
+        <ul>
+          @for (material of order.materials; track material.materialId) {
+            <li><strong>{{ material.name }}</strong> — {{ material.quantity }} {{ material.unit }}
+              @if (material.added) { <span class="added"> (agregado por subcontratista)</span> }
+            </li>
+          }
+        </ul>
+      } @else { <p>Sin materiales registrados</p> }
+    </article>
+    <footer>Reporte generado por el Portal RemoMN — Panel de Administración</footer>
+  </section>
+}
