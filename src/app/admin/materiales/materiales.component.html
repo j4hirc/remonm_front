@@ -1,0 +1,315 @@
+<section class="materials-container">
+    <section class="materials-container">
+        <header class="header-section">
+            <h2>Listado de Materiales</h2>
+
+            <div class="filters-wrapper">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input type="text" class="input-field search-input" placeholder="Buscar por nombre..."
+                        [value]="searchText()" (input)="onSearchInput($event)" autocomplete="off" />
+                </div>
+
+                <select class="input-field category-select" [value]="categoryFilter()"
+                    (change)="onCategoryFilterChange($event)">
+                    <option value="todos">Todas las categorías</option>
+                    @for (cat of categories(); track cat.categoryId) {
+                    <option [value]="cat.name.toLowerCase()">{{ cat.name }}</option>
+                    }
+                </select>
+
+                <button class="btn-add" type="button" [disabled]="
+          isLoading() ||
+          loadError() ||
+          editorOpen() ||
+          deletingId() !== null
+        " (click)="openEditor()">
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    Nuevo Material
+                </button>
+            </div>
+        </header>
+
+        @if (isLoading()) {
+        <p class="state-message" role="status">Cargando materiales...</p>
+        } @else if (loadError()) {
+        <div class="state-message">
+            <p>No se pudo cargar el listado.</p>
+            <button class="btn-retry" type="button" (click)="loadMaterials()">
+                Reintentar
+            </button>
+        </div>
+        } @else if (filteredMaterials().length === 0) {
+        <div class="state-message">
+            <p>
+                @if (searchText() || categoryFilter() !== 'todos') {
+                No se encontraron materiales con esos filtros.
+                } @else {
+                No hay materiales creados.
+                }
+            </p>
+            @if (searchText() || categoryFilter() !== 'todos') {
+            <button class="btn-retry" type="button" (click)="clearFilters()">
+                Limpiar filtros
+            </button>
+            }
+        </div>
+        } @else {
+        <div class="table-container">
+            <table class="materials-table">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Categoría</th>
+                        <th scope="col">Cantidad</th>
+                        <th scope="col">Unidad</th>
+                        <th scope="col">Precio</th>
+                        <th scope="col">Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @for (material of filteredMaterials(); track material.materialId) {
+                    <tr>
+                        <td class="material-id">#{{ material.materialId }}</td>
+                        <td class="material-name">
+                            <div class="name-with-icon">
+                                <span class="box-icon" aria-hidden="true">
+                                    <i class="fa-solid fa-box"></i>
+                                </span>
+                                <div>
+                                    <span class="name-main">{{ material.name }}</span>
+                                    <span class="name-meta">
+                                        ({{ formatPrice(material.price) }} · Disp:
+                                        {{ material.count }}{{ material.unit ? ' ' + material.unit : '' }})
+                                    </span>
+                                    <br />
+                                    <span class="name-cat">
+                                        Cat: {{ material.categoryName || 'Sin categoría' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ material.categoryName || '—' }}</td>
+                        <td>{{ material.count }}</td>
+                        <td>{{ material.unit || '—' }}</td>
+                        <td class="material-price">{{ formatPrice(material.price) }}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn-edit" type="button" [attr.aria-label]="'Editar ' + material.name"
+                                    title="Editar" [disabled]="editorOpen() || deletingId() !== null"
+                                    (click)="openEditor(material)">
+                                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                </button>
+
+                                <button class="btn-delete" type="button" [attr.aria-label]="'Eliminar ' + material.name"
+                                    title="Eliminar" [disabled]="editorOpen() || deletingId() !== null"
+                                    (click)="deleteMaterial(material)">
+                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mobile-cards">
+            @for (material of filteredMaterials(); track material.materialId) {
+            <article class="material-card">
+                <div class="card-header">
+                    <div class="name-with-icon">
+                        <span class="box-icon" aria-hidden="true">
+                            <i class="fa-solid fa-box"></i>
+                        </span>
+                        <div>
+                            <strong>{{ material.name }}</strong>
+                            <span class="card-id">#{{ material.materialId }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="card-details">
+                    <li>
+                        <span>Categoría</span>
+                        <strong>{{ material.categoryName || '—' }}</strong>
+                    </li>
+                    <li>
+                        <span>Cantidad</span>
+                        <strong>{{ material.count }}
+                            {{ material.unit ? material.unit : '' }}</strong>
+                    </li>
+                    <li>
+                        <span>Precio</span>
+                        <strong>{{ formatPrice(material.price) }}</strong>
+                    </li>
+                </ul>
+
+                <div class="actions">
+                    <button class="btn-edit" type="button" [disabled]="editorOpen() || deletingId() !== null"
+                        (click)="openEditor(material)">
+                        Editar
+                    </button>
+
+                    <button class="btn-delete" type="button" [disabled]="editorOpen() || deletingId() !== null"
+                        (click)="deleteMaterial(material)">
+                        Eliminar
+                    </button>
+                </div>
+            </article>
+            }
+        </div>
+        }
+    </section>
+
+    @if (isLoading()) {
+    <p class="state-message" role="status">Cargando materiales...</p>
+    } @else if (loadError()) {
+    <div class="state-message">
+        <p>No se pudo cargar el listado.</p>
+        <button class="btn-retry" type="button" (click)="loadMaterials()">
+            Reintentar
+        </button>
+    </div>
+    } @else if (materials().length === 0) {
+    <p class="state-message">No hay materiales creados.</p>
+    } @else {
+    <div class="table-container">
+        <table class="materials-table">
+            <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Nombre</th>
+                    <th scope="col">Categoría</th>
+                    <th scope="col">Cantidad</th>
+                    <th scope="col">Unidad</th>
+                    <th scope="col">Precio</th>
+                    <th scope="col">Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @for (material of materials(); track material.materialId) {
+                <tr>
+                    <td class="material-id">#{{ material.materialId }}</td>
+                    <td class="material-name">{{ material.name }}</td>
+                    <td>{{ material.categoryName || '—' }}</td>
+                    <td>{{ material.count }}</td>
+                    <td>{{ material.unit || '—' }}</td>
+                    <td class="material-price">{{ formatPrice(material.price) }}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-edit" type="button" [attr.aria-label]="'Editar ' + material.name"
+                                title="Editar" [disabled]="editorOpen() || deletingId() !== null"
+                                (click)="openEditor(material)">
+                                <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                            </button>
+
+                            <button class="btn-delete" type="button" [attr.aria-label]="'Eliminar ' + material.name"
+                                title="Eliminar" [disabled]="editorOpen() || deletingId() !== null"
+                                (click)="deleteMaterial(material)">
+                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mobile-cards">
+        @for (material of materials(); track material.materialId) {
+        <article class="material-card">
+            <div class="card-header">
+                <strong>{{ material.name }}</strong>
+                <span>#{{ material.materialId }}</span>
+            </div>
+
+            <ul class="card-details">
+                <li>
+                    <span>Categoría</span>
+                    <strong>{{ material.categoryName || '—' }}</strong>
+                </li>
+                <li>
+                    <span>Cantidad</span>
+                    <strong>{{ material.count }}
+                        {{ material.unit ? material.unit : '' }}</strong>
+                </li>
+                <li>
+                    <span>Precio</span>
+                    <strong>{{ formatPrice(material.price) }}</strong>
+                </li>
+            </ul>
+
+            <div class="actions">
+                <button class="btn-edit" type="button" [disabled]="editorOpen() || deletingId() !== null"
+                    (click)="openEditor(material)">
+                    Editar
+                </button>
+
+                <button class="btn-delete" type="button" [disabled]="editorOpen() || deletingId() !== null"
+                    (click)="deleteMaterial(material)">
+                    Eliminar
+                </button>
+            </div>
+        </article>
+        }
+    </div>
+    }
+</section>
+
+<swal #editor [swalOptions]="editorOptions">
+    <span *swalPortal="swalTargets.title" class="editor-title">
+        <i [class]="
+        editingId() === null ? 'fa-solid fa-plus' : 'fa-solid fa-pen'
+      " aria-hidden="true"></i>
+
+        {{ editingId() === null ? 'Nuevo Material' : 'Editar Material' }}
+    </span>
+
+    <form *swalPortal="swalTargets.content" class="material-form" [formGroup]="form" (ngSubmit)="submitEditor()"
+        novalidate>
+        <div class="form-row">
+            <label for="material-name">Nombre</label>
+            <input id="material-name" class="input-field" type="text" formControlName="name"
+                placeholder="Ej: Cemento gris 50kg" autocomplete="off" required [readOnly]="isSaving()" />
+        </div>
+
+        <div class="form-row">
+            <label for="material-category">Categoría</label>
+            <select id="material-category" class="input-field" formControlName="categoryId" required
+                [disabled]="isSaving() || categories().length === 0">
+                <option [value]="0" disabled>Selecciona una categoría</option>
+                @for (cat of categories(); track cat.categoryId) {
+                <option [value]="cat.categoryId">{{ cat.name }}</option>
+                }
+            </select>
+            @if (categories().length === 0) {
+            <p class="hint">No hay categorías disponibles. Crea una primero.</p>
+            }
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="material-count">Cantidad</label>
+                <input id="material-count" class="input-field" type="number" formControlName="count" min="0" step="1"
+                    [readOnly]="isSaving()" />
+            </div>
+
+            <div class="form-row">
+                <label for="material-unit">Unidad</label>
+                <input id="material-unit" class="input-field" type="text" formControlName="unit"
+                    placeholder="Ej: und, kg, m" autocomplete="off" [readOnly]="isSaving()" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label for="material-price">Precio</label>
+            <input id="material-price" class="input-field" type="number" formControlName="price" min="0" step="0.01"
+                [readOnly]="isSaving()" />
+        </div>
+    </form>
+</swal>

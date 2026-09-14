@@ -69,17 +69,17 @@ export class AdminLayoutComponent {
     {
       label: 'Usuarios',
       icon: 'fa-solid fa-users-gear',
-      route: null
+      route: '/admin/usuarios'
     },
     {
       label: 'Trabajos',
       icon: 'fa-solid fa-hammer',
-      route: null
+      route: '/admin/trabajos'
     },
     {
       label: 'Evidencias',
       icon: 'fa-solid fa-camera',
-      route: null
+      route: '/admin/evidencias'
     },
     {
       label: 'Categorías',
@@ -89,7 +89,7 @@ export class AdminLayoutComponent {
     {
       label: 'Materiales',
       icon: 'fa-solid fa-boxes-stacked',
-      route: null
+      route: '/admin/materiales'
     }
   ];
 

@@ -1,0 +1,250 @@
+<section class="users-container">
+    <header class="header-section">
+        <h2>Lista de Usuarios</h2>
+
+        <div class="filters-wrapper">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="text" class="input-field search-input" placeholder="Buscar por DNI o nombre..."
+                    [value]="searchText()" (input)="onSearchInput($event)" autocomplete="off" />
+            </div>
+
+            <select class="input-field status-select" [value]="statusFilter()" (change)="onStatusChange($event)">
+                <option value="Active">Empleados Activos</option>
+                <option value="Unemployed">Desempleados</option>
+                <option value="All">Ver Todos</option>
+            </select>
+
+            <button class="btn-add" type="button" [disabled]="isLoading() || loadError() || editorOpen()"
+                (click)="openEditor()">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                Nuevo Usuario
+            </button>
+        </div>
+    </header>
+
+    @if (isLoading()) {
+    <p class="state-message" role="status">Cargando usuarios...</p>
+    } @else if (loadError()) {
+    <div class="state-message">
+        <p>No se pudo cargar el listado.</p>
+        <button class="btn-retry" type="button" (click)="loadUsers()">
+            Reintentar
+        </button>
+    </div>
+    } @else if (filteredUsers().length === 0) {
+    <div class="state-message">
+        <p>
+            @if (searchText() || statusFilter() !== 'All') {
+            No se encontraron usuarios con esos filtros.
+            } @else {
+            No hay usuarios registrados.
+            }
+        </p>
+        @if (searchText() || statusFilter() !== 'Active') {
+        <button class="btn-retry" type="button" (click)="clearFilters()">
+            Limpiar filtros
+        </button>
+        }
+    </div>
+    } @else {
+    <div class="table-container">
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Nombre</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Teléfono</th>
+                    <th scope="col">Roles</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (user of filteredUsers(); track user.userId) {
+                <tr>
+                    <td class="user-id">#{{ user.userId }}</td>
+                    <td>
+                        <div class="user-name-cell">
+                            <span class="color-dot" [style.background]="user.color" aria-hidden="true"></span>
+                            <span>{{ fullName(user) }}</span>
+                        </div>
+                    </td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.phone }}</td>
+                    <td>{{ rolesLabel(user) }}</td>
+                    <td>
+                        <span class="status-badge" [class.active]="user.status === 'Active'">
+                            {{ user.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-edit" type="button" [attr.aria-label]="'Editar ' + fullName(user)"
+                                title="Editar" [disabled]="editorOpen()" (click)="openEditor(user)">
+                                <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mobile-cards">
+        @for (user of filteredUsers(); track user.userId) {
+        <article class="user-card">
+            <div class="card-header">
+                <div class="user-name-cell">
+                    <span class="color-dot" [style.background]="user.color" aria-hidden="true"></span>
+                    <strong>{{ fullName(user) }}</strong>
+                </div>
+                <span>#{{ user.userId }}</span>
+            </div>
+
+            <ul class="card-details">
+                <li>
+                    <span>Email</span>
+                    <strong>{{ user.email }}</strong>
+                </li>
+                <li>
+                    <span>Teléfono</span>
+                    <strong>{{ user.phone }}</strong>
+                </li>
+                <li>
+                    <span>Roles</span>
+                    <strong>{{ rolesLabel(user) }}</strong>
+                </li>
+                <li>
+                    <span>Estado</span>
+                    <strong>{{ user.status }}</strong>
+                </li>
+            </ul>
+
+            <div class="actions">
+                <button class="btn-edit" type="button" [disabled]="editorOpen()" (click)="openEditor(user)">
+                    Editar
+                </button>
+            </div>
+        </article>
+        }
+    </div>
+    }
+</section>
+
+<swal #editor [swalOptions]="editorOptions">
+    <span *swalPortal="swalTargets.title" class="editor-title">
+        <i [class]="
+        editingId() === null ? 'fa-solid fa-plus' : 'fa-solid fa-pen'
+      " aria-hidden="true"></i>
+        {{ editingId() === null ? 'Nuevo Usuario' : 'Editar Usuario' }}
+    </span>
+
+    <form *swalPortal="swalTargets.content" class="user-form" [formGroup]="form" (ngSubmit)="submitEditor()" novalidate>
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="user-dni">DNI / Cédula</label>
+                <input id="user-dni" class="input-field" type="text" formControlName="dni" [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="user-phone">Teléfono</label>
+                <input id="user-phone" class="input-field" type="text" formControlName="phone"
+                    [readOnly]="isSaving()" />
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="user-firstName">Primer nombre</label>
+                <input id="user-firstName" class="input-field" type="text" formControlName="firstName"
+                    [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="user-middleName">Segundo nombre</label>
+                <input id="user-middleName" class="input-field" type="text" formControlName="middleName"
+                    [readOnly]="isSaving()" />
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="user-lastName">Apellido</label>
+                <input id="user-lastName" class="input-field" type="text" formControlName="lastName"
+                    [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="user-secondSurname">Segundo apellido</label>
+                <input id="user-secondSurname" class="input-field" type="text" formControlName="secondSurname"
+                    [readOnly]="isSaving()" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label for="user-email">Email</label>
+            <input id="user-email" class="input-field" type="email" formControlName="email" [readOnly]="isSaving()" />
+        </div>
+
+        <div class="form-row">
+            <label for="user-password">
+                Contraseña
+                @if (editingId() !== null) {
+                <span class="optional">(dejar vacío para no cambiar)</span>
+                }
+            </label>
+            <input id="user-password" class="input-field" type="password" formControlName="password"
+                autocomplete="new-password" [readOnly]="isSaving()" />
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="user-dateOfBirth">Fecha de nacimiento</label>
+                <input id="user-dateOfBirth" class="input-field" type="date" formControlName="dateOfBirth"
+                    [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="user-dateOfEntry">Fecha de ingreso</label>
+                <input id="user-dateOfEntry" class="input-field" type="date" formControlName="dateOfEntry"
+                    [readOnly]="isSaving()" />
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="user-title">Cargo / Título</label>
+                <input id="user-title" class="input-field" type="text" formControlName="title"
+                    placeholder="Ej: Albañil, Supervisor" [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="user-status">Estado</label>
+                <select id="user-status" class="input-field" formControlName="status" [disabled]="isSaving()">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label for="user-color">Color identificador</label>
+            <input id="user-color" class="input-field input-color" type="color" formControlName="color"
+                [disabled]="isSaving()" />
+        </div>
+
+        <fieldset class="roles-fieldset">
+            <legend>Roles</legend>
+            <label class="role-check">
+                <input type="checkbox" formControlName="roleAdmin" [disabled]="isSaving()" />
+                Administrador
+            </label>
+            <label class="role-check">
+                <input type="checkbox" formControlName="roleJefe" [disabled]="isSaving()" />
+                Jefe
+            </label>
+            <label class="role-check">
+                <input type="checkbox" formControlName="roleEmployee" [disabled]="isSaving()" />
+                Empleado
+            </label>
+        </fieldset>
+    </form>
+</swal>

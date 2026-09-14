@@ -1,0 +1,182 @@
+<section class="evidencias-container">
+    <header class="header-section column">
+        <h2>Evidencias de Proyectos</h2>
+
+        <div class="filters-row">
+            <div class="filter-block filter-grow">
+                <label for="searchJobInput">Buscar por Proyecto / Cliente</label>
+                <input id="searchJobInput" type="text" class="input-field" placeholder="🔍 Escribe un nombre..."
+                    [value]="searchText()" (input)="onSearch($event)" autocomplete="off" />
+            </div>
+
+            <div class="filter-block filter-sm">
+                <label for="filterManager">Jefe</label>
+                <select id="filterManager" class="input-field" [value]="managerFilter()" (change)="onManager($event)">
+                    <option value="ALL">Todos los Jefes</option>
+                    @for (m of managers(); track m.userId) {
+                    <option [value]="m.userId">{{ fullUserName(m) }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="filter-block filter-sm">
+                <label for="filterStatusInput">Estado</label>
+                <select id="filterStatusInput" class="input-field" [value]="statusFilter()" (change)="onStatus($event)">
+                    <option value="ALL">Todos los Estados</option>
+                    <option value="PENDING">Pendiente</option>
+                    <option value="IN_PROGRESS">En Progreso</option>
+                    <option value="COMPLETED">Completado</option>
+                    <option value="CANCELLED">Cancelado</option>
+                </select>
+            </div>
+
+            <div class="filter-block filter-xs">
+                <label for="filterPriorityInput">Prioridad</label>
+                <input id="filterPriorityInput" type="number" class="input-field" placeholder="Ej: 0, 1, 2..." min="0"
+                    [value]="priorityFilter()" (input)="onPriority($event)" />
+            </div>
+        </div>
+    </header>
+
+    @if (isLoading()) {
+    <p class="state-message" role="status">Cargando evidencias...</p>
+    } @else if (loadError()) {
+    <div class="state-message">
+        <p>No se pudo cargar el listado.</p>
+        <button class="btn-retry" type="button" (click)="loadJobs()">Reintentar</button>
+    </div>
+    } @else if (filteredJobs().length === 0) {
+    <div class="state-message">
+        <p>No hay proyectos con esos filtros.</p>
+        <button class="btn-retry" type="button" (click)="clearFilters()">
+            Limpiar filtros
+        </button>
+    </div>
+    } @else {
+    <div class="jobs-grid">
+        @for (job of filteredJobs(); track job.jobId) {
+        <article class="evidence-card" [style.border-left]="'6px solid ' + employeeColor(job.employeeId)"
+            [style.background-color]="hexToRgba(employeeColor(job.employeeId), 0.05)">
+            <div class="card-top">
+                <div>
+                    <h3>{{ job.clientName }}</h3>
+                    <p class="card-meta">
+                        <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                        {{ job.address }}
+                    </p>
+                    <p class="card-meta date-line">
+                        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                        {{ formatDate(job.jobDate) }}
+                    </p>
+                </div>
+                <div class="card-badges">
+                    <span [class]="statusBadge(job.status).className">
+                        {{ statusBadge(job.status).label }}
+                    </span>
+                    <span [class]="priorityBadge(job.priority).className">
+                        {{ priorityBadge(job.priority).label }}
+                    </span>
+                </div>
+            </div>
+
+            <p class="card-desc">{{ cleanDescription(job.description) }}</p>
+
+            <div class="card-people">
+                <span>E: {{ job.nameEmployee || 'Sin asignar' }}</span>
+                <span>M: {{ job.nameManager || 'Sin asignar' }}</span>
+            </div>
+
+            <div class="card-footer">
+                <div class="stats">
+                    <span>
+                        <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+                        {{ countUpdates(job) }} avance(s)
+                    </span>
+                    <span>
+                        <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                        {{ countPhotos(job) }} archivo(s)
+                    </span>
+                </div>
+
+                <button type="button" class="btn-view" [disabled]="countUpdates(job) === 0" (click)="openModal(job)">
+                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                    @if (countPhotos(job) > 0) {
+                    Ver {{ countPhotos(job) }}
+                    } @else if (countUpdates(job) > 0) {
+                    Ver avances
+                    } @else {
+                    Sin evidencias
+                    }
+                </button>
+            </div>
+        </article>
+        }
+    </div>
+    }
+</section>
+
+<!-- Modal timeline -->
+@if (modalOpen() && selectedJob(); as job) {
+<div class="modal-overlay" (click)="closeModal()" role="presentation">
+    <div class="modal-panel" (click)="$event.stopPropagation()" role="dialog" aria-modal="true"
+        aria-labelledby="evidencias-title">
+        <header class="modal-header">
+            <div>
+                <h3 id="evidencias-title">
+                    <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                    Evidencias · {{ job.clientName }}
+                </h3>
+                <p class="modal-sub">{{ job.address }}</p>
+            </div>
+            <button type="button" class="btn-close" (click)="closeModal()" aria-label="Cerrar">
+                ✕
+            </button>
+        </header>
+
+        <div class="modal-body">
+            <div class="timeline">
+                @for (update of orderedUpdates(job); track update.jobUpdateId) {
+                <article class="timeline-update">
+                    <span class="timeline-date">
+                        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                        {{ formatUpdateDate(update.date) }}
+                    </span>
+                    <p class="timeline-comment">
+                        "{{ update.comment || 'Sin comentario' }}"
+                    </p>
+                    <div class="gallery-grid">
+                        @if (update.evidences && update.evidences.length > 0) {
+                        @for (evi of update.evidences; track evi.evidenceId) {
+                        @if (isPdf(evi.imageUri)) {
+                        <a class="pdf-btn" [href]="evi.imageUri" target="_blank" rel="noopener noreferrer"
+                            title="Descargar reporte PDF">
+                            <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                            Reporte
+                        </a>
+                        } @else {
+                        <button type="button" class="gallery-img-btn" (mouseenter)="preload(evi.imageUri)"
+                            (click)="viewPhoto(evi.imageUri)">
+                            <img [src]="evi.imageUri" class="gallery-img" alt="Evidencia" loading="lazy"
+                                decoding="async" (load)="$any($event.target).classList.add('loaded')" />
+                        </button>
+                        }
+                        }
+                        } @else {
+                        <span class="no-files">
+                            No se subieron archivos en esta actualización.
+                        </span>
+                        }
+                    </div>
+                </article>
+                }
+            </div>
+        </div>
+
+        <footer class="modal-footer">
+            <button type="button" class="btn-secondary" (click)="closeModal()">
+                Cerrar
+            </button>
+        </footer>
+    </div>
+</div>
+}
