@@ -4,7 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "node set-env.js && ng serve",
-  "build": "node set-env.js && ng build",
+    "build": "node set-env.js && ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -17,7 +17,9 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@angular/router": "^21.2.0",
+    "@sweetalert2/ngx-sweetalert2": "^14.1.0",
     "rxjs": "~7.8.0",
+    "sweetalert2": "^11.22.4",
     "tslib": "^2.3.0"
   },
   "devDependencies": {

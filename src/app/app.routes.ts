@@ -1,3 +1,88 @@
 import { Routes } from '@angular/router';
 
-export const routes: Routes = [];
+import { authGuard, roleGuard } from './core/guards/auth.guard';
+
+export const routes: Routes = [
+  {
+    path: 'auth/login',
+    loadComponent: () =>
+      import('./auth/login/login.component').then(
+        (component) => component.LoginComponent
+      )
+  },
+  {
+    path: 'auth/role-selector',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./auth/role-selector/role-selector.component').then(
+        (component) => component.RoleSelectorComponent
+      )
+  },
+  {
+    path: 'admin',
+    canActivate: [roleGuard],
+    data: { role: 'ROLE_ADMIN' },
+    loadComponent: () =>
+      import('./admin/layout/admin-layout.component').then(
+        (component) => component.AdminLayoutComponent
+      ),
+    children: [
+      {
+        path: 'dashboard',
+        canActivate: [roleGuard],
+        data: {
+          role: 'ROLE_ADMIN',
+          heading: 'Resumen del Sistema'
+        },
+        loadComponent: () =>
+          import('./admin/dashboard/admin-dashboard.component').then(
+            (component) => component.AdminDashboardComponent
+          )
+      },
+      {
+        path: 'categorias',
+        canActivate: [roleGuard],
+        data: {
+          role: 'ROLE_ADMIN',
+          heading: 'Gestión de Categorías'
+        },
+        loadComponent: () =>
+          import('./admin/categorias/categorias.component').then(
+            (component) => component.CategoriasComponent
+          )
+      },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      }
+    ]
+  },
+  {
+    path: 'jefe/dashboard',
+    canActivate: [roleGuard],
+    data: { role: 'ROLE_JEFE' },
+    loadComponent: () =>
+      import(
+        './shared/components/session-preview/session-preview.component'
+      ).then((component) => component.SessionPreviewComponent)
+  },
+  {
+    path: 'employee/dashboard',
+    canActivate: [roleGuard],
+    data: { role: 'ROLE_EMPLOYEE' },
+    loadComponent: () =>
+      import(
+        './shared/components/session-preview/session-preview.component'
+      ).then((component) => component.SessionPreviewComponent)
+  },
+  {
+    path: '',
+    redirectTo: 'auth/login',
+    pathMatch: 'full'
+  },
+  {
+    path: '**',
+    redirectTo: 'auth/login'
+  }
+];

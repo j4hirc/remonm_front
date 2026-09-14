@@ -1,0 +1,153 @@
+<section class="categories-container">
+  <header class="header-section">
+    <h2>Lista de Categorías</h2>
+
+    <button
+      class="btn-add"
+      type="button"
+      [disabled]="
+        isLoading() ||
+        loadError() ||
+        editorOpen() ||
+        deletingId() !== null
+      "
+      (click)="openEditor()"
+    >
+      <i class="fa-solid fa-plus" aria-hidden="true"></i>
+      Nueva Categoría
+    </button>
+  </header>
+
+  @if (isLoading()) {
+    <p class="state-message" role="status">
+      Cargando categorías...
+    </p>
+  } @else if (loadError()) {
+    <div class="state-message">
+      <p>No se pudo cargar el listado.</p>
+      <button
+        class="btn-retry"
+        type="button"
+        (click)="loadCategories()"
+      >
+        Reintentar
+      </button>
+    </div>
+  } @else if (categories().length === 0) {
+    <p class="state-message">No hay categorías creadas.</p>
+  } @else {
+    <div class="table-container">
+      <table class="category-table">
+        <thead>
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Nombre de la Categoría</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          @for (category of categories(); track category.categoryId) {
+            <tr>
+              <td class="category-id">#{{ category.categoryId }}</td>
+              <td class="category-name">{{ category.name }}</td>
+              <td>
+                <div class="actions">
+                  <button
+                    class="btn-edit"
+                    type="button"
+                    [attr.aria-label]="'Editar ' + category.name"
+                    title="Editar"
+                    [disabled]="editorOpen() || deletingId() !== null"
+                    (click)="openEditor(category)"
+                  >
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                  </button>
+
+                  <button
+                    class="btn-delete"
+                    type="button"
+                    [attr.aria-label]="'Eliminar ' + category.name"
+                    title="Eliminar"
+                    [disabled]="editorOpen() || deletingId() !== null"
+                    (click)="deleteCategory(category)"
+                  >
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mobile-cards">
+      @for (category of categories(); track category.categoryId) {
+        <article class="category-card">
+          <div class="card-header">
+            <strong>{{ category.name }}</strong>
+            <span>#{{ category.categoryId }}</span>
+          </div>
+
+          <div class="actions">
+            <button
+              class="btn-edit"
+              type="button"
+              [disabled]="editorOpen() || deletingId() !== null"
+              (click)="openEditor(category)"
+            >
+              Editar
+            </button>
+
+            <button
+              class="btn-delete"
+              type="button"
+              [disabled]="editorOpen() || deletingId() !== null"
+              (click)="deleteCategory(category)"
+            >
+              Eliminar
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>
+
+<swal #editor [swalOptions]="editorOptions">
+  <span *swalPortal="swalTargets.title" class="editor-title">
+    <i
+      [class]="
+        editingId() === null
+          ? 'fa-solid fa-plus'
+          : 'fa-solid fa-pen'
+      "
+      aria-hidden="true"
+    ></i>
+
+    {{ editingId() === null ? 'Nueva Categoría' : 'Editar Categoría' }}
+  </span>
+
+  <form
+    *swalPortal="swalTargets.content"
+    class="category-form"
+    [formGroup]="form"
+    (ngSubmit)="submitEditor()"
+    novalidate
+  >
+    <label for="category-name">Nombre de Categoría</label>
+
+    <input
+      id="category-name"
+      class="input-field"
+      type="text"
+      formControlName="name"
+      placeholder="Ej: Remodelación de Cocina"
+      autocomplete="off"
+      required
+      [readOnly]="isSaving()"
+      [attr.aria-invalid]="form.controls.name.touched && form.controls.name.invalid"
+    />
+  </form>
+</swal>

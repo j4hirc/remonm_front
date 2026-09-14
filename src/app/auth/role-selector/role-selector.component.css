@@ -1,0 +1,85 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f0f8fc;
+}
+
+.role-content {
+  font-family: 'Outfit', sans-serif;
+  color: #0f2d4a;
+}
+
+.role-description {
+  margin: 5px 0 25px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+.role-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.role-button {
+  width: 100%;
+  padding: 14px 18px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: filter 0.2s, transform 0.2s;
+}
+
+.role-button.admin {
+  background: #ffffff;
+  color: #0f2d4a;
+  border-color: #0f2d4a;
+}
+
+.role-button.jefe {
+  background: var(--cyan, #12cff4);
+  color: #0f2d4a;
+}
+
+.role-button.employee {
+  background: var(--gold, #f4a300);
+  color: #0f2d4a;
+}
+
+.role-button:hover:not(:disabled) {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+.role-button:disabled,
+.logout-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.role-button:focus-visible,
+.logout-button:focus-visible {
+  outline: 3px solid #0aa8c8;
+  outline-offset: 3px;
+}
+
+.logout-button {
+  margin-top: 24px;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  color: #526579;
+  font-family: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}

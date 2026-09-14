@@ -1,1 +1,49 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+:root {
+  --cyan: #12cff4;
+  --cyan-dark: #0aa8c8;
+  --gold: #f4a300;
+  --black: #0b0b0d;
+  --white: #ffffff;
+  --slate: #2e3238;
+  --navy: #0f2d4a;
+
+  --bg-body: #f4f7fa;
+  --sidebar-bg: var(--navy);
+  --text-main: var(--slate);
+  --text-muted: #8a9099;
+
+  --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.03);
+  --shadow-hover: 0 10px 30px rgba(18, 207, 244, 0.15);
+  --radius-card: 16px;
+}
+
+html {
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--bg-body);
+  color: var(--text-main);
+}
+
+app-root {
+  display: block;
+  min-height: 100vh;
+}
+
+/* SweetAlert2 se monta fuera de los componentes. */
+.swal2-container {
+  z-index: 20000 !important;
+}

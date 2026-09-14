@@ -1,0 +1,21 @@
+<main class="session-page">
+    <section class="session-card">
+        <img src="img/logohexa.png" alt="RemoMN" class="logo" />
+
+        <h1>{{ profileLabel() }}</h1>
+        <p class="email">{{ email() }}</p>
+        <p>Sesión iniciada correctamente.</p>
+
+        <div class="actions">
+            @if (roles().length > 1) {
+            <a routerLink="/auth/role-selector">
+                Cambiar perfil
+            </a>
+            }
+
+            <button type="button" (click)="logout()">
+                Cerrar sesión
+            </button>
+        </div>
+    </section>
+</main>

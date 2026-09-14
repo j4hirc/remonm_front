@@ -1,0 +1,42 @@
+<swal
+  [swalOptions]="modalOptions"
+  [swalFireOnInit]="true"
+>
+  <div *swalPortal="swalTargets.content" class="role-content">
+    @if (availableRoles().length > 1) {
+      <p class="role-description">
+        Tienes múltiples roles, elige cómo quieres ingresar hoy:
+      </p>
+    } @else if (availableRoles().length === 1) {
+      <p class="role-description">
+        Selecciona tu perfil para continuar:
+      </p>
+    } @else {
+      <p class="role-description">
+        Tu usuario no tiene un perfil habilitado para este sistema.
+      </p>
+    }
+
+    <div class="role-options" [attr.aria-busy]="isNavigating()">
+      @for (option of availableRoles(); track option.role) {
+        <button
+          type="button"
+          [class]="option.className"
+          [disabled]="isNavigating()"
+          (click)="chooseRole(option)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
+
+    <button
+      type="button"
+      class="logout-button"
+      [disabled]="isNavigating()"
+      (click)="logout()"
+    >
+      Cerrar sesión
+    </button>
+  </div>
+</swal>

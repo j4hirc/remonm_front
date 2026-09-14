@@ -1,0 +1,19 @@
+<section class="grid-cards" aria-label="Funciones del administrador">
+  @for (card of cards; track card.title) {
+    <button
+      type="button"
+      [class]="card.className"
+      [disabled]="card.route === null"
+      [routerLink]="card.route"
+    >
+      <span class="card-icon-container">
+        <i [class]="card.icon" aria-hidden="true"></i>
+      </span>
+
+      <span class="card-info">
+        <span class="card-title">{{ card.title }}</span>
+        <span class="card-description">{{ card.description }}</span>
+      </span>
+    </button>
+  }
+</section>

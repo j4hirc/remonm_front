@@ -1,15 +1,29 @@
-const fs = require('fs');
+const fs = require('node:fs');
+const path = require('node:path');
 
-const dir = './src/environments';
-if (!fs.existsSync(dir)) {
-  fs.mkdirSync(dir, { recursive: true });
-}
+const dir = path.join(__dirname, 'src', 'environments');
 
-const envConfigFile = `export const environment = {
+const apiUrl = (
+  process.env.API_URL?.trim() ||
+  'https://api-rojas-remodeling.onrender.com/api/v1'
+).replace(/\/+$/, '');
+
+const configuration = {
   production: true,
-  apiUrl: '${process.env.API_URL || "http://localhost:8080"}'
+  apiUrl
 };
-`;
 
-fs.writeFileSync('./src/environments/environment.ts', envConfigFile);
-console.log(`Archivo environment.ts generado correctamente con la API URL.`);
+const envConfigFile =
+  '// Generado automáticamente por set-env.js.\n' +
+  `export const environment = ${JSON.stringify(configuration, null, 2)} as const;\n`;
+
+fs.mkdirSync(dir, { recursive: true });
+
+fs.writeFileSync(
+  path.join(dir, 'environment.ts'),
+  envConfigFile,
+  'utf8'
+);
+
+console.log('environment.ts generado correctamente.');
+console.log(`API configurada: ${apiUrl}`);
