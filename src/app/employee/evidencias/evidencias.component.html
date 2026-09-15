@@ -1,0 +1,226 @@
+<section class="evidencias-container">
+  <header class="header-section">
+    <h2>Reportes y Evidencias Subidas</h2>
+    <div class="filters-row">
+      <div class="filter-block filter-grow">
+        <label for="searchJobInput">Buscar por Proyecto</label>
+        <input
+          id="searchJobInput"
+          type="search"
+          class="input-field"
+          placeholder="Escribe un nombre..."
+          [value]="searchText()"
+          (input)="onSearch($event)"
+          autocomplete="off"
+        />
+      </div>
+      <div class="filter-block">
+        <label for="filterStatusInput">Estado</label>
+        <select
+          id="filterStatusInput"
+          class="input-field"
+          [value]="statusFilter()"
+          (change)="onStatus($event)"
+        >
+          <option value="ALL">Todos los Estados</option>
+          <option value="PENDING">Pendiente</option>
+          <option value="IN_PROGRESS">En Progreso</option>
+          <option value="COMPLETED">Completado</option>
+          <option value="CANCELLED">Cancelado</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  @if (isLoading()) {
+    <p class="state-message" role="status">Cargando tus evidencias...</p>
+  } @else if (loadError()) {
+    <div class="state-message">
+      <p>No se pudo cargar el listado.</p>
+      <button class="btn-secondary" type="button" (click)="loadJobs()">Reintentar</button>
+    </div>
+  } @else if (filteredJobs().length === 0) {
+    <div class="state-message">
+      <p>No tienes proyectos que coincidan con los filtros.</p>
+      <button class="btn-secondary" type="button" (click)="clearFilters()">Limpiar filtros</button>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table class="evidence-table">
+        <thead>
+          <tr>
+            <th>Proyecto</th>
+            <th>Jefe Asignado</th>
+            <th>Estado</th>
+            <th>Evidencias</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (job of filteredJobs(); track job.jobId) {
+            <tr>
+              <td class="project-cell">
+                <strong>{{ job.clientName }}</strong>
+                <span class="desc-cell" [title]="cleanDescription(job.description)">
+                  {{ cleanDescription(job.description) }}
+                </span>
+              </td>
+              <td>{{ job.nameManager || 'Sin asignar' }}</td>
+              <td>
+                <span [class]="statusBadge(job.status).className">
+                  {{ statusBadge(job.status).label }}
+                </span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="btn-view"
+                  [disabled]="countUpdates(job) === 0"
+                  (click)="openModal(job)"
+                >
+                  <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                  @if (countPhotos(job) > 0) {
+                    Ver {{ countPhotos(job) }}
+                  } @else if (countUpdates(job) > 0) {
+                    Ver avances
+                  } @else {
+                    Sin evidencias
+                  }
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mobile-cards">
+      @for (job of filteredJobs(); track job.jobId) {
+        <article class="evidence-card">
+          <header class="card-heading">
+            <h3>{{ job.clientName }}</h3>
+            <span [class]="statusBadge(job.status).className">
+              {{ statusBadge(job.status).label }}
+            </span>
+          </header>
+          <p class="card-meta">
+            <strong>Jefe:</strong> {{ job.nameManager || 'Sin asignar' }}
+          </p>
+          <p class="card-meta">{{ job.address || 'Sin dirección' }}</p>
+          <p class="card-desc">"{{ cleanDescription(job.description) }}"</p>
+          <button
+            type="button"
+            class="btn-view"
+            [disabled]="countUpdates(job) === 0"
+            (click)="openModal(job)"
+          >
+            <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+            @if (countPhotos(job) > 0) {
+              Ver {{ countPhotos(job) }}
+            } @else if (countUpdates(job) > 0) {
+              Ver avances
+            } @else {
+              Sin evidencias
+            }
+          </button>
+        </article>
+      }
+    </div>
+  }
+</section>
+
+<swal
+  #historyModal
+  [width]="760"
+  [showCloseButton]="true"
+  confirmButtonText="Cerrar"
+  confirmButtonColor="#0277bd"
+  [allowOutsideClick]="false"
+  (didClose)="onModalClosed()"
+>
+  <div *swalPortal="swalTargets.title" class="history-title">
+    <i class="fa-solid fa-images" aria-hidden="true"></i>
+    {{ photoUrl() ? 'Vista de evidencia' : 'Mis Evidencias' }}
+    @if (selectedJob(); as j) {
+      - {{ j.clientName }}
+    }
+  </div>
+
+  <div *swalPortal="swalTargets.content" class="history-content">
+    @if (selectedJob(); as job) {
+      @if (photoUrl(); as url) {
+        <div class="photo-toolbar">
+          <button type="button" class="btn-secondary" (click)="backToHistory()">
+            <i class="fa-solid fa-arrow-left"></i> Volver al historial
+          </button>
+          <a [href]="url" target="_blank" rel="noopener noreferrer">Abrir original</a>
+        </div>
+        <div class="photo-stage">
+          @if (photoLoading()) {
+            <p class="photo-state">Cargando imagen...</p>
+          }
+          @if (photoError()) {
+            <p class="photo-state">No se pudo cargar la imagen.</p>
+          } @else {
+            <img
+              class="photo-full"
+              [src]="url"
+              [alt]="'Evidencia ' + job.clientName"
+              (load)="photoLoaded()"
+              (error)="photoFailed()"
+            />
+          }
+        </div>
+      } @else {
+        <div class="history-summary">
+          <p><strong>Descripción de obra:</strong></p>
+          <p class="full-description">{{ cleanDescription(job.description) }}</p>
+        </div>
+        <div class="timeline">
+          @for (update of selectedUpdates(); track update.jobUpdateId) {
+            <article class="timeline-update">
+              <span class="timeline-date">
+                <i class="fa-regular fa-calendar"></i>
+                {{ formatUpdateDate(update.date) }}
+              </span>
+              <p class="timeline-comment">"{{ update.comment || 'Sin comentario' }}"</p>
+              <div class="gallery-grid">
+                @for (evi of update.evidences || []; track evi.evidenceId) {
+                  @if (isPdf(evi.imageUri)) {
+                    <a
+                      class="pdf-btn"
+                      [href]="evi.imageUri"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <i class="fa-solid fa-file-pdf"></i>
+                      <span>Reporte</span>
+                    </a>
+                  } @else if (failedImages().has(evi.imageUri)) {
+                    <a class="file-error" [href]="evi.imageUri" target="_blank" rel="noopener noreferrer">
+                      Sin vista previa
+                    </a>
+                  } @else {
+                    <button type="button" class="gallery-img-btn" (click)="viewPhoto(evi.imageUri)">
+                      <img
+                        class="gallery-img"
+                        [src]="evi.imageUri"
+                        alt=""
+                        loading="lazy"
+                        (load)="imageLoaded(evi.imageUri)"
+                        (error)="imageFailed(evi.imageUri)"
+                      />
+                    </button>
+                  }
+                } @empty {
+                  <p class="no-files">No subiste archivos en esta actualización.</p>
+                }
+              </div>
+            </article>
+          } @empty {
+            <p class="state-message">Este proyecto no registra avances.</p>
+          }
+        </div>
+      }
+    }
+  </div>
+</swal>

@@ -1,0 +1,49 @@
+<div class="app-layout">
+    <aside class="sidebar" aria-label="Menú subcontratista">
+        <div class="sidebar-logo">
+            <img src="img/logo.png" alt="RemoMN" />
+        </div>
+
+        <nav class="sidebar-nav">
+            @for (item of menuItems; track item.route) {
+            <a class="nav-item" [routerLink]="item.route" routerLinkActive="active">
+                <i [class]="item.icon" aria-hidden="true"></i>
+                <span>{{ item.label }}</span>
+            </a>
+            }
+        </nav>
+
+        <button type="button" class="nav-item nav-exit" [disabled]="isLeaving()" (click)="openExitDialog()">
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+            <span>Salir</span>
+        </button>
+    </aside>
+
+    <div class="main-area">
+        <header class="topbar">
+            <h1 class="page-title">{{ pageTitle() }}</h1>
+            <div class="user-chip">
+                <i class="fa-solid fa-user" aria-hidden="true"></i>
+                <span>{{ displayName() }}</span>
+                <button type="button" class="btn-exit-icon" title="Salir" [disabled]="isLeaving()"
+                    (click)="openExitDialog()">
+                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- menú horizontal móvil -->
+        <nav class="mobile-nav" aria-label="Menú móvil">
+            @for (item of menuItems; track item.route) {
+            <a class="mobile-nav-item" [routerLink]="item.route" routerLinkActive="active">
+                <i [class]="item.icon" aria-hidden="true"></i>
+                <span>{{ item.label }}</span>
+            </a>
+            }
+        </nav>
+
+        <main class="content">
+            <router-outlet />
+        </main>
+    </div>
+</div>

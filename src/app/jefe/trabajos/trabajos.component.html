@@ -1,0 +1,517 @@
+<section class="trabajos-container">
+    <header class="header-section column">
+        <h2>Proyectos Asignados</h2>
+
+        <div class="filter-block">
+            <label for="searchJobInput">Buscar por Cliente o Descripción</label>
+            <input id="searchJobInput" type="text" class="input-field"
+                placeholder="🔍 Escribe un nombre o descripción..." [value]="searchText()" (input)="onSearch($event)"
+                autocomplete="off" />
+        </div>
+
+        <div class="filters-row">
+            <div class="filter-block filter-sm">
+                <label for="filterStatusInput">Estado</label>
+                <select id="filterStatusInput" class="input-field" [value]="statusFilter()" (change)="onStatus($event)">
+                    <option value="ALL">Todos los Estados</option>
+                    <option value="PENDING">Pendiente</option>
+                    <option value="IN_PROGRESS">En Progreso</option>
+                    <option value="COMPLETED">Completado</option>
+                    <option value="CANCELLED">Cancelado</option>
+                </select>
+            </div>
+
+            <div class="filter-block filter-xs">
+                <label for="filterPriorityInput">Prioridad</label>
+                <input id="filterPriorityInput" type="number" class="input-field" placeholder="Ej: 0, 1, 2..." min="0"
+                    [value]="priorityFilter()" (input)="onPriority($event)" />
+            </div>
+
+            <div class="filter-block filter-xs">
+                <label for="filterDateFromInput">Fecha Desde</label>
+                <input id="filterDateFromInput" type="date" class="input-field" [value]="dateFrom()"
+                    (change)="onDateFrom($event)" />
+            </div>
+
+            <div class="filter-block filter-xs">
+                <label for="filterDateToInput">Fecha Hasta</label>
+                <input id="filterDateToInput" type="date" class="input-field" [value]="dateTo()"
+                    (change)="onDateTo($event)" />
+            </div>
+
+            <div class="filter-block filter-md">
+                <label for="filterEmployeeInput">Subcontratista</label>
+                <select id="filterEmployeeInput" class="input-field" [value]="employeeFilter()"
+                    (change)="onEmployeeFilter($event)">
+                    <option value="">Todos los Subcontratistas</option>
+                    @for (emp of employees(); track emp.userId) {
+                    <option [value]="fullUserName(emp)">{{ fullUserName(emp) }}</option>
+                    }
+                </select>
+            </div>
+
+            <button class="btn-add btn-job" type="button"
+                [disabled]="isLoading() || loadError() || editorOpen() || deletingId() !== null" (click)="openCreate()">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                Nuevo Trabajo
+            </button>
+        </div>
+    </header>
+
+    @if (isLoading()) {
+    <p class="state-message" role="status">Cargando trabajos...</p>
+    } @else if (loadError()) {
+    <div class="state-message">
+        <p>No se pudo cargar el listado.</p>
+        <button class="btn-retry" type="button" (click)="loadJobs()">Reintentar</button>
+    </div>
+    } @else if (filteredJobs().length === 0) {
+    <div class="state-message">
+        <p>
+            @if (
+            searchText() ||
+            statusFilter() !== 'ALL' ||
+            priorityFilter() ||
+            dateFrom() ||
+            dateTo() ||
+            employeeFilter()
+            ) {
+            No hay trabajos con esos filtros.
+            } @else {
+            No hay trabajos registrados.
+            }
+        </p>
+        @if (
+        searchText() ||
+        statusFilter() !== 'ALL' ||
+        priorityFilter() ||
+        dateFrom() ||
+        dateTo() ||
+        employeeFilter()
+        ) {
+        <button class="btn-retry" type="button" (click)="clearFilters()">
+            Limpiar filtros
+        </button>
+        }
+    </div>
+    } @else {
+    <div class="table-container">
+        <table class="jobs-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Dirección y Fecha</th>
+                    <th>Descripción</th>
+                    <th>Subcontratista / Manager</th>
+                    <th>Estado</th>
+                    <th>Prioridad</th>
+                    <th>Pago</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (job of filteredJobs(); track job.jobId) {
+                <tr [style.border-left]="'5px solid ' + employeeColor(job.employeeId)"
+                    [style.background-color]="hexToRgba(employeeColor(job.employeeId), 0.06)">
+                    <td>
+                        <div class="cell-wrap">
+                            <strong>{{ job.clientName }}</strong><br />
+                            <small class="muted">
+                                <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                                {{ job.clientPhone }}
+                            </small>
+                            @if (job.quickbooksInvoice) {
+                            <br />
+                            <small class="qb">
+                                <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i>
+                                QB: {{ job.quickbooksInvoice }}
+                            </small>
+                            }
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-wrap">
+                            {{ job.address }}<br />
+                            <small class="date-line">
+                                <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                                {{ formatDate(job.jobDate) }}
+                            </small>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-wrap desc" [title]="cleanDescription(job.description)">
+                            {{ cleanDescription(job.description) }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="cell-wrap">
+                            <span class="emp">E: {{ job.nameEmployee || 'Sin asignar' }}</span><br />
+                            <span class="man">M: {{ job.nameManager || 'Sin asignar' }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span [class]="statusBadge(job.status).className">
+                            {{ statusBadge(job.status).label }}
+                        </span>
+                    </td>
+                    <td>
+                        <span [class]="priorityBadge(job.priority).className">
+                            {{ priorityBadge(job.priority).label }}
+                        </span>
+                    </td>
+                    <td class="pay">{{ job.pay | currency: 'USD' : 'symbol' : '1.2-2' }}</td>
+                    <td>
+                        <div class="acciones-cell">
+                            @if (job.blueprintUrls && job.blueprintUrls.length > 0) {
+                            <button type="button" class="btn-action btn-planos" title="Ver Planos"
+                                (click)="viewBlueprints(job)">
+                                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                                <span>{{ job.blueprintUrls.length }}</span>
+                            </button>
+                            }
+
+                            <button type="button" class="btn-action btn-pdf" title="Generar PDF Factura"
+                                (click)="generatePdf(job)">
+                                <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
+                            </button>
+
+                            <a class="btn-action btn-evidencias" [routerLink]="['/jefe/evidencias']"
+                                [queryParams]="{ jobId: job.jobId }" title="Ver Evidencias">
+                                <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                            </a>
+
+                            <button type="button" class="btn-action btn-edit" title="Editar"
+                                [disabled]="editorOpen() || deletingId() !== null" (click)="openEdit(job.jobId)">
+                                <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                            </button>
+
+                            <button type="button" class="btn-action btn-delete" title="Eliminar"
+                                [disabled]="editorOpen() || deletingId() !== null" (click)="deleteJob(job)">
+                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="mobile-cards">
+        @for (job of filteredJobs(); track job.jobId) {
+        <article class="job-card" [style.border-left]="'6px solid ' + employeeColor(job.employeeId)"
+            [style.background-color]="hexToRgba(employeeColor(job.employeeId), 0.06)">
+            <div class="card-top">
+                <h3>{{ job.clientName }}</h3>
+                <div class="card-badges">
+                    <span [class]="statusBadge(job.status).className">
+                        {{ statusBadge(job.status).label }}
+                    </span>
+                    <span [class]="priorityBadge(job.priority).className">
+                        {{ priorityBadge(job.priority).label }}
+                    </span>
+                </div>
+            </div>
+
+            <p class="card-line">
+                <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                {{ job.clientPhone }}
+            </p>
+            <p class="card-line">
+                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                {{ job.address }}
+            </p>
+            <p class="card-line date-line">
+                <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                Fecha: {{ formatDate(job.jobDate) }}
+            </p>
+
+            <div class="card-desc">
+                <strong>
+                    <i class="fa-solid fa-align-left" aria-hidden="true"></i>
+                    Descripción
+                </strong>
+                <p>"{{ cleanDescription(job.description) }}"</p>
+            </div>
+
+            <div class="card-people">
+                <p><strong>E:</strong> {{ job.nameEmployee || 'Sin asignar' }}</p>
+                <p><strong>M:</strong> {{ job.nameManager || 'Sin asignar' }}</p>
+            </div>
+
+            <p class="card-pay">
+                Pago: {{ job.pay | currency: 'USD' : 'symbol' : '1.2-2' }}
+            </p>
+
+            <div class="card-actions">
+                @if (job.blueprintUrls && job.blueprintUrls.length > 0) {
+                <button type="button" class="btn-card btn-planos" (click)="viewBlueprints(job)">
+                    <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                    Planos ({{ job.blueprintUrls.length }})
+                </button>
+                }
+
+                <a class="btn-card btn-evidencias" [routerLink]="['/jefe/evidencias']"
+                    [queryParams]="{ jobId: job.jobId }">
+                    <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                    Evidencias
+                </a>
+
+                <button type="button" class="btn-card btn-edit" [disabled]="editorOpen() || deletingId() !== null"
+                    (click)="openEdit(job.jobId)">
+                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                    Editar
+                </button>
+
+                <button type="button" class="btn-card btn-delete" [disabled]="editorOpen() || deletingId() !== null"
+                    (click)="deleteJob(job)">
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    Eliminar
+                </button>
+
+                <button type="button" class="btn-card btn-pdf" (click)="generatePdf(job)">
+                    <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
+                    PDF Factura
+                </button>
+            </div>
+        </article>
+        }
+    </div>
+    }
+</section>
+
+<!-- ========== MODAL CREAR / EDITAR ========== -->
+<swal #editor [swalOptions]="editorOptions" (didOpen)="onEditorDidOpen()" (willClose)="onEditorWillClose()">
+    <span *swalPortal="swalTargets.title" class="editor-title">
+        <i [class]="editingId() === null ? 'fa-solid fa-hammer' : 'fa-solid fa-pen'" aria-hidden="true"></i>
+        {{ editingId() === null ? 'Nuevo Trabajo' : 'Editar Trabajo' }}
+    </span>
+
+    <form *swalPortal="swalTargets.content" class="job-form" [formGroup]="form" (ngSubmit)="submitEditor()" novalidate>
+        <!-- Cliente -->
+        <h4 class="section-title">Datos del Cliente</h4>
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="jobClientName">Nombre del Cliente</label>
+                <input id="jobClientName" class="input-field" type="text" formControlName="clientName"
+                    placeholder="Ej: Familia Rojas" [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="jobClientPhone">Teléfono del Cliente</label>
+                <input id="jobClientPhone" class="input-field" type="text" formControlName="clientPhone"
+                    placeholder="0999999999" [readOnly]="isSaving()" />
+            </div>
+        </div>
+
+        <!-- Ubicación -->
+        <h4 class="section-title">Ubicación y Logística</h4>
+        <div class="form-row">
+            <label for="jobAddress">Dirección (Texto)</label>
+            <input id="jobAddress" class="input-field" type="text" formControlName="address"
+                placeholder="Dirección exacta" [readOnly]="isSaving()" (blur)="searchAddressOnMap()"
+                (keydown)="onAddressKeydown($event)" />
+        </div>
+
+        <div class="form-row map-block">
+            <div class="map-header">
+                <label>Selecciona en el mapa</label>
+                <button type="button" class="btn-location" (click)="myLocation()" [disabled]="isSaving()">
+                    <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+                    Mi Ubicación
+                </button>
+            </div>
+            <div id="jobMap" class="job-map" aria-label="Mapa de ubicación"></div>
+        </div>
+
+        <!-- Lat/Lng ocultos (solo para el form) -->
+        <div class="latlng-hidden" hidden>
+            <input type="number" formControlName="latitude" step="any" />
+            <input type="number" formControlName="longitude" step="any" />
+        </div>
+
+        <!-- Personal -->
+        <h4 class="section-title">Asignación de Personal</h4>
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="jobEmployee">Subcontratista Asignado</label>
+                <select id="jobEmployee" class="input-field" formControlName="employeeId" [disabled]="isSaving()">
+                    <option value="">-- Seleccione Subcontratista --</option>
+                    @for (emp of employees(); track emp.userId) {
+                    <option [value]="emp.userId">{{ fullUserName(emp) }}</option>
+                    }
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="jobManager">Manager Asignado</label>
+                <select id="jobManager" class="input-field" formControlName="managerId" [disabled]="isSaving()">
+                    <option value="">-- Seleccione Manager --</option>
+                    @for (man of managers(); track man.userId) {
+                    <option [value]="man.userId">{{ fullUserName(man) }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <!-- Materiales inventario -->
+        <h4 class="section-title">Materiales del Inventario</h4>
+        <div class="materials-filters">
+            <input type="text" class="input-field" placeholder="🔍 Buscar material por nombre..."
+                [value]="materialSearch()" (input)="materialSearch.set($any($event.target).value)"
+                [readOnly]="isSaving()" />
+            <select class="input-field" [value]="materialCategoryFilter()"
+                (change)="materialCategoryFilter.set($any($event.target).value)" [disabled]="isSaving()">
+                <option value="">Todas las Categorías</option>
+                @for (cat of materialCategories(); track cat) {
+                <option [value]="cat">{{ cat }}</option>
+                }
+            </select>
+        </div>
+
+        <div class="materials-list">
+            @if (filteredMaterialsForModal().length === 0) {
+            <span class="muted">No se encontraron materiales con ese filtro.</span>
+            } @else {
+            @for (mat of filteredMaterialsForModal(); track mat.materialId) {
+            <label class="material-item">
+                <span class="material-left">
+                    <input type="checkbox" [checked]="selectedMaterialIds().has(mat.materialId)" [disabled]="isSaving()"
+                        (change)="toggleMaterial(mat, $any($event.target).checked)" />
+                    {{ mat.name }}
+                    <span class="mat-disp">
+                        (Disp: {{ mat.count || 0 }}{{ mat.unit ? ' ' + mat.unit : '' }})
+                    </span>
+                </span>
+                <span class="mat-price">
+                    ${{ (mat.price || 0).toFixed(2) }} c/u
+                </span>
+            </label>
+            }
+            }
+        </div>
+
+        <!-- Materiales necesarios -->
+        <h4 class="section-title">Materiales Necesarios para esta Obra</h4>
+        <div class="necessary-list">
+            @if (necessaryMaterials().length === 0) {
+            <span class="muted">Ningún material seleccionado.</span>
+            } @else {
+            @for (row of necessaryMaterials(); track row.materialId) {
+            <div class="necessary-row">
+                <div class="nec-name" [title]="row.name">{{ row.name }}</div>
+                <div class="nec-fields">
+                    <input type="number" class="input-field nec-qty" min="1" [value]="row.quantity"
+                        [readOnly]="isSaving()" (input)="
+                  updateNecessaryQty(
+                    row.materialId,
+                    +$any($event.target).value || 1
+                  )
+                " title="Cantidad" />
+                    <input type="text" class="input-field nec-unit" [value]="row.unit" readonly title="Unidad" />
+                    <input type="number" class="input-field nec-price" [value]="row.price" readonly
+                        title="Precio unitario" />
+                    <button type="button" class="nec-delete" title="Quitar" [disabled]="isSaving()"
+                        (click)="removeNecessary(row.materialId)">
+                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            }
+            }
+        </div>
+        <div class="necessary-total">
+            Total Estimado Necesarios: ${{ necessaryTotal().toFixed(2) }}
+        </div>
+
+        <!-- Datos del trabajo -->
+        <h4 class="section-title">Datos del Trabajo</h4>
+        <div class="form-row">
+            <label for="jobDesc">Descripción del Trabajo</label>
+            <textarea id="jobDesc" class="input-field" rows="2" formControlName="description"
+                placeholder="Ej: Remodelación completa..." [readOnly]="isSaving()"></textarea>
+        </div>
+
+        <div class="form-row">
+            <label for="jobPriority">Prioridad del Trabajo (Número)</label>
+            <input id="jobPriority" type="number" class="input-field" formControlName="priority" min="0" step="1"
+                [readOnly]="isSaving()" />
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="jobDate">Fecha de Ejecución</label>
+                <input id="jobDate" type="date" class="input-field" formControlName="jobDate" [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="jobPay">Pago Asignado ($)</label>
+                <input id="jobPay" type="number" class="input-field" formControlName="pay" step="0.01" min="0"
+                    [readOnly]="isSaving()" />
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="jobSafeBox">Código Caja de Seguridad</label>
+                <input id="jobSafeBox" type="text" class="input-field" formControlName="safeDepositBoxCodes"
+                    placeholder="Opcional" [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="jobQuickbooksInvoice">Invoice QuickBooks</label>
+                <input id="jobQuickbooksInvoice" type="text" class="input-field" formControlName="quickbooksInvoice"
+                    placeholder="Opcional" [readOnly]="isSaving()" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <label for="jobStatus">Estado del Trabajo</label>
+            <select id="jobStatus" class="input-field" formControlName="status" [disabled]="isSaving()">
+                <option value="PENDING">Pendiente</option>
+                <option value="IN_PROGRESS">En Progreso</option>
+                <option value="COMPLETED">Completado</option>
+                <option value="CANCELLED">Cancelado</option>
+            </select>
+        </div>
+
+        <!-- Planos -->
+        <h4 class="section-title">Documentos Adjuntos</h4>
+        <div class="form-row">
+            <label for="jobBlueprint">
+                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                Planos del Trabajo (Imagen o PDF)
+            </label>
+            <input id="jobBlueprint" type="file" class="input-field" accept="image/*,application/pdf" multiple
+                [disabled]="isSaving()" (change)="onBlueprintChange($event)" />
+            <small class="hint-text">Opcional. Puedes subir múltiples planos.</small>
+
+            @if (existingBlueprintUrls().length > 0) {
+            <div class="existing-blueprints">
+                <i class="fa-solid fa-check-circle" aria-hidden="true"></i>
+                <strong>Planos guardados:</strong>
+                <div class="blueprint-links">
+                    @for (url of existingBlueprintUrls(); track $index) {
+                    <a [href]="url" target="_blank" rel="noopener noreferrer">
+                        <i class="fa-solid fa-file-image" aria-hidden="true"></i>
+                        Plano {{ $index + 1 }}
+                    </a>
+                    }
+                </div>
+            </div>
+            }
+
+            @if (blueprintFiles().length > 0) {
+            <div class="pending-blueprints">
+                @for (file of blueprintFiles(); track $index) {
+                <div class="pending-item">
+                    <span>
+                        <i class="fa-solid fa-file" aria-hidden="true"></i>
+                        {{ file.name }}
+                    </span>
+                    <button type="button" class="nec-delete" title="Quitar" (click)="removeBlueprintFile($index)">
+                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    </button>
+                </div>
+                }
+            </div>
+            }
+        </div>
+    </form>
+</swal>

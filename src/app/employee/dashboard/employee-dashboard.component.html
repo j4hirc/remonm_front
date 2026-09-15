@@ -1,0 +1,13 @@
+<section class="grid-cards" aria-label="Panel del subcontratista">
+  @for (card of cards; track card.title) {
+    <a [routerLink]="card.route" [class]="card.className">
+      <span class="card-icon-container">
+        <i [class]="card.icon" aria-hidden="true"></i>
+      </span>
+      <span class="card-info">
+        <span class="card-title">{{ card.title }}</span>
+        <span class="card-description">{{ card.description }}</span>
+      </span>
+    </a>
+  }
+</section>

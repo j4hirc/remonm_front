@@ -1,0 +1,48 @@
+<section class="grid-cards" aria-label="Funciones del jefe">
+  @for (card of cards; track card.title) {
+    <button
+      type="button"
+      [class]="card.className"
+      [disabled]="card.route === null && !card.action"
+      (click)="openReport(card.action)"
+      [routerLink]="card.route"
+    >
+      <span class="card-icon-container">
+        <i [class]="card.icon" aria-hidden="true"></i>
+      </span>
+
+      <span class="card-info">
+        <span class="card-title">{{ card.title }}</span>
+        <span class="card-description">{{ card.description }}</span>
+      </span>
+    </button>
+  }
+</section>
+
+<swal
+  #bodegaModal
+  [width]="800"
+  confirmButtonText="Cerrar"
+  confirmButtonColor="#12CFF4"
+  [allowOutsideClick]="false"
+>
+  <span *swalPortal="swalTargets.title">
+    <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+    Órdenes de Bodega (Global)
+  </span>
+  <app-jefe-bodega *swalPortal="swalTargets.content" />
+</swal>
+
+<swal
+  #nominaModal
+  [width]="650"
+  confirmButtonText="Cerrar"
+  confirmButtonColor="#12CFF4"
+  [allowOutsideClick]="false"
+>
+  <span *swalPortal="swalTargets.title">
+    <i class="fa-solid fa-money-check-dollar" aria-hidden="true"></i>
+    Nómina Quincenal Global
+  </span>
+  <app-jefe-nomina *swalPortal="swalTargets.content" />
+</swal>

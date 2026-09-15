@@ -1,0 +1,70 @@
+<div class="app-layout">
+  <aside class="sidebar" aria-label="Panel del jefe">
+    <a
+      class="sidebar-logo"
+      routerLink="/jefe/dashboard"
+      aria-label="RemoMN: ir al inicio"
+    >
+      <img src="img/logo.png" alt="Rojas Remodeling" />
+    </a>
+
+    <nav class="sidebar-nav" aria-label="Navegación principal">
+      @for (item of menuItems; track item.label) {
+        @if (item.route; as route) {
+          <a
+            class="nav-item"
+            [routerLink]="route"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            ariaCurrentWhenActive="page"
+          >
+            <i [class]="item.icon" aria-hidden="true"></i>
+            <span>{{ item.label }}</span>
+          </a>
+        } @else {
+          <button class="nav-item" type="button" disabled>
+            <i [class]="item.icon" aria-hidden="true"></i>
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <button
+        class="btn-logout-sidebar"
+        type="button"
+        [disabled]="isLeaving()"
+        (click)="openExitDialog()"
+      >
+        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+        <span>Salir</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="top-navbar">
+      <h1 class="page-title">{{ pageTitle() }}</h1>
+
+      <div class="user-profile">
+        <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
+        <span class="user-email">{{ email() }}</span>
+
+        @if (roles().length > 1) {
+          <a
+            routerLink="/auth/role-selector"
+            aria-label="Cambiar de rol"
+            title="Cambiar de rol"
+          >
+            <i class="fa-solid fa-right-left" aria-hidden="true"></i>
+          </a>
+        }
+      </div>
+    </header>
+
+    <div class="content-body">
+      <router-outlet />
+    </div>
+  </main>
+</div>
