@@ -11,9 +11,10 @@
 
 .header-section {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 16px 20px;
     margin-bottom: 25px;
     padding-bottom: 15px;
     border-bottom: 1px solid #f4f7fe;
@@ -23,6 +24,7 @@ h2 {
     margin: 0;
     color: #2b3674;
     font-size: 1.5rem;
+    flex: 0 0 auto;
 }
 
 button {
@@ -42,6 +44,7 @@ button {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    white-space: nowrap;
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(18, 207, 244, 0.25);
 }
@@ -227,26 +230,103 @@ button:focus-visible {
     font-size: 0.8rem;
 }
 
+/* ---- Filtros: buscador + select + botón en una sola fila ---- */
+
+.filters-wrapper {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 auto;
+    min-width: 280px;
+    justify-content: flex-end;
+}
+
+.search-box {
+    position: relative;
+    flex: 1 1 200px;
+    min-width: 140px;
+    max-width: 280px;
+}
+
+.search-box i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a3aed0;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 14px 10px 40px !important;
+    border: 1px solid #e0e5f2;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.category-select {
+    flex: 0 1 170px;
+    min-width: 130px;
+    padding: 10px 15px;
+    border: 1px solid #e0e5f2;
+    border-radius: 8px;
+    background: #f9fafc;
+    color: #2e3238;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.name-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.box-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background: rgba(0, 184, 169, 0.1);
+    color: #00b8a9;
+}
+
+.name-main {
+    font-weight: 600;
+}
+
+.name-meta {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: #00b8a9;
+}
+
+.name-cat {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.card-id {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
 @media (max-width: 768px) {
     .materials-container {
         padding: 20px 15px;
     }
 
-    .header-section {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 18px;
-    }
-
     h2 {
         font-size: 1.4rem;
-    }
-
-    .btn-add {
-        width: 100%;
-        min-height: 52px;
-        border-radius: 12px;
-        font-size: 1.05rem;
     }
 
     .table-container {
@@ -311,90 +391,8 @@ button:focus-visible {
     }
 }
 
-.filters-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-}
-
-.search-box {
-    position: relative;
-    width: 100%;
-    max-width: 250px;
-}
-
-.search-box i {
-    position: absolute;
-    left: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #a3aed0;
-    pointer-events: none;
-}
-
-.search-input {
-    width: 100%;
-    padding: 10px 14px 10px 40px !important;
-    border: 1px solid #e0e5f2;
-    border-radius: 8px;
-    font-size: 0.9rem;
-}
-
-.category-select {
-    width: 100%;
-    max-width: 200px;
-    padding: 10px 15px;
-    border: 1px solid #e0e5f2;
-    border-radius: 8px;
-    background: #f9fafc;
-    color: #2e3238;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-}
-
-.name-with-icon {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.box-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    flex-shrink: 0;
-    border-radius: 8px;
-    background: rgba(0, 184, 169, 0.1);
-    color: #00b8a9;
-}
-
-.name-main {
-    font-weight: 600;
-}
-
-.name-meta {
-    font-size: 0.8rem;
-    font-weight: 400;
-    color: #00b8a9;
-}
-
-.name-cat {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    font-weight: 400;
-}
-
-.card-id {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    font-weight: 400;
-}
-
+/* Solo aquí apilamos todo en columna: título arriba, filtros abajo,
+   y cada filtro ocupa el 100% del ancho */
 @media (max-width: 900px) {
     .header-section {
         flex-direction: column;
@@ -402,14 +400,20 @@ button:focus-visible {
         gap: 15px;
     }
 
+    h2 {
+        flex: none;
+    }
+
     .filters-wrapper {
-        flex-direction: column;
-        width: 100%;
+        flex-wrap: wrap;
+        min-width: 0;
+        justify-content: flex-start;
     }
 
     .search-box,
     .category-select,
     .btn-add {
+        flex: 1 1 100%;
         max-width: none;
         width: 100%;
     }

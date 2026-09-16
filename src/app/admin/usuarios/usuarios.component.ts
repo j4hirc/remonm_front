@@ -88,6 +88,14 @@ export class UsuariosComponent implements OnInit {
         allowEscapeKey: () => !this.isSaving(),
         preConfirm: () => this.persistUser()
     };
+
+    constructor() {
+        // AÑADIDO: Libera la pantalla si cambias de pestaña o destruyes el componente
+        this.destroyRef.onDestroy(() => {
+            if (Swal.isVisible()) Swal.close();
+        });
+    }
+
     readonly filteredUsers = () => {
         let list = [...this.users()];
         const status = this.statusFilter();
@@ -101,9 +109,8 @@ export class UsuariosComponent implements OnInit {
         } else if (status === 'Unemployed') {
             list = list.filter((u) => u.status === 'Unemployed');
         }
-        // 'All' → no filtra por estado
 
-        // 2. Multibúsqueda: DNI, nombre, apellido
+        // 2. Multibúsqueda
         if (text) {
             list = list.filter((u) => {
                 const dni = (u.dni ?? '').toLowerCase();
@@ -129,23 +136,24 @@ export class UsuariosComponent implements OnInit {
     ngOnInit(): void {
         void this.loadUsers();
     }
-onSearchInput(event: Event): void {
-  const value = (event.target as HTMLInputElement).value;
-  this.searchText.set(value);
-}
 
-onStatusChange(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value as
-    | 'Active'
-    | 'Unemployed'
-    | 'All';
-  this.statusFilter.set(value);
-}
+    onSearchInput(event: Event): void {
+        const value = (event.target as HTMLInputElement).value;
+        this.searchText.set(value);
+    }
 
-clearFilters(): void {
-  this.searchText.set('');
-  this.statusFilter.set('Active');
-}
+    onStatusChange(event: Event): void {
+        const value = (event.target as HTMLSelectElement).value as
+            | 'Active'
+            | 'Unemployed'
+            | 'All';
+        this.statusFilter.set(value);
+    }
+
+    clearFilters(): void {
+        this.searchText.set('');
+        this.statusFilter.set('Active');
+    }
 
     async loadUsers(): Promise<void> {
         if (this.isLoading() || this.editorOpen()) {
@@ -155,16 +163,28 @@ clearFilters(): void {
         this.isLoading.set(true);
         this.loadError.set(false);
 
+        // MODAL DE CARGA AÑADIDO
+        void Swal.fire({
+            title: 'Cargando usuarios...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
         try {
             const users = await firstValueFrom(
                 this.usersService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
             );
             this.users.set(users);
+            
+            if (Swal.isVisible()) {
+                Swal.close();
+            }
         } catch (error: unknown) {
             if (this.destroyRef.destroyed) {
                 return;
             }
             this.loadError.set(true);
+            
             await Swal.fire({
                 icon: 'error',
                 title: 'No se pudieron cargar los usuarios',

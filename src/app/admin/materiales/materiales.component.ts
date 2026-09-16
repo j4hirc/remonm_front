@@ -113,36 +113,44 @@ export class MaterialesComponent implements OnInit {
     }
 
     async loadMaterials(): Promise<void> {
-        if (this.isLoading() || this.editorOpen() || this.deletingId() !== null) {
-            return;
-        }
-
-        this.isLoading.set(true);
-        this.loadError.set(false);
-
-        try {
-            const materials = await firstValueFrom(
-                this.materialsService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
-            );
-
-            this.materials.set(materials);
-        } catch (error: unknown) {
-            if (this.destroyRef.destroyed) {
-                return;
-            }
-
-            this.loadError.set(true);
-
-            await Swal.fire({
-                icon: 'error',
-                title: 'No se pudieron cargar los materiales',
-                text: this.getErrorMessage(error),
-                confirmButtonColor: '#12CFF4'
-            });
-        } finally {
-            this.isLoading.set(false);
-        }
+    if (this.isLoading() || this.editorOpen() || this.deletingId() !== null) {
+        return;
     }
+
+    this.isLoading.set(true);
+    this.loadError.set(false);
+
+    // MODAL DE CARGA
+    void Swal.fire({
+        title: 'Cargando materiales...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const materials = await firstValueFrom(
+            this.materialsService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
+        );
+
+        this.materials.set(materials);
+        Swal.close(); // CERRAMOS EL MODAL CON ÉXITO
+    } catch (error: unknown) {
+        Swal.close(); // Cerramos el loading antes de mostrar el error
+
+        if (this.destroyRef.destroyed) return;
+
+        this.loadError.set(true);
+
+        await Swal.fire({
+            icon: 'error',
+            title: 'No se pudieron cargar los materiales',
+            text: this.getErrorMessage(error),
+            confirmButtonColor: '#12CFF4'
+        });
+    } finally {
+        this.isLoading.set(false);
+    }
+}
 
     onSearchInput(event: Event): void {
         const value = (event.target as HTMLInputElement).value;

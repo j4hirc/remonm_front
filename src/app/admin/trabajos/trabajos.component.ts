@@ -82,7 +82,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     readonly loadError = signal(false);
     readonly editingId = signal<number | null>(null);
 
-    // Filtros (igual que el original)
+    // Filtros
     readonly searchText = signal('');
     readonly statusFilter = signal('ALL');
     readonly priorityFilter = signal('');
@@ -118,14 +118,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         status: ['PENDING', Validators.required]
     });
 
-    // IMPORTANTE: NO pongas aquí `didOpen`, `willClose`, `didClose`, etc.
-    // SwalComponent expone esos hooks como @Output() EventEmitter para
-    // usarlos con binding en el template, p.ej. (didOpen)="onEditorDidOpen()".
-    // Si se incluyen como funciones planas dentro de swalOptions, la
-    // librería pisa su propio EventEmitter y al intentar emitir lanza
-    // "this.didOpen.emit is not a function". `preConfirm` sí debe ir aquí
-    // porque necesita devolver un valor que controla el flujo del modal,
-    // algo que un @Output() (void) no puede hacer.
     readonly editorOptions: SweetAlertOptions = {
         width: 780,
         showCancelButton: true,
@@ -140,11 +132,15 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         preConfirm: () => this.persistJob()
     };
 
+    constructor() {
+        // AÑADIDO: Libera la pantalla si cambias de pestaña o destruyes el componente
+        this.destroyRef.onDestroy(() => {
+            if (Swal.isVisible()) Swal.close();
+        });
+    }
+
     /** Bindear en el template: <swal #editor (didOpen)="onEditorDidOpen()"> */
     onEditorDidOpen(): void {
-        // En vez de un setTimeout fijo (que puede disparar antes de que
-        // Angular haya insertado el contenido del swalPortal en el DOM),
-        // esperamos activamente a que el elemento #jobMap exista.
         this.initMapFromForm();
     }
 
@@ -163,9 +159,27 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
     private async bootstrap(): Promise<void> {
         this.isLoading.set(true);
+
+        // MODAL DE CARGA AÑADIDO
+        void Swal.fire({
+            title: 'Cargando datos del sistema...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
         try {
             await Promise.all([this.loadUsers(), this.loadMaterials()]);
             await this.loadJobs();
+
+            // Si loadJobs falló y mostró la alerta de error, no la cerramos
+            if (this.loadError()) {
+                return;
+            }
+
+            // Si todo cargó bien, cerramos el modal
+            if (Swal.isVisible()) {
+                Swal.close();
+            }
         } finally {
             this.isLoading.set(false);
         }
@@ -180,6 +194,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.jobs.set(jobs);
         } catch (error: unknown) {
             this.loadError.set(true);
+            
+            // Esto sobrescribirá automáticamente el modal de "Cargando datos..."
             await Swal.fire({
                 icon: 'error',
                 title: 'No se pudieron cargar los trabajos',
@@ -459,10 +475,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 this.jobsService.getById(jobId).pipe(takeUntilDestroyed(this.destroyRef))
             );
 
-            // Esperamos a que la animación de cierre del "Cargando datos..."
-            // termine antes de abrir el editor, para no competir por el
-            // hilo principal justo cuando Angular necesita insertar el
-            // contenido del swalPortal (incluido #jobMap).
             await Swal.close();
 
             this.editingId.set(jobId);
@@ -574,7 +586,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.isSaving.set(true);
         const raw = this.form.getRawValue();
 
-        // Resumen materiales en descripción (como el original)
         let descripcionBase = raw.description.trim();
         if (descripcionBase.includes('[MATERIALES PRE-ASIGNADOS]:')) {
             descripcionBase = descripcionBase
@@ -698,15 +709,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
     // ---------- MAPA ----------
 
-    /**
-     * En vez de asumir con un setTimeout fijo que Angular ya insertó el
-     * contenido del swalPortal (incluido el div #jobMap) para cuando se
-     * dispara didOpen, esperamos activamente (polling con
-     * requestAnimationFrame) a que el elemento exista de verdad en el DOM.
-     * Esto elimina la condición de carrera que hacía que el mapa a veces
-     * no apareciera (contenedor de 0px porque Leaflet se inicializaba
-     * antes de que el nodo estuviera montado).
-     */
     private initMapFromForm(): void {
         this.waitForElement('.swal2-container #jobMap', 30, 50).then((host) => {
             if (!host) {
@@ -744,22 +746,19 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     private buildMap(host: HTMLElement): void {
-        // Limpiar instancias previas correctamente
         if (this.map) {
             this.map.remove();
             this.map = null;
         }
 
-        // Limpiar rastros de Leaflet en el elemento HTML
         if ((host as any)._leaflet_id) {
             (host as any)._leaflet_id = null;
         }
-        host.innerHTML = ''; // Limpiar tiles viejos
+        host.innerHTML = '';
 
         const lat = Number(this.form.controls.latitude.value) || -2.900128;
         const lng = Number(this.form.controls.longitude.value) || -79.005896;
 
-        // Inicializar mapa
         this.map = L.map(host, { scrollWheelZoom: true }).setView([lat, lng], 14);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -783,8 +782,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.reverseGeocode(e.latlng.lat, e.latlng.lng);
         });
 
-        // Forzar a Leaflet a recalcular su tamaño una vez que el modal
-        // (y su animación de apertura) terminaron de asentarse.
         requestAnimationFrame(() => {
             setTimeout(() => {
                 this.map?.invalidateSize(true);
@@ -794,13 +791,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.resetScrollInsideModal();
     }
 
-    /**
-     * Equivalente a `resetearScrollModal` del JS original: SweetAlert2
-     * puede reutilizar/recordar el scroll de un popup anterior; esto
-     * fuerza que el formulario (y el propio popup) arranquen siempre
-     * desde arriba, incluso si el mapa o los materiales aún están
-     * terminando de acomodar su layout.
-     */
     private resetScrollInsideModal(): void {
         const resetTodo = () => {
             const container = document.querySelector('.swal2-container') as HTMLElement | null;
@@ -858,14 +848,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             .catch(() => undefined);
     }
 
-    /**
-     * Equivalente exacto a `buscarDireccionEnMapa` del JS original: toma el
-     * texto escrito en "Dirección (Texto)" y lo geocodifica.
-     * - Si el texto ya es "lat,lng", usa esas coordenadas directamente.
-     * - Si no, consulta Nominatim y centra el mapa en el primer resultado.
-     * Bindear en el template sobre el input de dirección:
-     *   (blur)="searchAddressOnMap()" (keydown)="onAddressKeydown($event)"
-     */
     searchAddressOnMap(): void {
         const texto = this.form.controls.address.value.trim();
         if (!texto) return;
@@ -914,7 +896,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             .catch((err) => console.error('Error geocoding:', err));
     }
 
-    /** Bindear en el template: (keydown)="onAddressKeydown($event)" */
     onAddressKeydown(e: KeyboardEvent): void {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -946,8 +927,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             { enableHighAccuracy: true }
         );
     }
-
-    // ---------- UI helpers ----------
 
     cleanDescription(desc?: string | null): string {
         if (!desc) return 'Sin descripción';

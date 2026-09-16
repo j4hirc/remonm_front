@@ -7,28 +7,18 @@
 >
   @for (triangle of backgroundTriangles(); track triangle.id) {
     <polygon
+      class="bg-triangle"
       [attr.points]="triangle.points"
       [attr.fill]="triangle.color"
       [attr.fill-opacity]="triangle.minimumOpacity"
       [attr.stroke]="triangle.color"
       stroke-opacity="0.18"
       stroke-width="0.5"
-    >
-      <animate
-        attributeName="fill-opacity"
-        [attr.values]="
-          triangle.minimumOpacity + ';' +
-          triangle.maximumOpacity + ';' +
-          triangle.minimumOpacity
-        "
-        keyTimes="0;0.5;1"
-        calcMode="spline"
-        keySplines="0.37 0 0.63 1;0.37 0 0.63 1"
-        [attr.dur]="triangle.duration"
-        [attr.begin]="triangle.delay"
-        repeatCount="indefinite"
-      />
-    </polygon>
+      [style.--min-opacity]="triangle.minimumOpacity"
+      [style.--max-opacity]="triangle.maximumOpacity"
+      [style.animation-duration]="triangle.duration"
+      [style.animation-delay]="triangle.delay"
+    ></polygon>
   }
 </svg>
 

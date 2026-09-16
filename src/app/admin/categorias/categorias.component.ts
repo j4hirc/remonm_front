@@ -70,6 +70,13 @@ export class CategoriasComponent implements OnInit {
     preConfirm: () => this.persistCategory()
   };
 
+  constructor() {
+    // AÑADIDO: Libera la pantalla si cambias de pestaña o destruyes el componente
+    this.destroyRef.onDestroy(() => {
+      if (Swal.isVisible()) Swal.close();
+    });
+  }
+
   ngOnInit(): void {
     void this.loadCategories();
   }
@@ -82,6 +89,13 @@ export class CategoriasComponent implements OnInit {
     this.isLoading.set(true);
     this.loadError.set(false);
 
+    // MODAL DE CARGA AÑADIDO
+    void Swal.fire({
+      title: 'Cargando categorías...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
     try {
       const categories = await firstValueFrom(
         this.categoriesService.getAll().pipe(
@@ -90,6 +104,11 @@ export class CategoriasComponent implements OnInit {
       );
 
       this.categories.set(categories);
+      
+      // Cerramos el modal de carga porque tuvimos éxito
+      if (Swal.isVisible()) {
+        Swal.close();
+      }
     } catch (error: unknown) {
       if (this.destroyRef.destroyed) {
         return;
@@ -97,6 +116,8 @@ export class CategoriasComponent implements OnInit {
 
       this.loadError.set(true);
 
+      // Al lanzar un nuevo Swal.fire, SweetAlert2 sobrescribe automáticamente
+      // el modal de carga actual por el modal de error.
       await Swal.fire({
         icon: 'error',
         title: 'No se pudieron cargar las categorías',

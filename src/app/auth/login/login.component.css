@@ -340,3 +340,21 @@ button:focus-visible {
   height: 100%;
   pointer-events: none;
 }
+
+/* Animación de opacidad de los triángulos, ahora vía CSS en vez de SMIL */
+.bg-triangle {
+  animation-name: bg-triangle-pulse;
+  animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  animation-iteration-count: infinite;
+  will-change: fill-opacity;
+}
+
+@keyframes bg-triangle-pulse {
+  0%,
+  100% {
+    fill-opacity: var(--min-opacity, 0.06);
+  }
+  50% {
+    fill-opacity: var(--max-opacity, 0.14);
+  }
+}

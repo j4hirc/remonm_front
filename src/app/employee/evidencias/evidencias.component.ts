@@ -83,14 +83,40 @@ export class EvidenciasEmployeeComponent implements OnInit {
     return list;
   });
 
+  constructor() {
+    // AÑADIDO: Libera la pantalla si cambias de pestaña o destruyes el componente
+    this.destroyRef.onDestroy(() => {
+      if (Swal.isVisible()) Swal.close();
+    });
+  }
+
   ngOnInit(): void {
     void this.bootstrap();
   }
 
   private async bootstrap(): Promise<void> {
     this.isLoading.set(true);
+
+    // MODAL DE CARGA AÑADIDO
+    void Swal.fire({
+      title: 'Cargando evidencias...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
     try {
       await this.loadJobs();
+
+      // Si ocurrió un error, loadJobs ya mostró un SweetAlert de error.
+      // Retornamos para NO cerrar ese modal de error accidentalmente.
+      if (this.loadError()) {
+        return;
+      }
+
+      // Si todo fue exitoso, cerramos el modal de carga
+      if (Swal.isVisible()) {
+        Swal.close();
+      }
 
       const jobIdParam = this.route.snapshot.queryParamMap.get('jobId');
       if (jobIdParam) {

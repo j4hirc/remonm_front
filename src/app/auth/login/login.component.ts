@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   DestroyRef,
   HostListener,
@@ -13,7 +14,7 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize } from 'rxjs';
+import { finalize, Subject, debounceTime } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -34,7 +35,8 @@ interface BackgroundTriangle {
   standalone: true,
   imports: [ReactiveFormsModule],
   templateUrl: './login.component.html',
-  styleUrl: './login.component.css'
+  styleUrl: './login.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent {
   private readonly formBuilder = inject(FormBuilder);
@@ -56,6 +58,16 @@ export class LoginComponent {
     ROLE_JEFE: '/jefe/dashboard',
     ROLE_EMPLOYEE: '/employee/dashboard'
   };
+
+  private readonly resize$ = new Subject<void>();
+
+  constructor() {
+    this.resize$
+      .pipe(debounceTime(200), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.backgroundTriangles.set(this.createBackgroundTriangles());
+      });
+  }
 
   togglePassword(): void {
     this.showPassword.update((visible) => !visible);
@@ -158,15 +170,13 @@ export class LoginComponent {
     }
   }
 
-    readonly backgroundTriangles = signal<BackgroundTriangle[]>(
+  readonly backgroundTriangles = signal<BackgroundTriangle[]>(
     this.createBackgroundTriangles()
   );
 
   @HostListener('window:resize')
   onWindowResize(): void {
-    this.backgroundTriangles.set(
-      this.createBackgroundTriangles()
-    );
+    this.resize$.next();
   }
 
   private createBackgroundTriangles(): BackgroundTriangle[] {
@@ -186,8 +196,9 @@ export class LoginComponent {
       '#e8f4fb'
     ];
 
-    const columns = Math.ceil(width / 90) + 1;
-    const rows = Math.ceil(height / 78) + 1;
+    // Celdas más grandes = muchos menos triángulos y elementos animados.
+    const columns = Math.ceil(width / 220) + 1;
+    const rows = Math.ceil(height / 200) + 1;
 
     const cellWidth = width / (columns - 1);
     const cellHeight = height / (rows - 1);
@@ -201,7 +212,6 @@ export class LoginComponent {
       const opacity = 0.06 + Math.random() * 0.12;
       const speed = 0.00012 + Math.random() * 0.00025;
 
-      // Duración equivalente al original a unos 60 FPS.
       const duration = (Math.PI * 2) / (speed * 3600);
 
       triangles.push({
