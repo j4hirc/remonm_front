@@ -105,7 +105,7 @@
           <p class="card-meta">
             <strong>Jefe:</strong> {{ job.nameManager || 'Sin asignar' }}
           </p>
-          <p class="card-meta">{{ job.address || 'Sin dirección' }}</p>
+          <p class="card-meta">{{ job.address || 'Sin dirección' }} @if (job.buildingNumber) { · Edificio: {{ job.buildingNumber }} } @if (job.apartment) { · Departamento: {{ job.apartment }} }</p>
           <p class="card-desc">"{{ cleanDescription(job.description) }}"</p>
           <button
             type="button"

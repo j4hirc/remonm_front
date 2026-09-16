@@ -1,3 +1,4 @@
+import { jobLocation, escapeLocationHtml } from '../../core/utils/job-location';
 import {
     AfterViewInit,
     Component,
@@ -229,7 +230,7 @@ export class CalendarioEmployeeComponent
               </span>
               <span class="fc-emp-pay">$${Number(p.job.pay || 0).toFixed(2)}</span>
             </div>
-            <div class="fc-emp-addr"><strong>Dir:</strong> ${p.job.address || 'Sin dirección'}</div>
+            <div class="fc-emp-addr"><strong>Dir:</strong> ${escapeLocationHtml(jobLocation(p.job))}</div>
           </div>
         `
             };
@@ -322,7 +323,7 @@ export class CalendarioEmployeeComponent
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-regular fa-calendar" style="color:#00B8A9;width:20px;"></i> Fecha:</strong> ${p.fechaHermosa}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-house" style="color:#00B8A9;width:20px;"></i> Propiedad:</strong> ${job.clientName}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-phone" style="color:#00B8A9;width:20px;"></i> Teléfono:</strong> ${job.clientPhone || 'No registrado'}</p>
-          <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-location-dot" style="color:#00B8A9;width:20px;"></i> Dirección:</strong> ${job.address || 'Sin dirección'}</p>
+          <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-location-dot" style="color:#00B8A9;width:20px;"></i> Dirección:</strong> ${escapeLocationHtml(jobLocation(job))}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-lock" style="color:#00B8A9;width:20px;"></i> Código Caja Fuerte:</strong> ${job.safeDepositBoxCodes || 'No registrado'}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-sack-dollar" style="color:#00B8A9;width:20px;"></i> Pago:</strong> $${Number(job.pay || 0).toFixed(2)}</p>
           ${planoHtml}

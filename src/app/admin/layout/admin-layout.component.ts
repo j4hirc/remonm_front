@@ -61,6 +61,7 @@ export class AdminLayoutComponent {
   );
 
 readonly menuItems: readonly AdminMenuItem[] = [
+  { label: 'Clientes frecuentes', icon: 'fa-solid fa-address-book', route: '/admin/clientes-frecuentes' },
   {
     label: 'Inicio',
     icon: 'fa-solid fa-house',

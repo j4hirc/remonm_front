@@ -1,0 +1,115 @@
+<section class="clientes">
+  <header>
+    <div>
+      <h2>Clientes frecuentes</h2>
+      <p>Administra los datos y la ubicación de tus clientes.</p>
+    </div>
+    <button class="primary" type="button" (click)="open()" [disabled]="busy() || loading()">
+      + Nuevo cliente
+    </button>
+  </header>
+
+  <div class="toolbar">
+    <label>
+      Buscar cliente
+      <input type="search" [value]="search()" (input)="onSearch($event)" placeholder="Nombre, teléfono o dirección" />
+    </label>
+    <button type="button" (click)="load()" [disabled]="loading() || busy() || editorOpen()">
+      Actualizar lista
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p role="status">Cargando clientes…</p>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Teléfono</th>
+            <th>Dirección</th>
+            <th>Coordenadas</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (cliente of rows(); track cliente.id) {
+            <tr>
+              <td><strong>{{ cliente.clientName }}</strong></td>
+              <td>{{ cliente.clientPhone || 'Sin teléfono' }}</td>
+              <td>{{ cliente.address }}</td>
+              <td>{{ cliente.latitude }}, {{ cliente.longitude }}</td>
+              <td>
+                <div class="actions">
+                  <button type="button" (click)="open(cliente)" [disabled]="busy()">Editar</button>
+                  <button class="danger" type="button" (click)="remove(cliente)" [disabled]="busy()">Eliminar</button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5">No hay clientes que mostrar.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      <span>{{ filtered().length }} clientes · Página {{ page() }} de {{ pageCount() }}</span>
+      <div class="actions">
+        <button type="button" (click)="page.set(page() - 1)" [disabled]="page() <= 1">Anterior</button>
+        <button type="button" (click)="page.set(page() + 1)" [disabled]="page() >= pageCount()">Siguiente</button>
+      </div>
+    </footer>
+  }
+</section>
+
+<!-- ========== MODAL CREAR / EDITAR CLIENTE (SWEETALERT) ========== -->
+<swal #editor [swalOptions]="editorOptions" (didOpen)="onEditorDidOpen()" (willClose)="onEditorWillClose()">
+  <span *swalPortal="swalTargets.title" class="editor-title">
+    <i [class]="editingId() === null ? 'fa-solid fa-user-plus' : 'fa-solid fa-user-pen'" aria-hidden="true"></i>
+    {{ editingId() === null ? 'Nuevo Cliente' : 'Editar Cliente' }}
+  </span>
+
+  <form *swalPortal="swalTargets.content" class="job-form" [formGroup]="form" novalidate style="text-align: left;">
+    <fieldset [disabled]="busy()" style="border:none; padding:0; margin:0;">
+      <div class="grid" style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; margin-bottom: 1rem;">
+        <label style="display: flex; flex-direction: column; gap: 0.25rem;">
+          Nombre *
+          <input formControlName="clientName" autocomplete="organization" placeholder="Nombre del cliente" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;" />
+        </label>
+
+        <label style="display: flex; flex-direction: column; gap: 0.25rem;">
+          Teléfono
+          <input formControlName="clientPhone" type="tel" autocomplete="tel" placeholder="Número de contacto" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;" />
+        </label>
+      </div>
+
+      <label style="display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem;">
+        Dirección (Busca o pincha en el mapa) *
+        <input formControlName="address" autocomplete="street-address" placeholder="Dirección exacta" (blur)="searchAddressOnMap()" (keydown)="onAddressKeydown($event)" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;" />
+      </label>
+
+      <!-- Mapa -->
+      <div class="form-row map-block" style="margin-top: 1rem; margin-bottom: 1rem;">
+        <div class="map-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+            <label style="font-weight: bold;">Selecciona en el mapa</label>
+            <button type="button" class="btn-location" (click)="myLocation()" [disabled]="busy()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; background: #e0e0e0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">
+                <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> Mi Ubicación
+            </button>
+        </div>
+        <!-- ID 'clientMap' es requerido en el TS -->
+        <div id="clientMap" aria-label="Mapa de ubicación" style="height: 300px; width: 100%; border-radius: 8px; z-index: 1; border: 1px solid #ccc;"></div>
+      </div>
+
+      <div class="latlng-hidden" hidden>
+        <input type="number" formControlName="latitude" step="any" />
+        <input type="number" formControlName="longitude" step="any" />
+      </div>
+
+      <p class="hint" style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+        Los campos con * son obligatorios. El mapa llenará automáticamente las coordenadas y la dirección al hacer clic.
+      </p>
+    </fieldset>
+  </form>
+</swal>

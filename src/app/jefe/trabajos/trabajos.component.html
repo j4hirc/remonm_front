@@ -132,6 +132,8 @@
                     <td>
                         <div class="cell-wrap">
                             {{ job.address }}<br />
+                            @if (job.buildingNumber) { <small>Edificio: {{ job.buildingNumber }}</small><br /> }
+                            @if (job.apartment) { <small>Departamento: {{ job.apartment }}</small><br /> }
                             <small class="date-line">
                                 <i class="fa-regular fa-calendar" aria-hidden="true"></i>
                                 {{ formatDate(job.jobDate) }}
@@ -220,6 +222,8 @@
             <p class="card-line">
                 <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
                 {{ job.address }}
+                @if (job.buildingNumber) { <br /><span>Edificio: {{ job.buildingNumber }}</span> }
+                @if (job.apartment) { <br /><span>Departamento: {{ job.apartment }}</span> }
             </p>
             <p class="card-line date-line">
                 <i class="fa-regular fa-calendar" aria-hidden="true"></i>
@@ -281,7 +285,8 @@
 </section>
 
 <!-- ========== MODAL CREAR / EDITAR ========== -->
-<swal #editor [swalOptions]="editorOptions" (didOpen)="onEditorDidOpen()" (willClose)="onEditorWillClose()">
+<swal #editor [swalOptions]="editorOptions" [showDenyButton]="editingId() !== null" denyButtonText="Eliminar"
+    denyButtonColor="#d33" (didOpen)="onEditorDidOpen()" (willClose)="onEditorWillClose()">
     <span *swalPortal="swalTargets.title" class="editor-title">
         <i [class]="editingId() === null ? 'fa-solid fa-hammer' : 'fa-solid fa-pen'" aria-hidden="true"></i>
         {{ editingId() === null ? 'Nuevo Trabajo' : 'Editar Trabajo' }}
@@ -290,6 +295,23 @@
     <form *swalPortal="swalTargets.content" class="job-form" [formGroup]="form" (ngSubmit)="submitEditor()" novalidate>
         <!-- Cliente -->
         <h4 class="section-title">Datos del Cliente</h4>
+        <div class="form-row">
+            <label for="savedClient">Completar desde un cliente registrado</label>
+            <select id="savedClient" class="input-field" (change)="selectCliente($event)"
+                [disabled]="isSaving() || clientesLoading()">
+                <option value="">{{ clientesLoading() ? 'Cargando clientes…' : '-- Selecciona para copiar sus datos --'
+                    }}</option>
+                @for (cliente of clientes(); track cliente.id) {
+                <option [value]="cliente.id">{{ cliente.clientName }} · {{ cliente.address }}</option>
+                }
+            </select>
+            <small>Puedes completar o ajustar los datos manualmente para este trabajo.</small>
+            @if (clientesError()) {
+            <p role="alert">{{ clientesError() }}</p>
+            <button type="button" (click)="loadClientes()"
+                [disabled]="clientesLoading() || isSaving()">Reintentar</button>
+            }
+        </div>
         <div class="form-grid">
             <div class="form-row">
                 <label for="jobClientName">Nombre del Cliente</label>
@@ -310,6 +332,19 @@
             <input id="jobAddress" class="input-field" type="text" formControlName="address"
                 placeholder="Dirección exacta" [readOnly]="isSaving()" (blur)="searchAddressOnMap()"
                 (keydown)="onAddressKeydown($event)" />
+        </div>
+
+        <div class="form-grid">
+            <div class="form-row">
+                <label for="jobBuilding">Edificio (opcional)</label>
+                <input id="jobBuilding" class="input-field" type="text" formControlName="buildingNumber"
+                    placeholder="Ej.: Edificio A" [readOnly]="isSaving()" />
+            </div>
+            <div class="form-row">
+                <label for="jobApartment">Departamento (opcional)</label>
+                <input id="jobApartment" class="input-field" type="text" formControlName="apartment"
+                    placeholder="Ej.: 204-B" [readOnly]="isSaving()" />
+            </div>
         </div>
 
         <div class="form-row map-block">

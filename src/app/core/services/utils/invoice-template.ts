@@ -1,3 +1,4 @@
+import { jobLocation, escapeLocationHtml } from '../../utils/job-location';
 import { Job } from "../../models/job.model";
 
 
@@ -45,7 +46,7 @@ export function buildInvoiceElement(job: Job): HTMLElement {
       <h3 style="margin:0 0 15px;color:#0f4c81;font-size:16px;">Datos del Cliente</h3>
       <p style="margin:6px 0;"><strong>Cliente:</strong> ${job.clientName}</p>
       <p style="margin:6px 0;"><strong>Teléfono:</strong> ${job.clientPhone || 'No registrado'}</p>
-      <p style="margin:6px 0;"><strong>Dirección:</strong> ${job.address}</p>
+      <p style="margin:6px 0;"><strong>Dirección:</strong> ${escapeLocationHtml(jobLocation(job))}</p>
     </div>
     <div style="background:#f8fafc;padding:20px;border-radius:10px;margin-bottom:25px;">
       <h3 style="margin:0 0 15px;color:#0f4c81;font-size:16px;">Asignación</h3>
