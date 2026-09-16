@@ -1,3 +1,5 @@
+import { Cliente } from '../../core/models/cliente.model';
+import { ClientesService } from '../../core/services/clientes.service';
 import {
     Component,
     DestroyRef,
@@ -58,6 +60,46 @@ interface NecessaryMaterialRow {
     styleUrl: './trabajos.component.css'
 })
 export class TrabajosComponent implements OnInit, OnDestroy {
+    private readonly clientesService = inject(ClientesService);
+    readonly clientes = signal<Cliente[]>([]);
+    readonly clientesLoading = signal(false);
+    readonly clientesError = signal('');
+
+    async loadClientes(): Promise<void> {
+        if (this.clientesLoading()) return;
+        this.clientesLoading.set(true);
+        this.clientesError.set('');
+        try {
+            this.clientes.set(await firstValueFrom(
+                this.clientesService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
+            ));
+        } catch {
+            if (!this.destroyRef.destroyed) {
+                this.clientesError.set('No se pudieron cargar los clientes. Puedes reintentar o ingresar sus datos manualmente.');
+            }
+        } finally { this.clientesLoading.set(false); }
+    }
+
+    selectCliente(event: Event): void {
+        const select = event.target as HTMLSelectElement;
+        const cliente = this.clientes().find(c => c.id === Number(select.value));
+        if (!cliente || this.isSaving()) return;
+        this.form.patchValue({
+            clientName: cliente.clientName,
+            clientPhone: cliente.clientPhone ?? '',
+            address: cliente.address,
+            latitude: cliente.latitude,
+            longitude: cliente.longitude
+        });
+        this.form.markAsDirty();
+        if (Number.isFinite(cliente.latitude) && Number.isFinite(cliente.longitude)) {
+            this.marker?.setLatLng([cliente.latitude, cliente.longitude]);
+            this.map?.setView([cliente.latitude, cliente.longitude], 16);
+        }
+        // Solo copia los datos; el backend no vincula el trabajo a un clienteId.
+        select.value = '';
+    }
+
     private readonly jobsService = inject(JobsService);
     private readonly usersService = inject(UsersService);
     private readonly materialsService = inject(MaterialsService);
@@ -105,6 +147,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         clientName: ['', Validators.required],
         clientPhone: ['', Validators.required],
         address: ['', Validators.required],
+        buildingNumber: [''],
+        apartment: [''],
         latitude: [0, Validators.required],
         longitude: [0, Validators.required],
         employeeId: ['', Validators.required],
@@ -141,6 +185,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
     /** Bindear en el template: <swal #editor (didOpen)="onEditorDidOpen()"> */
     onEditorDidOpen(): void {
+        void this.loadClientes();
         this.initMapFromForm();
     }
 
@@ -431,6 +476,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             clientName: '',
             clientPhone: '',
             address: '',
+            buildingNumber: '',
+            apartment: '',
             latitude: -2.900128,
             longitude: -79.005896,
             employeeId: '',
@@ -494,6 +541,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 clientName: data.clientName || '',
                 clientPhone: data.clientPhone || '',
                 address: data.address || '',
+                buildingNumber: data.buildingNumber ?? '',
+                apartment: data.apartment ?? '',
                 latitude: data.latitude,
                 longitude: data.longitude,
                 employeeId: String(data.employeeId || ''),
@@ -530,6 +579,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
             this.editorOpen.set(true);
             const result = await this.editor().fire();
+            
             if (result.isConfirmed && !this.destroyRef.destroyed) {
                 await Swal.fire({
                     icon: 'success',
@@ -537,6 +587,12 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                     text: 'Trabajo actualizado.',
                     confirmButtonColor: '#12CFF4'
                 });
+            } else if (result.isDenied && !this.destroyRef.destroyed) {
+                // Si presiona el botón "Eliminar", buscamos el trabajo y lanzamos la alerta de borrado
+                const jobToDel = this.jobs().find(j => j.jobId === jobId);
+                if (jobToDel) {
+                    await this.deleteJob(jobToDel);
+                }
             }
         } catch (error: unknown) {
             Swal.close();
@@ -620,6 +676,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             clientPhone: raw.clientPhone.trim(),
             description,
             address: raw.address.trim(),
+            buildingNumber: raw.buildingNumber.trim() || null,
+            apartment: raw.apartment.trim() || null,
             latitude: Number(raw.latitude),
             longitude: Number(raw.longitude),
             safeDepositBoxCodes: raw.safeDepositBoxCodes.trim() || null,
@@ -756,8 +814,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         }
         host.innerHTML = '';
 
-        const lat = Number(this.form.controls.latitude.value) || -2.900128;
-        const lng = Number(this.form.controls.longitude.value) || -79.005896;
+        const lat = this.form.controls.latitude.value ?? -2.900128;
+        const lng = this.form.controls.longitude.value ?? -79.005896;
 
         this.map = L.map(host, { scrollWheelZoom: true }).setView([lat, lng], 14);
 

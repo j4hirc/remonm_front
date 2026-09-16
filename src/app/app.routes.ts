@@ -25,6 +25,12 @@ export const routes: Routes = [
             ),
         children: [
             {
+                path: 'clientes-frecuentes',
+                canActivate: [roleGuard],
+                data: { role: 'ROLE_ADMIN', heading: 'Clientes frecuentes' },
+                loadComponent: () => import('./admin/clientes-frecuentes/clientes-frecuentes.component').then(c => c.ClientesFrecuentesAdminComponent)
+            },
+            {
                 path: 'dashboard',
                 canActivate: [roleGuard],
                 data: { role: 'ROLE_ADMIN', heading: 'Resumen del Sistema' },
@@ -108,6 +114,12 @@ export const routes: Routes = [
                 (c) => c.JefeLayoutComponent
             ),
         children: [
+            {
+                path: 'clientes-frecuentes',
+                canActivate: [roleGuard],
+                data: { role: 'ROLE_JEFE', heading: 'Clientes frecuentes' },
+                loadComponent: () => import('./jefe/clientes-frecuentes/clientes-frecuentes.component').then(c => c.ClientesFrecuentesJefeComponent)
+            },
             {
                 path: 'dashboard',
                 canActivate: [roleGuard],

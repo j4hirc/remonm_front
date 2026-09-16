@@ -1,3 +1,4 @@
+import { jobLocation, escapeLocationHtml } from '../../core/utils/job-location';
 import {
     Component,
     OnInit,
@@ -175,7 +176,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
                 backgroundColor: bgColor,
                 borderColor: bgColor,
                 extendedProps: {
-                    address: job.address || '',
+                    address: jobLocation(job),
                     description: this.cleanDescription(job.description),
                     status: job.status,
                     pay: job.pay,
@@ -223,7 +224,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
           </div>
           <div class="fc-list-meta">
             <span><i class="fa-solid fa-user-tie"></i> ${p.employee}</span>
-            <span><i class="fa-solid fa-location-dot"></i> ${p.address}</span>
+            <span><i class="fa-solid fa-location-dot"></i> ${escapeLocationHtml(p.address)}</span>
           </div>
           <div class="fc-list-desc" style="border-left-color:${arg.event.backgroundColor}">
             "${p.description}"
@@ -285,7 +286,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
               <strong><i class="fa-solid fa-phone" style="color:#198754;width:20px;"></i> Teléfono:</strong> ${p.clientPhone || '-'}
             </p>
             <p style="margin:8px 0;font-size:14px;color:#444;">
-              <strong><i class="fa-solid fa-location-dot" style="color:#198754;width:20px;"></i> Dirección:</strong> ${p.address || '-'}
+              <strong><i class="fa-solid fa-location-dot" style="color:#198754;width:20px;"></i> Dirección:</strong> ${escapeLocationHtml(p.address || '-')}
             </p>
             <p style="margin:8px 0;font-size:14px;color:#444;">
               <strong><i class="fa-solid fa-user-tie" style="color:#198754;width:20px;"></i> Empleado:</strong> ${p.employee}

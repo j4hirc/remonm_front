@@ -4,7 +4,7 @@
   <section class="reporte-box">
     <header class="reporte-header">
       <h2>Reporte — {{ j.clientName }}</h2>
-      <p>{{ j.address }}</p>
+      <p>{{ j.address }} @if (j.buildingNumber) { · Edificio: {{ j.buildingNumber }} } @if (j.apartment) { · Departamento: {{ j.apartment }} }</p>
     </header>
 
     <label class="field">

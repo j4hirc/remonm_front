@@ -1,3 +1,4 @@
+import { jobLocation } from '../../core/utils/job-location';
 import {
   AfterViewInit,
   Component,
@@ -338,7 +339,7 @@ export class ReporteEmployeeComponent
     (document.getElementById('pdfJobName') as HTMLElement).textContent =
       job.clientName || 'Sin asignar';
     (document.getElementById('pdfAddress') as HTMLElement).textContent =
-      job.address || 'Sin dirección';
+      jobLocation(job);
     (document.getElementById('pdfClientPhone') as HTMLElement).textContent =
       job.clientPhone || 'No registrado';
     (document.getElementById('pdfEmployee') as HTMLElement).textContent =

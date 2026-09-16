@@ -32,6 +32,8 @@ export interface Job {
   clientPhone: string;
   description?: string | null;
   address: string;
+  buildingNumber?: string | null;
+  apartment?: string | null;
   latitude: number;
   longitude: number;
   safeDepositBoxCodes?: string | null;
@@ -64,6 +66,8 @@ export interface JobRequest {
   clientPhone: string;
   description?: string | null;
   address: string;
+  buildingNumber?: string | null;
+  apartment?: string | null;
   latitude: number;
   longitude: number;
   safeDepositBoxCodes?: string | null;
