@@ -56,7 +56,8 @@ export class LoginComponent {
   private readonly dashboardRoutes: Record<AppRole, string> = {
     ROLE_ADMIN: '/admin/dashboard',
     ROLE_JEFE: '/jefe/dashboard',
-    ROLE_EMPLOYEE: '/employee/dashboard'
+    ROLE_EMPLOYEE: '/employee/dashboard',
+    ROLE_BODEGUERO: '/bodeguero/bodega'
   };
 
   private readonly resize$ = new Subject<void>();

@@ -83,3 +83,5 @@
   text-decoration: underline;
   cursor: pointer;
 }
+.role-button.bodeguero { background: #0f766e; color: white; }
+.role-button.bodeguero:hover { background: #115e59; }

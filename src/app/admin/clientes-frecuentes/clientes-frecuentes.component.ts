@@ -21,7 +21,7 @@ export class ClientesFrecuentesAdminComponent implements OnInit, OnDestroy {
   private readonly api = inject(ClientesService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
-  
+
   // Elementos de SweetAlert
   readonly swalTargets = inject(SwalPortalTargets);
   private readonly editor = viewChild.required<SwalComponent>('editor');
@@ -38,16 +38,25 @@ export class ClientesFrecuentesAdminComponent implements OnInit, OnDestroy {
   readonly search = signal('');
   readonly page = signal(1);
   readonly pageSize = 10;
-  
+
   readonly filtered = computed(() => {
     const text = this.search().trim().toLocaleLowerCase();
-    return this.clientes().filter(c =>
+
+    // 1. Filtramos por nombre, teléfono o dirección
+    const listaFiltrada = this.clientes().filter(c =>
       `${c.clientName} ${c.clientPhone ?? ''} ${c.address}`.toLocaleLowerCase().includes(text)
     );
+
+    // 2. Ordenamos alfabéticamente por el nombre del cliente
+    return listaFiltrada.sort((a, b) => {
+      const nombreA = a.clientName || '';
+      const nombreB = b.clientName || '';
+      return nombreA.localeCompare(nombreB, 'es'); // 'es' para que respete acentos y ñ
+    });
   });
   readonly pageCount = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize)));
   readonly rows = computed(() => this.filtered().slice((this.page() - 1) * this.pageSize, this.page() * this.pageSize));
-  
+
   readonly form = this.fb.group({
     clientName: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(/\S/)]),
     clientPhone: this.fb.nonNullable.control(''),
@@ -231,13 +240,13 @@ export class ClientesFrecuentesAdminComponent implements OnInit, OnDestroy {
     if (this.busy()) return;
     this.editingId.set(cliente?.id ?? null);
     this.form.reset({
-      clientName: cliente?.clientName ?? '', 
+      clientName: cliente?.clientName ?? '',
       clientPhone: cliente?.clientPhone ?? '',
-      address: cliente?.address ?? '', 
+      address: cliente?.address ?? '',
       latitude: cliente?.latitude ?? -2.900128,
       longitude: cliente?.longitude ?? -79.005896
     });
-    
+
     this.editorOpen.set(true);
     try {
       const result = await this.editor().fire();

@@ -1,6 +1,7 @@
 import { jobLocation, escapeLocationHtml } from '../../core/utils/job-location';
 import {
     Component,
+    DestroyRef,
     OnInit,
     OnDestroy,
     inject,
@@ -11,7 +12,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 
@@ -28,16 +29,17 @@ import { Job } from '../../core/models/job.model';
 import { User } from '../../core/models/user.model';
 
 @Component({
-    selector: 'app-jefe-calendario',
+    selector: 'app-bodeguero-calendario',
     standalone: true,
     imports: [CommonModule, FormsModule],
     templateUrl: './calendario.component.html',
     styleUrl: './calendario.component.css'
 })
-export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy {
+export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly jobsService = inject(JobsService);
     private readonly usersService = inject(UsersService);
-    private readonly router = inject(Router);
+    private readonly destroyRef = inject(DestroyRef);
+    readonly error = signal('');
 
     private readonly calendarEl =
         viewChild.required<ElementRef<HTMLDivElement>>('calendar');
@@ -65,9 +67,11 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
 
     ngOnDestroy(): void {
         this.calendar?.destroy();
+        Swal.close();
     }
 
-    private loadData(): void {
+    loadData(): void {
+        this.error.set('');
         this.loading.set(true);
 
         void Swal.fire({
@@ -79,7 +83,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
         forkJoin({
             jobs: this.jobsService.getAll(),
             users: this.usersService.getAll()
-        }).subscribe({
+        }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
             next: ({ jobs, users }) => {
                 this.allJobs = jobs;
 
@@ -118,6 +122,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
             },
             error: () => {
                 this.loading.set(false);
+                this.error.set('No se pudieron cargar los datos del calendario.');
                 Swal.close();
                 void Swal.fire(
                     'Error',
@@ -177,7 +182,8 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     /** Color del subcontratista (fallback gris) */
     private employeeColor(employeeId?: number | null): string {
         if (!employeeId) return '#CCCCCC';
-        return this.colorByEmployeeId[employeeId] || '#CCCCCC';
+        const color = this.colorByEmployeeId[employeeId] || '';
+        return /^#[0-9a-f]{3,8}$/i.test(color) ? color : '#CCCCCC';
     }
 
     /** Icono + clase según estado (con animación) */
@@ -219,6 +225,12 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     /** Contenido visual del evento con iconos animados */
+    private escapeHtml(value: unknown): string {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]!));
+    }
+
     private eventContent = (arg: EventContentArg) => {
         const p = arg.event.extendedProps as {
             status: string;
@@ -244,16 +256,16 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
           <div class="fc-list-top">
             <span class="fc-list-title">
               <i class="fa-solid ${icon}" style="color:${arg.event.backgroundColor}"></i>
-              ${arg.event.title}
+              ${this.escapeHtml(arg.event.title)}
             </span>
             <span class="fc-list-pay">$${Number(p.pay || 0).toFixed(2)}</span>
           </div>
           <div class="fc-list-meta">
-            <span><i class="fa-solid fa-user-tie"></i> ${p.employee}</span>
+            <span><i class="fa-solid fa-user-tie"></i> ${this.escapeHtml(p.employee)}</span>
             <span><i class="fa-solid fa-location-dot"></i> ${escapeLocationHtml(p.address)}</span>
           </div>
           <div class="fc-list-desc" style="border-left-color:${arg.event.backgroundColor}">
-            "${p.description}"
+            "${this.escapeHtml(p.description)}"
           </div>
         </div>
       `
@@ -263,9 +275,9 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
         // Vista MES / SEMANA: compacto con icono animado
         return {
             html: `
-      <div class="fc-day-event-custom" title="${arg.event.title} · ${p.employee}">
+      <div class="fc-day-event-custom" title="${this.escapeHtml(arg.event.title)} · ${this.escapeHtml(p.employee)}">
         <i class="fa-solid ${icon}"></i>
-        <span>${arg.event.title}</span>
+        <span>${this.escapeHtml(arg.event.title)}</span>
       </div>
     `
         };
@@ -280,7 +292,6 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
             description: string;
             clientPhone: string;
         };
-        const jobId = info.event.id;
 
         let estadoTxt = 'Pendiente';
         let badgeColor = '#ff9800';
@@ -296,7 +307,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
         }
 
         void Swal.fire({
-            title: `<h3 style="color:#0f4c81;margin:0;font-weight:700;">${info.event.title}</h3>`,
+            title: `<h3 style="color:#0f4c81;margin:0;font-weight:700;">${this.escapeHtml(info.event.title)}</h3>`,
             html: `
         <div style="text-align:left;margin-top:15px;font-family:'Poppins',sans-serif;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding-bottom:12px;border-bottom:1px dashed #ccc;">
@@ -309,13 +320,13 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
           </div>
           <div style="padding-left:5px;">
             <p style="margin:8px 0;font-size:14px;color:#444;">
-              <strong><i class="fa-solid fa-phone" style="color:#198754;width:20px;"></i> Teléfono:</strong> ${p.clientPhone || '-'}
+              <strong><i class="fa-solid fa-phone" style="color:#198754;width:20px;"></i> Teléfono:</strong> ${this.escapeHtml(p.clientPhone || '-')}
             </p>
             <p style="margin:8px 0;font-size:14px;color:#444;">
               <strong><i class="fa-solid fa-location-dot" style="color:#198754;width:20px;"></i> Dirección:</strong> ${escapeLocationHtml(p.address || '-')}
             </p>
             <p style="margin:8px 0;font-size:14px;color:#444;">
-              <strong><i class="fa-solid fa-user-tie" style="color:#198754;width:20px;"></i> Empleado:</strong> ${p.employee}
+              <strong><i class="fa-solid fa-user-tie" style="color:#198754;width:20px;"></i> Empleado:</strong> ${this.escapeHtml(p.employee)}
             </p>
           </div>
           <div style="margin-top:20px;padding:15px;background:#F9FAFC;border-radius:8px;border:1px solid #E0E5F2;">
@@ -323,31 +334,16 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
               <i class="fa-solid fa-align-left"></i> Descripción de la obra:
             </strong>
             <p style="margin:8px 0 0;font-size:13px;color:#555;font-style:italic;line-height:1.5;">
-              "${p.description}"
+              "${this.escapeHtml(p.description)}"
             </p>
           </div>
         </div>
       `,
-            showCancelButton: true,
-            showDenyButton: true,
-            confirmButtonColor: '#12CFF4',
-            denyButtonColor: '#198754',
-            cancelButtonColor: '#2E3238',
-            confirmButtonText:
-                '<i class="fa-solid fa-pen-to-square"></i> Abrir Trabajo',
-            denyButtonText: '<i class="fa-solid fa-camera"></i> Ver Evidencias',
-            cancelButtonText: 'Cerrar',
-            width: '450px'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                void this.router.navigate(['/jefe/trabajos'], {
-                    queryParams: { abrir: jobId }
-                });
-            } else if (result.isDenied) {
-                void this.router.navigate(['/jefe/evidencias'], {
-                    queryParams: { jobId }
-                });
-            }
+            showCancelButton: false,
+            showDenyButton: false,
+            confirmButtonColor: '#0f4c81',
+            confirmButtonText: 'Cerrar',
+            width: '500px'
         });
     };
 

@@ -8,7 +8,8 @@ function isAppRole(value: unknown): value is AppRole {
   return (
     value === 'ROLE_ADMIN' ||
     value === 'ROLE_JEFE' ||
-    value === 'ROLE_EMPLOYEE'
+    value === 'ROLE_EMPLOYEE' ||
+    value === 'ROLE_BODEGUERO'
   );
 }
 

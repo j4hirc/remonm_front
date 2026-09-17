@@ -25,16 +25,17 @@
   min-width: 0;
 }
 
+/* Toolbar */
 :host ::ng-deep .fc .fc-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   align-items: center;
 }
 
 :host ::ng-deep .fc .fc-toolbar-title {
-  font-size: 1.25rem !important;
+  font-size: 1.4rem !important;
   color: #0f2d4a !important;
   font-weight: 800 !important;
   text-transform: capitalize;
@@ -46,8 +47,8 @@
   border-radius: 8px !important;
   font-weight: 600 !important;
   text-transform: capitalize !important;
-  font-size: 0.8rem !important;
-  padding: 6px 10px !important;
+  font-size: 0.9rem !important;
+  padding: 8px 14px !important;
 }
 
 :host ::ng-deep .fc .fc-button-primary:hover,
@@ -62,7 +63,7 @@
   color: #2e3238 !important;
   text-decoration: none !important;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 
 :host ::ng-deep .fc-theme-standard td,
@@ -70,9 +71,15 @@
   border-color: #e2e8f0 !important;
 }
 
+/* Celdas más altas */
+:host ::ng-deep .fc-daygrid-day-frame {
+  min-height: 110px;
+}
+
+/* Eventos mes / semana */
 :host ::ng-deep .fc-daygrid-event {
-  border-radius: 6px !important;
-  margin: 1px 2px !important;
+  border-radius: 8px !important;
+  margin: 2px 3px !important;
   border: none !important;
   padding: 0 !important;
 }
@@ -80,51 +87,95 @@
 .fc-emp-day {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
-  font-size: 0.72rem;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 0.85rem;          /* ← más grande */
   font-weight: 600;
   color: #fff;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+.fc-emp-day i {
+  flex-shrink: 0;
+  font-size: 0.85rem;          /* ← icono más grande */
 }
 
 .prio-badge {
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 3px;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
   color: #fff;
   margin-left: 4px;
+  font-weight: 700;
+  flex-shrink: 0;
 }
+
 .prio-badge.alta {
   background: #ef4444;
 }
+
 .prio-badge.media {
   background: #f59e0b;
 }
 
+/* "+N más" legible */
+:host ::ng-deep .fc-daygrid-more-link {
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  color: #0f4c81 !important;
+  padding: 3px 6px !important;
+}
+
+/* Vista Lista (Agenda) */
 .fc-emp-list-top {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
 }
+
 .fc-emp-title {
   font-weight: 700;
   color: #111c44;
-  font-size: 1.05rem;
+  font-size: 1.1rem;           /* ← más grande */
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.fc-emp-title i {
+  font-size: 1rem;
+}
+
 .fc-emp-pay {
   font-weight: 700;
   color: #f59e0b;
-}
-.fc-emp-addr {
-  font-size: 0.9rem;
-  color: #555;
-  margin-top: 4px;
+  font-size: 1.1rem;
 }
 
+.fc-emp-addr {
+  font-size: 0.95rem;
+  color: #555;
+  margin-top: 6px;
+}
+
+/* Hover eventos */
+:host ::ng-deep .fc-event {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+:host ::ng-deep .fc-event:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(15, 45, 74, 0.18);
+  z-index: 5 !important;
+}
+
+/* ---------- MÓVIL ---------- */
 @media (max-width: 768px) {
   .calendario-wrapper {
     padding: 12px 10px;
@@ -134,6 +185,7 @@
   :host ::ng-deep .fc .fc-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
   }
 
   :host ::ng-deep .fc .fc-toolbar-chunk {
@@ -144,17 +196,60 @@
   }
 
   :host ::ng-deep .fc .fc-toolbar-title {
-    font-size: 1.05rem !important;
+    font-size: 1.15rem !important;
     text-align: center;
     width: 100%;
   }
 
   :host ::ng-deep .fc .fc-button-primary {
     min-height: 40px;
-    font-size: 0.75rem !important;
+    font-size: 0.8rem !important;
+    padding: 8px 12px !important;
   }
 
   :host ::ng-deep .fc-daygrid-day-frame {
-    min-height: 72px;
+    min-height: 85px;
+  }
+
+  .fc-emp-day {
+    font-size: 0.75rem;
+    padding: 4px 6px;
+  }
+
+  .fc-emp-day i {
+    font-size: 0.75rem;
+  }
+
+  .prio-badge {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+
+  :host ::ng-deep .fc-col-header-cell-cushion {
+    font-size: 0.8rem !important;
+  }
+
+  :host ::ng-deep .fc-daygrid-day-number {
+    font-size: 0.85rem !important;
+    padding: 4px !important;
+  }
+
+  .fc-emp-title {
+    font-size: 1rem;
+  }
+
+  .fc-emp-pay {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .fc-emp-day {
+    font-size: 0.7rem;
+    padding: 3px 5px;
+  }
+
+  :host ::ng-deep .fc-daygrid-event {
+    margin: 1px 2px !important;
   }
 }

@@ -1,13 +1,13 @@
 <div class="calendario-wrapper">
     <div class="filter-bar">
         <label for="filterEmployee">Filtrar por subcontratista:</label>
-        <select id="filterEmployee" [(ngModel)]="filterEmployeeId" (ngModelChange)="onFilterChange()">
+        <select id="filterEmployee" [disabled]="loading()" [(ngModel)]="filterEmployeeId" (ngModelChange)="onFilterChange()">
             <option value="">Todos los Subcontratistas</option>
             @for (emp of employees(); track emp.id) {
             <option [value]="emp.id">{{ emp.name }}</option>
             }
         </select>
-        <button type="button" class="btn-reset" (click)="resetFilter()">
+        <button type="button" class="btn-reset" (click)="resetFilter()" [disabled]="loading()">
             Limpiar filtro
         </button>
     </div>
@@ -35,5 +35,11 @@
     <p class="loading-msg">Cargando cronograma...</p>
     }
 
+    @if (error()) {
+    <div class="loading-msg" role="alert">
+        <p>{{ error() }}</p>
+        <button type="button" class="btn-reset" (click)="loadData()" [disabled]="loading()">Reintentar</button>
+    </div>
+    }
     <div #calendar id="calendar"></div>
 </div>

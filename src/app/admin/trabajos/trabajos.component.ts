@@ -8,6 +8,7 @@ import {
     OnDestroy,
     OnInit,
     signal,
+    computed, // Añadido computed
     viewChild
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -43,7 +44,7 @@ interface NecessaryMaterialRow {
     name: string;
     quantity: number;
     unit: string;
-    price: number;
+    price: number; // Precio unitario: SIEMPRE de solo lectura, nunca editable por el usuario.
 }
 
 @Component({
@@ -80,10 +81,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         } finally { this.clientesLoading.set(false); }
     }
 
-    selectCliente(event: Event): void {
-        const select = event.target as HTMLSelectElement;
-        const cliente = this.clientes().find(c => c.id === Number(select.value));
-        if (!cliente || this.isSaving()) return;
+    seleccionarClienteManual(cliente: Cliente): void {
+        if (this.isSaving()) return;
+
         this.form.patchValue({
             clientName: cliente.clientName,
             clientPhone: cliente.clientPhone ?? '',
@@ -92,12 +92,21 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             longitude: cliente.longitude
         });
         this.form.markAsDirty();
+
         if (Number.isFinite(cliente.latitude) && Number.isFinite(cliente.longitude)) {
             this.marker?.setLatLng([cliente.latitude, cliente.longitude]);
             this.map?.setView([cliente.latitude, cliente.longitude], 16);
         }
-        // Solo copia los datos; el backend no vincula el trabajo a un clienteId.
-        select.value = '';
+        
+        this.clientSearchModal.set('');
+        this.showClientList.set(false); // <--- Ocultamos la lista al seleccionar
+    }
+
+    // NUEVA FUNCIÓN para ocultar la lista al salir del buscador
+    hideClientList(): void {
+        setTimeout(() => {
+            this.showClientList.set(false);
+        }, 200);
     }
 
     private readonly jobsService = inject(JobsService);
@@ -124,13 +133,26 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     readonly loadError = signal(false);
     readonly editingId = signal<number | null>(null);
 
-    // Filtros
+    // Filtros de la tabla principal
     readonly searchText = signal('');
     readonly statusFilter = signal('ALL');
     readonly priorityFilter = signal('');
     readonly dateFrom = signal('');
     readonly dateTo = signal('');
     readonly employeeFilter = signal('');
+
+    // Búsqueda de clientes dentro del modal (NUEVO)
+    readonly clientSearchModal = signal('');
+    readonly showClientList = signal(false);
+    readonly filteredClientesModal = computed(() => {
+        const term = this.clientSearchModal().trim().toLowerCase();
+        if (!term) return this.clientes();
+        return this.clientes().filter(c => 
+            c.clientName.toLowerCase().includes(term) || 
+            (c.clientPhone || '').toLowerCase().includes(term) ||
+            c.address.toLowerCase().includes(term)
+        );
+    });
 
     // Materiales dentro del modal
     readonly materialSearch = signal('');
@@ -145,7 +167,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
     readonly form = this.formBuilder.nonNullable.group({
         clientName: ['', Validators.required],
-        clientPhone: ['', Validators.required],
+        clientPhone: [''],
         address: ['', Validators.required],
         buildingNumber: [''],
         apartment: [''],
@@ -162,7 +184,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         status: ['PENDING', Validators.required]
     });
 
-    readonly editorOptions: SweetAlertOptions = {
+    // IMPORTANTE: Quitamos el `readonly` para poder cambiar las opciones al vuelo
+    editorOptions: SweetAlertOptions = {
         width: 780,
         showCancelButton: true,
         showCloseButton: true,
@@ -177,7 +200,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     };
 
     constructor() {
-        // AÑADIDO: Libera la pantalla si cambias de pestaña o destruyes el componente
+        // Libera la pantalla si cambias de pestaña o destruyes el componente
         this.destroyRef.onDestroy(() => {
             if (Swal.isVisible()) Swal.close();
         });
@@ -239,7 +262,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.jobs.set(jobs);
         } catch (error: unknown) {
             this.loadError.set(true);
-            
+
             // Esto sobrescribirá automáticamente el modal de "Cargando datos..."
             await Swal.fire({
                 icon: 'error',
@@ -294,7 +317,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     // ---------- FILTROS LISTA ----------
-
     readonly filteredJobs = () => {
         const text = this.searchText().trim().toLowerCase();
         const status = this.statusFilter();
@@ -304,11 +326,13 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         const emp = this.employeeFilter().trim().toLowerCase();
 
         let list = [...this.jobs()].filter((job) => {
+            // CAMBIO: Se agregó la validación para quickbooksInvoice
             const coincideTexto =
                 (job.clientName || '').toLowerCase().includes(text) ||
                 (job.description || '').toLowerCase().includes(text) ||
                 (job.nameEmployee || '').toLowerCase().includes(text) ||
-                (job.nameManager || '').toLowerCase().includes(text);
+                (job.nameManager || '').toLowerCase().includes(text) ||
+                (job.quickbooksInvoice || '').toLowerCase().includes(text); // ¡Nuevo!
 
             const coincideEstado = status === 'ALL' || job.status === status;
 
@@ -340,12 +364,11 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             );
         });
 
-        // Más nuevo arriba
+        // Ordenado alfabéticamente por el nombre del cliente (A - Z)
         list.sort((a, b) => {
-            const timeB = this.jobTime(b.jobDate);
-            const timeA = this.jobTime(a.jobDate);
-            if (timeB !== timeA) return timeB - timeA;
-            return b.jobId - a.jobId;
+            const nombreA = (a.clientName || '').toLowerCase();
+            const nombreB = (b.clientName || '').toLowerCase();
+            return nombreA.localeCompare(nombreB, 'es');
         });
 
         return list;
@@ -422,6 +445,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 name: mat.name,
                 quantity: qty,
                 unit: mat.unit || '',
+                // El precio SIEMPRE viene del inventario, nunca lo escribe el usuario.
                 price: mat.price || 0
             }
         ]);
@@ -438,10 +462,15 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.recalcPay();
     }
 
+    /**
+     * Solo permite editar la CANTIDAD. El precio unitario nunca se toca
+     * aquí: siempre queda tal cual vino del inventario (mat.price).
+     */
     updateNecessaryQty(materialId: number, qty: number): void {
+        const cantidadSegura = Number.isFinite(qty) && qty > 0 ? qty : 1;
         this.necessaryMaterials.update((rows) =>
             rows.map((r) =>
-                r.materialId === materialId ? { ...r, quantity: qty } : r
+                r.materialId === materialId ? { ...r, quantity: cantidadSegura } : r
             )
         );
         this.recalcPay();
@@ -465,6 +494,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     async openCreate(): Promise<void> {
         if (this.isLoading() || this.editorOpen()) return;
         this.editingId.set(null);
+        this.clientSearchModal.set(''); // Limpia el buscador de clientes
         this.necessaryMaterials.set([]);
         this.selectedMaterialIds.set(new Set());
         this.blueprintFiles.set([]);
@@ -491,9 +521,20 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             status: 'PENDING'
         });
 
+        // Al crear, nunca debe mostrarse el botón "Eliminar".
+        const editorCmp = this.editor();
+        editorCmp.swalOptions = {
+            ...this.editorOptions,
+            showDenyButton: false
+        };
+        this.editorOptions = editorCmp.swalOptions;
+
         this.editorOpen.set(true);
         try {
-            const result = await this.editor().fire();
+            const result = await editorCmp.fire();
+            // El modal ya está cerrado físicamente en este punto.
+            this.editorOpen.set(false);
+
             if (result.isConfirmed && !this.destroyRef.destroyed) {
                 await Swal.fire({
                     icon: 'success',
@@ -525,6 +566,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             await Swal.close();
 
             this.editingId.set(jobId);
+            this.clientSearchModal.set(''); // Limpia el buscador de clientes
             this.necessaryMaterials.set([]);
             this.selectedMaterialIds.set(new Set());
             this.blueprintFiles.set([]);
@@ -556,7 +598,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 status: data.status || 'PENDING'
             });
 
-            // Materiales asignados
+            // Materiales asignados.
             const mats = data.materials || [];
             const set = new Set<number>();
             mats.forEach((m: any) => {
@@ -577,9 +619,22 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             });
             this.selectedMaterialIds.set(set);
 
+            // Al editar, mostramos el botón "Eliminar".
+            const editorCmp = this.editor();
+            editorCmp.swalOptions = {
+                ...this.editorOptions,
+                showDenyButton: true,
+                denyButtonText: 'Eliminar',
+                denyButtonColor: '#d33'
+            };
+            this.editorOptions = editorCmp.swalOptions;
+
             this.editorOpen.set(true);
-            const result = await this.editor().fire();
-            
+            const result = await editorCmp.fire();
+
+            // CLAVE DEL FIX: el modal de edición ya se cerró físicamente.
+            this.editorOpen.set(false);
+
             if (result.isConfirmed && !this.destroyRef.destroyed) {
                 await Swal.fire({
                     icon: 'success',
@@ -634,7 +689,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.form.markAllAsTouched();
         if (this.form.invalid) {
             Swal.showValidationMessage(
-                'Completa Cliente, Teléfono, Dirección, Empleado, Manager, Fecha y Ubicación.'
+                'Completa Cliente, Dirección, Empleado, Manager, Fecha y Ubicación.'
             );
             return false;
         }

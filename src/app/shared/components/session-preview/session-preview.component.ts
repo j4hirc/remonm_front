@@ -22,7 +22,8 @@ export class SessionPreviewComponent {
     private readonly roleLabels: Record<AppRole, string> = {
         ROLE_ADMIN: 'Administrador',
         ROLE_JEFE: 'Manager',
-        ROLE_EMPLOYEE: 'Subcontratista'
+        ROLE_EMPLOYEE: 'Subcontratista',
+        ROLE_BODEGUERO: 'Bodeguero'
     };
 
     readonly profileLabel = computed(() => {

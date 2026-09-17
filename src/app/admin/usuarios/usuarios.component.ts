@@ -27,7 +27,8 @@ import { UsersService } from '../../core/services/users.service';
 const AVAILABLE_ROLES = [
     { value: 'ROLE_ADMIN', label: 'Administrador' },
     { value: 'ROLE_JEFE', label: 'Jefe' },
-    { value: 'ROLE_EMPLOYEE', label: 'Empleado' }
+    { value: 'ROLE_EMPLOYEE', label: 'Empleado' },
+    { value: 'ROLE_BODEGUERO', label: 'Bodeguero' }
 ] as const;
 
 @Component({
@@ -72,7 +73,8 @@ export class UsuariosComponent implements OnInit {
         color: ['#12cff4', Validators.required],
         roleAdmin: [false],
         roleJefe: [false],
-        roleEmployee: [false]
+        roleEmployee: [false],
+        roleBodeguero: [false]
     });
 
     readonly editorOptions: SweetAlertOptions = {
@@ -227,7 +229,8 @@ export class UsuariosComponent implements OnInit {
             color: user?.color ?? '#12cff4',
             roleAdmin: roleNames.has('ROLE_ADMIN'),
             roleJefe: roleNames.has('ROLE_JEFE'),
-            roleEmployee: roleNames.has('ROLE_EMPLOYEE')
+            roleEmployee: roleNames.has('ROLE_EMPLOYEE'),
+        roleBodeguero: roleNames.has('ROLE_BODEGUERO')
         });
 
         this.editorOpen.set(true);
@@ -278,6 +281,7 @@ export class UsuariosComponent implements OnInit {
                 if (r.name === 'ROLE_ADMIN') return 'Admin';
                 if (r.name === 'ROLE_JEFE') return 'Jefe';
                 if (r.name === 'ROLE_EMPLOYEE') return 'Empleado';
+        if (r.name === 'ROLE_BODEGUERO') return 'Bodeguero';
                 return r.name;
             })
             .join(', ');
@@ -295,6 +299,7 @@ export class UsuariosComponent implements OnInit {
         if (raw.roleAdmin) roles.push('ROLE_ADMIN');
         if (raw.roleJefe) roles.push('ROLE_JEFE');
         if (raw.roleEmployee) roles.push('ROLE_EMPLOYEE');
+    if (raw.roleBodeguero) roles.push('ROLE_BODEGUERO');
 
         if (this.form.invalid) {
             Swal.showValidationMessage('Revisa los campos obligatorios.');

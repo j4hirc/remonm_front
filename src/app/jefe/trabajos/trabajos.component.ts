@@ -8,6 +8,7 @@ import {
     OnDestroy,
     OnInit,
     signal,
+    computed,
     viewChild
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -24,7 +25,7 @@ import {
     SwalPortalTargets
 } from '@sweetalert2/ngx-sweetalert2';
 import Swal, { SweetAlertOptions } from 'sweetalert2';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 
 import { Job, JobRequest } from '../../core/models/job.model';
@@ -34,7 +35,6 @@ import { JobsService } from '../../core/services/jobs.service';
 import { UsersService } from '../../core/services/users.service';
 import { MaterialsService } from '../../core/services/materials.service';
 import { InvoicePdfService } from '../../core/services/invoice-pdf.service';
-import { ActivatedRoute } from '@angular/router';
 
 declare const L: any;
 declare const html2pdf: any;
@@ -81,10 +81,9 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         } finally { this.clientesLoading.set(false); }
     }
 
-    selectCliente(event: Event): void {
-        const select = event.target as HTMLSelectElement;
-        const cliente = this.clientes().find(c => c.id === Number(select.value));
-        if (!cliente || this.isSaving()) return;
+    seleccionarClienteManual(cliente: Cliente): void {
+        if (this.isSaving()) return;
+
         this.form.patchValue({
             clientName: cliente.clientName,
             clientPhone: cliente.clientPhone ?? '',
@@ -93,12 +92,20 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             longitude: cliente.longitude
         });
         this.form.markAsDirty();
+
         if (Number.isFinite(cliente.latitude) && Number.isFinite(cliente.longitude)) {
             this.marker?.setLatLng([cliente.latitude, cliente.longitude]);
             this.map?.setView([cliente.latitude, cliente.longitude], 16);
         }
-        // Solo copia los datos; el backend no vincula el trabajo a un clienteId.
-        select.value = '';
+
+        this.clientSearchModal.set('');
+        this.showClientList.set(false);
+    }
+
+    hideClientList(): void {
+        setTimeout(() => {
+            this.showClientList.set(false);
+        }, 200);
     }
 
     private readonly jobsService = inject(JobsService);
@@ -127,13 +134,26 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     readonly loadError = signal(false);
     readonly editingId = signal<number | null>(null);
 
-    // Filtros
+    // Filtros de la tabla principal
     readonly searchText = signal('');
     readonly statusFilter = signal('ALL');
     readonly priorityFilter = signal('');
     readonly dateFrom = signal('');
     readonly dateTo = signal('');
     readonly employeeFilter = signal('');
+
+    // Búsqueda de clientes en el modal
+    readonly clientSearchModal = signal('');
+    readonly showClientList = signal(false);
+    readonly filteredClientesModal = computed(() => {
+        const term = this.clientSearchModal().trim().toLowerCase();
+        if (!term) return this.clientes();
+        return this.clientes().filter(c =>
+            c.clientName.toLowerCase().includes(term) ||
+            (c.clientPhone || '').toLowerCase().includes(term) ||
+            c.address.toLowerCase().includes(term)
+        );
+    });
 
     // Materiales dentro del modal
     readonly materialSearch = signal('');
@@ -148,7 +168,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
 
     readonly form = this.formBuilder.nonNullable.group({
         clientName: ['', Validators.required],
-        clientPhone: ['', Validators.required],
+        clientPhone: [''],
         address: ['', Validators.required],
         buildingNumber: [''],
         apartment: [''],
@@ -165,7 +185,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         status: ['PENDING', Validators.required]
     });
 
-    readonly editorOptions: SweetAlertOptions = {
+    editorOptions: SweetAlertOptions = {
         width: 780,
         showCancelButton: true,
         showCloseButton: true,
@@ -173,10 +193,14 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#e65100',
         cancelButtonColor: '#2E3238',
-        showLoaderOnConfirm: true,
-        allowOutsideClick: () => !this.isSaving(),
-        allowEscapeKey: () => !this.isSaving(),
-        preConfirm: () => this.persistJob()
+        preConfirm: () => {
+            this.form.markAllAsTouched();
+            if (this.form.invalid) {
+                Swal.showValidationMessage('Completa Cliente, Dirección, Empleado, Manager, Fecha y Ubicación.');
+                return false;
+            }
+            return true;
+        }
     };
 
     onEditorDidOpen(): void {
@@ -304,7 +328,8 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 (job.clientName || '').toLowerCase().includes(text) ||
                 (job.description || '').toLowerCase().includes(text) ||
                 (job.nameEmployee || '').toLowerCase().includes(text) ||
-                (job.nameManager || '').toLowerCase().includes(text);
+                (job.nameManager || '').toLowerCase().includes(text) ||
+                (job.quickbooksInvoice || '').toLowerCase().includes(text);
 
             const coincideEstado = status === 'ALL' || job.status === status;
 
@@ -336,12 +361,10 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             );
         });
 
-        // Más nuevo arriba
         list.sort((a, b) => {
-            const timeB = this.jobTime(b.jobDate);
-            const timeA = this.jobTime(a.jobDate);
-            if (timeB !== timeA) return timeB - timeA;
-            return b.jobId - a.jobId;
+            const nombreA = (a.clientName || '').toLowerCase();
+            const nombreB = (b.clientName || '').toLowerCase();
+            return nombreA.localeCompare(nombreB, 'es');
         });
 
         return list;
@@ -461,6 +484,8 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     async openCreate(): Promise<void> {
         if (this.isLoading() || this.editorOpen()) return;
         this.editingId.set(null);
+        this.clientSearchModal.set('');
+        this.showClientList.set(false);
         this.necessaryMaterials.set([]);
         this.selectedMaterialIds.set(new Set());
         this.blueprintFiles.set([]);
@@ -487,20 +512,41 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             status: 'PENDING'
         });
 
+        // Aseguramos que NO se muestre el botón eliminar al crear
+        const editorCmp = this.editor();
+        editorCmp.swalOptions = {
+            ...this.editorOptions,
+            showDenyButton: false
+        };
+        this.editorOptions = editorCmp.swalOptions;
+
         this.editorOpen.set(true);
-        try {
-            const result = await this.editor().fire();
-            if (result.isConfirmed && !this.destroyRef.destroyed) {
+        const result = await editorCmp.fire();
+
+        this.editorOpen.set(false);
+        this.destroyMap();
+
+        if (result.isConfirmed && !this.destroyRef.destroyed) {
+            Swal.fire({
+                title: 'Guardando trabajo...',
+                text: 'Por favor, espera.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                await this.persistJob();
                 await Swal.fire({
                     icon: 'success',
                     title: '¡Éxito!',
                     text: 'Trabajo asignado correctamente.',
                     confirmButtonColor: '#12CFF4'
                 });
+            } catch (error) {
+                await Swal.fire('Error', this.getErrorMessage(error), 'error');
             }
-        } finally {
-            this.editorOpen.set(false);
-            this.destroyMap();
         }
     }
 
@@ -521,6 +567,8 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             await Swal.close();
 
             this.editingId.set(jobId);
+            this.clientSearchModal.set('');
+            this.showClientList.set(false);
             this.necessaryMaterials.set([]);
             this.selectedMaterialIds.set(new Set());
             this.blueprintFiles.set([]);
@@ -552,7 +600,6 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 status: data.status || 'PENDING'
             });
 
-            // Materiales asignados
             const mats = data.materials || [];
             const set = new Set<number>();
             mats.forEach((m: any) => {
@@ -573,15 +620,48 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             });
             this.selectedMaterialIds.set(set);
 
+            // Mostrar el botón eliminar al editar
+            const editorCmp = this.editor();
+            editorCmp.swalOptions = {
+                ...this.editorOptions,
+                showDenyButton: true,
+                denyButtonText: 'Eliminar',
+                denyButtonColor: '#d33'
+            };
+            this.editorOptions = editorCmp.swalOptions;
+
             this.editorOpen.set(true);
-            const result = await this.editor().fire();
+            const result = await editorCmp.fire();
+
+            this.editorOpen.set(false);
+            this.destroyMap();
+
             if (result.isConfirmed && !this.destroyRef.destroyed) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: 'Trabajo actualizado.',
-                    confirmButtonColor: '#12CFF4'
+                Swal.fire({
+                    title: 'Actualizando trabajo...',
+                    text: 'Por favor, espera.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
                 });
+
+                try {
+                    await this.persistJob();
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Éxito!',
+                        text: 'Trabajo actualizado correctamente.',
+                        confirmButtonColor: '#12CFF4'
+                    });
+                } catch (error) {
+                    await Swal.fire('Error', this.getErrorMessage(error), 'error');
+                }
+            } else if (result.isDenied && !this.destroyRef.destroyed) {
+                const jobToDel = this.jobs().find(j => j.jobId === jobId);
+                if (jobToDel) {
+                    await this.deleteJob(jobToDel);
+                }
             }
         } catch (error: unknown) {
             Swal.close();
@@ -592,8 +672,10 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 confirmButtonColor: '#12CFF4'
             });
         } finally {
-            this.editorOpen.set(false);
-            this.destroyMap();
+            if (this.editorOpen()) {
+                this.editorOpen.set(false);
+                this.destroyMap();
+            }
         }
     }
 
@@ -619,73 +701,63 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     private async persistJob(): Promise<Job | false> {
-        if (this.isSaving()) return false;
-        this.form.markAllAsTouched();
-        if (this.form.invalid) {
-            Swal.showValidationMessage(
-                'Completa Cliente, Teléfono, Dirección, Empleado, Manager, Fecha y Ubicación.'
-            );
-            return false;
-        }
-
         this.isSaving.set(true);
-        const raw = this.form.getRawValue();
-
-        // Resumen materiales en descripción
-        let descripcionBase = raw.description.trim();
-        if (descripcionBase.includes('[MATERIALES PRE-ASIGNADOS]:')) {
-            descripcionBase = descripcionBase
-                .split('[MATERIALES PRE-ASIGNADOS]:')[0]
-                .trim();
-        }
-        let resumen = '';
-        this.necessaryMaterials().forEach((r) => {
-            resumen += `• ${r.name}: ${r.quantity} ${r.unit || ''}\n`;
-        });
-        const description =
-            resumen !== ''
-                ? `${descripcionBase}\n\n[MATERIALES PRE-ASIGNADOS]:\n${resumen}`
-                : descripcionBase;
-
-        const materials = this.necessaryMaterials().map((r) => ({
-            materialId: r.materialId,
-            quantity: r.quantity,
-            unit: r.unit || 'N/A'
-        }));
-
-        const necessaryMaterials = this.necessaryMaterials().map((r) => ({
-            materialId: r.materialId,
-            name: r.name,
-            quantity: r.quantity,
-            unit: r.unit,
-            estimatedPrice: r.price
-        }));
-
-        const request: JobRequest = {
-            clientName: raw.clientName.trim(),
-            clientPhone: raw.clientPhone.trim(),
-            description,
-            address: raw.address.trim(),
-            buildingNumber: raw.buildingNumber.trim() || null,
-            apartment: raw.apartment.trim() || null,
-            latitude: Number(raw.latitude),
-            longitude: Number(raw.longitude),
-            safeDepositBoxCodes: raw.safeDepositBoxCodes.trim() || null,
-            quickbooksInvoice: raw.quickbooksInvoice.trim() || null,
-            status: raw.status,
-            pay: Number(raw.pay),
-            jobDate: raw.jobDate,
-            employeeId: Number(raw.employeeId),
-            managerId: Number(raw.managerId),
-            materials,
-            necessaryMaterials,
-            priority: Number(raw.priority)
-        };
-
-        const id = this.editingId();
-        const files = this.blueprintFiles();
-
         try {
+            const raw = this.form.getRawValue();
+
+            let descripcionBase = raw.description.trim();
+            if (descripcionBase.includes('[MATERIALES PRE-ASIGNADOS]:')) {
+                descripcionBase = descripcionBase
+                    .split('[MATERIALES PRE-ASIGNADOS]:')[0]
+                    .trim();
+            }
+            let resumen = '';
+            this.necessaryMaterials().forEach((r) => {
+                resumen += `• ${r.name}: ${r.quantity} ${r.unit || ''}\n`;
+            });
+            const description =
+                resumen !== ''
+                    ? `${descripcionBase}\n\n[MATERIALES PRE-ASIGNADOS]:\n${resumen}`
+                    : descripcionBase;
+
+            const materials = this.necessaryMaterials().map((r) => ({
+                materialId: r.materialId,
+                quantity: r.quantity,
+                unit: r.unit || 'N/A'
+            }));
+
+            const necessaryMaterials = this.necessaryMaterials().map((r) => ({
+                materialId: r.materialId,
+                name: r.name,
+                quantity: r.quantity,
+                unit: r.unit,
+                estimatedPrice: r.price
+            }));
+
+            const request: JobRequest = {
+                clientName: raw.clientName.trim(),
+                clientPhone: raw.clientPhone.trim(),
+                description,
+                address: raw.address.trim(),
+                buildingNumber: raw.buildingNumber.trim() || null,
+                apartment: raw.apartment.trim() || null,
+                latitude: Number(raw.latitude),
+                longitude: Number(raw.longitude),
+                safeDepositBoxCodes: raw.safeDepositBoxCodes.trim() || null,
+                quickbooksInvoice: raw.quickbooksInvoice.trim() || null,
+                status: raw.status,
+                pay: Number(raw.pay),
+                jobDate: raw.jobDate,
+                employeeId: Number(raw.employeeId),
+                managerId: Number(raw.managerId),
+                materials,
+                necessaryMaterials,
+                priority: Number(raw.priority)
+            };
+
+            const id = this.editingId();
+            const files = this.blueprintFiles();
+
             const saved =
                 id === null
                     ? await firstValueFrom(
@@ -701,19 +773,13 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
 
             await this.loadJobs();
             return saved;
-        } catch (error: unknown) {
-            if (!this.destroyRef.destroyed) {
-                Swal.showValidationMessage(this.getErrorMessage(error));
-            }
-            return false;
         } finally {
             this.isSaving.set(false);
         }
     }
 
-
     async deleteJob(job: Job): Promise<void> {
-        if (this.deletingId() !== null || this.editorOpen()) return;
+        if (this.deletingId() !== null) return; // NOTA: quitamos `|| this.editorOpen()` porque ahora el modal puede estar "lógicamente cerrado"
         this.deletingId.set(job.jobId);
         try {
             const result = await Swal.fire({
@@ -724,32 +790,36 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 confirmButtonText: 'Sí, eliminar',
                 cancelButtonText: 'Cancelar',
                 confirmButtonColor: '#d33',
-                cancelButtonColor: '#2E3238',
-                showLoaderOnConfirm: true,
-                preConfirm: async () => {
-                    try {
-                        await firstValueFrom(
-                            this.jobsService
-                                .delete(job.jobId)
-                                .pipe(takeUntilDestroyed(this.destroyRef))
-                        );
-                        this.jobs.update((list) =>
-                            list.filter((j) => j.jobId !== job.jobId)
-                        );
-                        return true;
-                    } catch (error: unknown) {
-                        Swal.showValidationMessage(this.getErrorMessage(error, true));
-                        return false;
-                    }
-                }
+                cancelButtonColor: '#2E3238'
             });
-            if (result.isConfirmed) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: '¡Eliminado!',
-                    text: 'El trabajo fue eliminado.',
-                    confirmButtonColor: '#12CFF4'
+
+            if (result.isConfirmed && !this.destroyRef.destroyed) {
+                Swal.fire({
+                    title: 'Eliminando trabajo...',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
                 });
+
+                try {
+                    await firstValueFrom(
+                        this.jobsService
+                            .delete(job.jobId)
+                            .pipe(takeUntilDestroyed(this.destroyRef))
+                    );
+                    this.jobs.update((list) =>
+                        list.filter((j) => j.jobId !== job.jobId)
+                    );
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Eliminado!',
+                        text: 'El trabajo fue eliminado.',
+                        confirmButtonColor: '#12CFF4'
+                    });
+                } catch (error: unknown) {
+                    await Swal.fire('Error', this.getErrorMessage(error, true), 'error');
+                }
             }
         } finally {
             this.deletingId.set(null);
