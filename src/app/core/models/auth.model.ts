@@ -4,7 +4,8 @@
 export type AppRole =
     | 'ROLE_ADMIN'
     | 'ROLE_JEFE'
-    | 'ROLE_EMPLOYEE';
+    | 'ROLE_EMPLOYEE'
+    | 'ROLE_BODEGUERO';
 
 /**
  * Datos enviados a POST /auth/login.

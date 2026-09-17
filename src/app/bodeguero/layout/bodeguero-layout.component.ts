@@ -13,24 +13,24 @@ import Swal from 'sweetalert2';
 
 import { AuthService } from '../../core/services/auth.service';
 
-interface AdminMenuItem {
+interface BodegueroMenuItem {
   label: string;
   icon: string;
   route: string | null;
 }
 
-export interface AdminPageInfo {
+export interface BodegueroPageInfo {
   heading: string;
 }
 
 @Component({
-  selector: 'app-admin-layout',
+  selector: 'app-bodeguero-layout',
   standalone: true,
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
-  templateUrl: './admin-layout.component.html',
-  styleUrl: './admin-layout.component.css'
+  templateUrl: './bodeguero-layout.component.html',
+  styleUrl: './bodeguero-layout.component.css'
 })
-export class AdminLayoutComponent {
+export class BodegueroLayoutComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -54,56 +54,16 @@ export class AdminLayoutComponent {
 
         return typeof heading === 'string'
           ? heading
-          : 'Resumen del Sistema';
+          : 'Bodega';
       })
     ),
-    { initialValue: 'Resumen del Sistema' }
+    { initialValue: 'Bodega' }
   );
 
-readonly menuItems: readonly AdminMenuItem[] = [
-  
-  {
-    label: 'Inicio',
-    icon: 'fa-solid fa-house',
-    route: '/admin/dashboard'
-  },
-  {
-    label: 'Usuarios',
-    icon: 'fa-solid fa-users-gear',
-    route: '/admin/usuarios'
-  },
-  {
-    label: 'Trabajos',
-    icon: 'fa-solid fa-hammer',
-    route: '/admin/trabajos'
-  },
-  { label: 'Clientes frecuentes', icon: 'fa-solid fa-address-book', route: '/admin/clientes-frecuentes' },
-  {
-    label: 'Evidencias',
-    icon: 'fa-solid fa-camera',
-    route: '/admin/evidencias'
-  },
-  {
-    label: 'Categorías',
-    icon: 'fa-solid fa-tags',
-    route: '/admin/categorias'
-  },
-  {
-    label: 'Materiales',
-    icon: 'fa-solid fa-boxes-stacked',
-    route: '/admin/materiales'
-  },
-  {
-    label: 'Bodega',
-    icon: 'fa-solid fa-truck-fast',
-    route: '/admin/bodega'
-  },
-  {
-    label: 'Nómina',
-    icon: 'fa-solid fa-money-check-dollar',
-    route: '/admin/nomina'
-  }
-];
+  readonly menuItems: readonly BodegueroMenuItem[] = [
+    { label: 'Bodega', icon: 'fa-solid fa-truck-fast', route: '/bodeguero/bodega' },
+    { label: 'Calendario', icon: 'fa-solid fa-calendar-days', route: '/bodeguero/calendario' }
+  ];
 
   async openExitDialog(): Promise<void> {
     if (this.isLeaving()) {

@@ -3,7 +3,7 @@
         <h2>Proyectos Asignados</h2>
 
         <div class="filter-block">
-            <label for="searchJobInput">Buscar por Cliente o Descripción</label>
+            <label for="searchJobInput">Buscar por Cliente o Descripción o QB</label>
             <input id="searchJobInput" type="text" class="input-field"
                 placeholder="🔍 Escribe un nombre o descripción..." [value]="searchText()" (input)="onSearch($event)"
                 autocomplete="off" />
@@ -285,33 +285,58 @@
 </section>
 
 <!-- ========== MODAL CREAR / EDITAR ========== -->
-<swal #editor [swalOptions]="editorOptions" [showDenyButton]="editingId() !== null" denyButtonText="Eliminar"
-    denyButtonColor="#d33" (didOpen)="onEditorDidOpen()" (willClose)="onEditorWillClose()">
+<swal #editor [swalOptions]="editorOptions" (didOpen)="onEditorDidOpen()" (willClose)="onEditorWillClose()">
     <span *swalPortal="swalTargets.title" class="editor-title">
         <i [class]="editingId() === null ? 'fa-solid fa-hammer' : 'fa-solid fa-pen'" aria-hidden="true"></i>
         {{ editingId() === null ? 'Nuevo Trabajo' : 'Editar Trabajo' }}
     </span>
 
     <form *swalPortal="swalTargets.content" class="job-form" [formGroup]="form" (ngSubmit)="submitEditor()" novalidate>
+        
         <!-- Cliente -->
         <h4 class="section-title">Datos del Cliente</h4>
-        <div class="form-row">
-            <label for="savedClient">Completar desde un cliente registrado</label>
-            <select id="savedClient" class="input-field" (change)="selectCliente($event)"
-                [disabled]="isSaving() || clientesLoading()">
-                <option value="">{{ clientesLoading() ? 'Cargando clientes…' : '-- Selecciona para copiar sus datos --'
-                    }}</option>
-                @for (cliente of clientes(); track cliente.id) {
-                <option [value]="cliente.id">{{ cliente.clientName }} · {{ cliente.address }}</option>
+        <div class="form-row" style="position: relative;">
+            <label>Completar desde un cliente registrado</label>
+
+            <!-- BUSCADOR CON AUTOCOMPLETADO -->
+            <input type="text" class="input-field" placeholder="🔍 Haz clic para ver todos o escribe para filtrar..."
+                [value]="clientSearchModal()" 
+                (input)="clientSearchModal.set($any($event.target).value)"
+                (focus)="showClientList.set(true)"
+                (blur)="hideClientList()"
+                [disabled]="isSaving() || clientesLoading()" autocomplete="off" />
+
+            <!-- LISTA FLOTANTE -->
+            @if (showClientList()) {
+            <ul class="autocomplete-list" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; list-style: none; padding: 0; margin-top: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                
+                @if (clientesLoading()) {
+                    <li style="padding: 8px 12px; color: #666; text-align: center;">Cargando clientes...</li>
+                } @else {
+                    @for (cliente of filteredClientesModal(); track cliente.id) {
+                    <!-- eslint-disable-next-line a11y-click-events-have-key-events, a11y-no-noninteractive-element-interactions -->
+                    <li style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"
+                        onmouseover="this.style.backgroundColor='#f9fafb'" onmouseout="this.style.backgroundColor='transparent'"
+                        (mousedown)="seleccionarClienteManual(cliente)">
+                        <strong style="color: #0f4c81;">{{ cliente.clientName }}</strong><br>
+                        <small style="color: #666;"><i class="fa-solid fa-location-dot"></i> {{ cliente.address }}</small>
+                    </li>
+                    } @empty {
+                    <li style="padding: 8px 12px; color: #666; text-align: center;">No se encontraron clientes...</li>
+                    }
                 }
-            </select>
-            <small>Puedes completar o ajustar los datos manualmente para este trabajo.</small>
+            </ul>
+            }
+
+            <small style="display: block; margin-top: 0.5rem;">Puedes buscar un cliente arriba o ingresar los datos manualmente abajo.</small>
+            
             @if (clientesError()) {
-            <p role="alert">{{ clientesError() }}</p>
-            <button type="button" (click)="loadClientes()"
-                [disabled]="clientesLoading() || isSaving()">Reintentar</button>
+            <p role="alert" style="color: #d33; margin-top: 0.5rem;">{{ clientesError() }}</p>
+            <button type="button" class="btn-retry" (click)="loadClientes()"
+                [disabled]="clientesLoading() || isSaving()">Reintentar carga de clientes</button>
             }
         </div>
+        
         <div class="form-grid">
             <div class="form-row">
                 <label for="jobClientName">Nombre del Cliente</label>
@@ -478,8 +503,10 @@
             </div>
             <div class="form-row">
                 <label for="jobPay">Pago Asignado ($)</label>
-                <input id="jobPay" type="number" class="input-field" formControlName="pay" step="0.01" min="0"
-                    [readOnly]="isSaving()" />
+                <!-- CAMBIO AQUÍ: input bloqueado con "readonly" y estilos para notarlo -->
+                <input id="jobPay" type="number" class="input-field" formControlName="pay" step="0.01" min="0" readonly
+                    title="Calculado automáticamente según los materiales"
+                    style="background-color: #f3f4f6; cursor: not-allowed;" />
             </div>
         </div>
 

@@ -78,6 +78,13 @@ export class AdminDashboardComponent {
             icon: 'fa-solid fa-money-check-dollar',
             className: 'card card-green',
             route: '/admin/nomina'
+        },
+        {
+            title: 'Clientes frecuentes',
+            description: 'Gestión de clientes frecuentes',
+            icon: 'fa-solid fa-address-book',
+            className: 'card card-blue',
+            route: '/admin/clientes-frecuentes'
         }
     ];
 }

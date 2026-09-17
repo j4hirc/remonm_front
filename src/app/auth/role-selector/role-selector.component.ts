@@ -32,6 +32,7 @@ export class RoleSelectorComponent {
   readonly swalTargets = inject(SwalPortalTargets);
 
   private readonly options: readonly RoleOption[] = [
+    { role: 'ROLE_BODEGUERO', label: 'Entrar como Bodeguero', className: 'role-button bodeguero', route: '/bodeguero/bodega' },
     {
       role: 'ROLE_ADMIN',
       label: 'Entrar como Administrador',

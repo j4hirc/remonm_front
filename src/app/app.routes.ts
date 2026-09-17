@@ -234,6 +234,26 @@ export const routes: Routes = [
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]
     },
+    {
+        path: 'bodeguero',
+        canActivate: [roleGuard],
+        data: { role: 'ROLE_BODEGUERO' },
+        loadComponent: () => import('./bodeguero/layout/bodeguero-layout.component').then(c => c.BodegueroLayoutComponent),
+        children: [
+            {
+                path: 'bodega', canActivate: [roleGuard],
+                data: { role: 'ROLE_BODEGUERO', heading: 'Órdenes de Bodega' },
+                loadComponent: () => import('./bodeguero/bodega/bodega.component').then(c => c.BodegaBodegueroComponent)
+            },
+            {
+                path: 'calendario', canActivate: [roleGuard],
+                data: { role: 'ROLE_BODEGUERO', heading: 'Calendario de Obras' },
+                loadComponent: () => import('./bodeguero/calendario/calendario.component').then(c => c.CalendarioBodegueroComponent)
+            },
+            { path: '', redirectTo: 'bodega', pathMatch: 'full' },
+            { path: '**', redirectTo: 'bodega' }
+        ]
+    },
     { path: '', redirectTo: 'auth/login', pathMatch: 'full' },
     { path: '**', redirectTo: 'auth/login' }
 ];
