@@ -66,6 +66,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     readonly clientesLoading = signal(false);
     readonly clientesError = signal('');
 
+    readonly managerFijoId = 5;
+
+
     async loadClientes(): Promise<void> {
         if (this.clientesLoading()) return;
         this.clientesLoading.set(true);
@@ -174,7 +177,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         latitude: [0, Validators.required],
         longitude: [0, Validators.required],
         employeeId: ['', Validators.required],
-        managerId: ['', Validators.required],
+        managerId: [String(this.managerFijoId), Validators.required],
         description: [''],
         priority: [2, Validators.required],
         jobDate: ['', Validators.required],
@@ -511,7 +514,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             latitude: -2.900128,
             longitude: -79.005896,
             employeeId: '',
-            managerId: '',
+            managerId: String(this.managerFijoId),
             description: '',
             priority: 2,
             jobDate: '',
@@ -588,7 +591,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 latitude: data.latitude,
                 longitude: data.longitude,
                 employeeId: String(data.employeeId || ''),
-                managerId: String(data.managerId || ''),
+                managerId: String(this.managerFijoId),
                 description: descripcion,
                 priority: data.priority ?? 2,
                 jobDate: this.fechaParaInput(data.jobDate),

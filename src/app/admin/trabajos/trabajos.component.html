@@ -403,11 +403,15 @@
                 </select>
             </div>
             <div class="form-row">
-                <label for="jobManager">Manager Asignado</label>
-                <select id="jobManager" class="input-field" formControlName="managerId" [disabled]="isSaving()">
+                <label for="jobManager">Manager asignado</label>
+
+                <select id="jobManager" class="input-field" formControlName="managerId">
                     <option value="">-- Seleccione Manager --</option>
+
                     @for (man of managers(); track man.userId) {
-                    <option [value]="man.userId">{{ fullUserName(man) }}</option>
+                    <option [value]="man.userId">
+                        {{ fullUserName(man) }}
+                    </option>
                     }
                 </select>
             </div>
