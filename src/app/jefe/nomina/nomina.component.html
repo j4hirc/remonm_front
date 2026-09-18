@@ -1,33 +1,60 @@
 <div class="toolbar">
-  <button type="button" [disabled]="busy()" (click)="changePeriod(-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+  <button type="button" [disabled]="busy()" (click)="changePeriod(-1)"><i class="fa-solid fa-chevron-left"
+      aria-hidden="true"></i> Anterior</button>
   <div class="date-label"><small>Quincena del</small><strong>{{ report().start }} al {{ report().end }}</strong></div>
-  <button class="pdf-button" type="button" [disabled]="busy() || empty()" (click)="exportPdf()"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ exporting() ? 'Generando...' : 'PDF' }}</button>
-  <button type="button" [disabled]="busy()" (click)="changePeriod(1)">Siguiente <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+  <button class="pdf-button" type="button" [disabled]="busy() || empty()" (click)="exportPdf()"><i
+      class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ exporting() ? 'Generando...' : 'PDF' }}</button>
+  <button type="button" [disabled]="busy()" (click)="changePeriod(1)">Siguiente <i class="fa-solid fa-chevron-right"
+      aria-hidden="true"></i></button>
 </div>
 
 @if (error()) {
-  <div class="empty"><p>{{ error() }}</p><button type="button" [disabled]="busy()" (click)="load()">Reintentar carga</button></div>
+<div class="empty">
+  <p>{{ error() }}</p><button type="button" [disabled]="busy()" (click)="load()">Reintentar carga</button>
+</div>
 }
 
 @if (loading()) { <p class="empty" role="status">Obteniendo registros globales...</p> }
 @else if (!error()) {
-  @if (empty()) { <p class="empty">No hay trabajos completados en esta quincena.</p> }
-  @else {
-    <div class="report-list">
-      @for (employee of report().employees; track employee.employeeId) {
-        <article class="employee">
-          <div class="employee-title">{{ employee.name }}</div>
-          <table>
-            <thead><tr><th>Fecha</th><th>Cliente / Trabajo</th><th class="money">Monto</th></tr></thead>
-            <tbody>@for (job of employee.jobs; track job.jobId) {
-              <tr><td>{{ job.date }}</td><td>{{ job.clientName }}</td><td class="money">{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</td></tr>
-            }</tbody>
-            <tfoot><tr><td colspan="2" class="money">Subtotal</td><td class="money gold">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td></tr></tfoot>
-          </table>
-        </article>
-      }
-      <div class="grand-total"><strong>Total Nómina Global</strong><strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong></div>
-    </div>
-  }
+@if (empty()) { <p class="empty">No hay trabajos completados en esta quincena.</p> }
+@else {
+<div class="report-container">
+  <div class="report-list">
+    @for (employee of report().employees; track employee.employeeId) {
+    <article class="employee">
+      <div class="employee-title">{{ employee.name }}</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Cliente / Trabajo</th>
+            <th class="money">Monto</th>
+          </tr>
+        </thead>
+        <tbody>@for (job of employee.jobs; track job.jobId) {
+          <tr>
+            <td>{{ job.date }}</td>
+            <td>{{ job.clientName }}</td>
+            <td class="money">{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
+          </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" class="money">Subtotal</td>
+            <td class="money gold">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </article>
+    }
+  </div>
+  <div class="grand-total">
+    <strong>Total Nómina Global</strong>
+    <strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+  </div>
+</div>
 }
-<div class="pdf-stage" aria-hidden="true" inert><app-nomina-pdf [report]="pdfSnapshot()" [generatedAt]="generatedAt()" /></div>
+}
+<div class="pdf-stage" aria-hidden="true" inert><app-nomina-pdf [report]="pdfSnapshot()"
+    [generatedAt]="generatedAt()" /></div>

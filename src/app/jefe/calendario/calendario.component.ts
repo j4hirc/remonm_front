@@ -364,6 +364,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
             plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
             initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
             locale: esLocale,
+            firstDay: 0, // <-- Agrega esta línea para que inicie en Domingo
             height: 'auto',
             headerToolbar: {
                 left: 'prev,next today',

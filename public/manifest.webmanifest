@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "RemoMN - Gestión de Trabajos",
+  "short_name": "RemoMN",
+  "description": "Gestión de trabajos, materiales y evidencias de RemoMN.",
+  "lang": "es",
+  "theme_color": "#e65100",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

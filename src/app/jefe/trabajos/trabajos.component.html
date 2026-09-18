@@ -177,7 +177,7 @@
                                 <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
                             </button>
 
-                            <a class="btn-action btn-evidencias" [routerLink]="['/jefe/evidencias']"
+                            <a class="btn-action btn-evidencias" [routerLink]="['/admin/evidencias']"
                                 [queryParams]="{ jobId: job.jobId }" title="Ver Evidencias">
                                 <i class="fa-solid fa-camera" aria-hidden="true"></i>
                             </a>
@@ -255,7 +255,7 @@
                 </button>
                 }
 
-                <a class="btn-card btn-evidencias" [routerLink]="['/jefe/evidencias']"
+                <a class="btn-card btn-evidencias" [routerLink]="['/admin/evidencias']"
                     [queryParams]="{ jobId: job.jobId }">
                     <i class="fa-solid fa-camera" aria-hidden="true"></i>
                     Evidencias
@@ -285,26 +285,28 @@
 </section>
 
 <!-- ========== MODAL CREAR / EDITAR ========== -->
+
 <swal #editor [swalOptions]="editorOptions" (didOpen)="onEditorDidOpen()" (willClose)="onEditorWillClose()">
+
     <span *swalPortal="swalTargets.title" class="editor-title">
         <i [class]="editingId() === null ? 'fa-solid fa-hammer' : 'fa-solid fa-pen'" aria-hidden="true"></i>
         {{ editingId() === null ? 'Nuevo Trabajo' : 'Editar Trabajo' }}
     </span>
 
     <form *swalPortal="swalTargets.content" class="job-form" [formGroup]="form" (ngSubmit)="submitEditor()" novalidate>
-
         <!-- Cliente -->
         <h4 class="section-title">Datos del Cliente</h4>
+
         <div class="form-row" style="position: relative;">
             <label>Completar desde un cliente registrado</label>
 
-            <!-- BUSCADOR CON AUTOCOMPLETADO -->
+            <!-- BUSCADOR CON AUTOCOMPLETADO (Abre la lista al hacer foco) -->
             <input type="text" class="input-field" placeholder="🔍 Haz clic para ver todos o escribe para filtrar..."
                 [value]="clientSearchModal()" (input)="clientSearchModal.set($any($event.target).value)"
                 (focus)="showClientList.set(true)" (blur)="hideClientList()"
                 [disabled]="isSaving() || clientesLoading()" autocomplete="off" />
 
-            <!-- LISTA FLOTANTE -->
+            <!-- LISTA FLOTANTE QUE SE MUESTRA AL HACER CLIC EN EL INPUT -->
             @if (showClientList()) {
             <ul class="autocomplete-list"
                 style="position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; list-style: none; padding: 0; margin-top: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
@@ -316,8 +318,7 @@
                 <!-- eslint-disable-next-line a11y-click-events-have-key-events, a11y-no-noninteractive-element-interactions -->
                 <li style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"
                     onmouseover="this.style.backgroundColor='#f9fafb'"
-                    onmouseout="this.style.backgroundColor='transparent'"
-                    (mousedown)="seleccionarClienteManual(cliente)">
+                    onmouseout="this.style.backgroundColor='transparent'" (mousedown)="seleccionarClienteManual(cliente)">
                     <strong style="color: #0f4c81;">{{ cliente.clientName }}</strong><br>
                     <small style="color: #666;"><i class="fa-solid fa-location-dot"></i> {{ cliente.address }}</small>
                 </li>
@@ -337,7 +338,6 @@
                 [disabled]="clientesLoading() || isSaving()">Reintentar carga de clientes</button>
             }
         </div>
-
         <div class="form-grid">
             <div class="form-row">
                 <label for="jobClientName">Nombre del Cliente</label>
@@ -405,7 +405,7 @@
             <div class="form-row">
                 <label for="jobManager">Manager asignado</label>
 
-                <select id="jobManager" class="input-field" formControlName="managerId">
+                <select id="jobManager" class="input-field" formControlName="managerId" [disabled]="isSaving()">
                     <option value="">-- Seleccione Manager --</option>
 
                     @for (man of managers(); track man.userId) {
@@ -508,7 +508,6 @@
             </div>
             <div class="form-row">
                 <label for="jobPay">Pago Asignado ($)</label>
-                <!-- CAMBIO AQUÍ: input bloqueado con "readonly" y estilos para notarlo -->
                 <input id="jobPay" type="number" class="input-field" formControlName="pay" step="0.01" min="0" readonly
                     title="Calculado automáticamente según los materiales"
                     style="background-color: #f3f4f6; cursor: not-allowed;" />
