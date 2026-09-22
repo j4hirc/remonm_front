@@ -7,13 +7,28 @@
     </header>
     <div class="group-title">Trabajos realizados por: {{ employee.name }}</div>
     <table>
-      <thead><tr><th>Fecha (MM/DD/YYYY)</th><th>Cliente / Trabajo</th><th class="money">Monto</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Fecha (MM/DD/YYYY)</th>
+          <th>Cliente / Trabajo</th>
+          <th class="money">Monto</th>
+        </tr>
+      </thead>
       <tbody>
         @for (job of employee.jobs; track job.jobId) {
-          <tr><td>{{ job.date }}</td><td>{{ job.clientName }}</td><td class="money">{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</td></tr>
+          <tr>
+            <td>{{ job.date }}</td>
+            <td>{{ job.clientName }}</td>
+            <td class="money">{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
+          </tr>
         }
       </tbody>
-      <tfoot><tr><td colspan="2" class="money">Pago Total Quincena</td><td class="money gold">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td></tr></tfoot>
+      <tfoot>
+        <tr>
+          <td colspan="2" class="money">Pago Total Quincena</td>
+          <td class="money gold">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
+        </tr>
+      </tfoot>
     </table>
     <footer>Documento confidencial generado automáticamente por el sistema RemoMN · {{ generatedAt() }}</footer>
   </section>
@@ -26,13 +41,24 @@
   </header>
   <div class="group-title">Desglose de Pagos por Subcontratista</div>
   <table>
-    <thead><tr><th>Nombre del Trabajador</th><th class="money">Pago Total</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Nombre del Trabajador</th>
+        <th class="money">Pago Total</th>
+      </tr>
+    </thead>
     <tbody>
       @for (employee of report().employees; track employee.employeeId) {
-        <tr><td>{{ employee.name }}</td><td class="money">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td></tr>
+        <tr>
+          <td>{{ employee.name }}</td>
+          <td class="money">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
+        </tr>
       }
     </tbody>
   </table>
-  <div class="grand-total"><strong>Total Nómina Global Empresa</strong><strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong></div>
+  <div class="grand-total">
+    <strong>Total Nómina Global Empresa</strong>
+    <strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+  </div>
   <footer>Documento administrativo confidencial · {{ generatedAt() }}</footer>
 </section>

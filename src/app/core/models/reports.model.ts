@@ -19,7 +19,20 @@ export interface WarehouseReport {
   label: string;
   orders: WarehouseOrder[];
 }
+export interface PayrollAdvance {
+  id: number;
+  date: string;
+  comment: string;
+  /** Precio reportado en ese avance (valor independiente) */
+  price?: number | null;
+  /** Estado del trabajo en ese momento */
+  status?: string | null;
+  files: Array<{ id: number; url: string; label: string }>;
+}
 export interface PayrollJob {
+  statusLabel: string;
+  advances: PayrollAdvance[];
+  dateSource: string;
   jobId: number;
   date: string;
   clientName: string;
