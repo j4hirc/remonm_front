@@ -5,7 +5,7 @@ const dir = path.join(__dirname, 'src', 'environments');
 
 const apiUrl = (
   process.env.API_URL?.trim() ||
-  'https://api-rojas-remodeling.onrender.com/api/v1'
+  'http://localhost:8081/api/v1'
 ).replace(/\/+$/, '');
 
 const configuration = {

@@ -3,7 +3,6 @@ import { ClientesService } from '../../core/services/clientes.service';
 import {
     Component,
     DestroyRef,
-    ElementRef,
     inject,
     OnDestroy,
     OnInit,
@@ -26,7 +25,7 @@ import {
 } from '@sweetalert2/ngx-sweetalert2';
 import Swal, { SweetAlertOptions } from 'sweetalert2';
 import { RouterLink, ActivatedRoute } from '@angular/router';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 
 import { Job, JobRequest } from '../../core/models/job.model';
 import { User } from '../../core/models/user.model';
@@ -37,7 +36,6 @@ import { MaterialsService } from '../../core/services/materials.service';
 import { InvoicePdfService } from '../../core/services/invoice-pdf.service';
 
 declare const L: any;
-declare const html2pdf: any;
 
 interface NecessaryMaterialRow {
     materialId: number;
@@ -65,6 +63,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     readonly clientes = signal<Cliente[]>([]);
     readonly clientesLoading = signal(false);
     readonly clientesError = signal('');
+    readonly managerFijoId = 5;
 
     async loadClientes(): Promise<void> {
         if (this.clientesLoading()) return;
@@ -124,6 +123,8 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     readonly jobs = signal<readonly Job[]>([]);
     readonly employees = signal<readonly User[]>([]);
     readonly managers = signal<readonly User[]>([]);
+    // NUEVO: todos los usuarios (para poder mostrar un manager guardado aunque esté inactivo)
+    private readonly allUsers = signal<readonly User[]>([]);
     readonly materials = signal<readonly Material[]>([]);
     readonly colorByEmployeeId = signal<Record<number, string>>({});
 
@@ -175,7 +176,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         latitude: [0, Validators.required],
         longitude: [0, Validators.required],
         employeeId: ['', Validators.required],
-        managerId: ['', Validators.required],
+        managerId: [String(this.managerFijoId), Validators.required],
         description: [''],
         priority: [2, Validators.required],
         jobDate: ['', Validators.required],
@@ -270,11 +271,13 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         }
     }
 
+    // CAMBIO: guarda todos los usuarios, acepta ROLE_MANAGER y ya no ignora errores en silencio
     private async loadUsers(): Promise<void> {
         try {
             const users = await firstValueFrom(
                 this.usersService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
             );
+            this.allUsers.set(users);
 
             const colors: Record<number, string> = {};
             users.forEach((u) => {
@@ -290,13 +293,13 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             );
             this.managers.set(
                 active.filter((u) =>
-                    u.roles?.some(
-                        (r) => r.name === 'ROLE_JEFE' || r.name === 'ROLE_ADMIN'
+                    u.roles?.some((r) =>
+                        ['ROLE_JEFE', 'ROLE_ADMIN', 'ROLE_MANAGER'].includes(r.name)
                     )
                 )
             );
-        } catch {
-            /* ignore */
+        } catch (error) {
+            console.error('Error cargando usuarios:', error);
         }
     }
 
@@ -310,6 +313,24 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             this.materials.set(mats);
         } catch {
             /* ignore */
+        }
+    }
+
+    // NUEVO: manager por defecto que SÍ exista en la lista del select
+    private defaultManagerId(): string {
+        const list = this.managers();
+        if (list.some((m) => m.userId === this.managerFijoId)) {
+            return String(this.managerFijoId);
+        }
+        return list.length ? String(list[0].userId) : '';
+    }
+
+    // NUEVO: garantiza que el manager guardado aparezca en el select (aunque esté inactivo)
+    private ensureManagerInList(managerId: number): void {
+        if (this.managers().some((m) => m.userId === managerId)) return;
+        const found = this.allUsers().find((u) => u.userId === managerId);
+        if (found) {
+            this.managers.update((list) => [...list, found]);
         }
     }
 
@@ -502,7 +523,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             latitude: -2.900128,
             longitude: -79.005896,
             employeeId: '',
-            managerId: '',
+            managerId: this.defaultManagerId(), // CAMBIO
             description: '',
             priority: 2,
             jobDate: '',
@@ -581,6 +602,10 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                     .trim();
             }
 
+            // CAMBIO: el manager guardado siempre debe estar en la lista del select
+            const managerId = data.managerId ?? this.managerFijoId;
+            this.ensureManagerInList(managerId);
+
             this.form.reset({
                 clientName: data.clientName || '',
                 clientPhone: data.clientPhone || '',
@@ -590,7 +615,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 latitude: data.latitude,
                 longitude: data.longitude,
                 employeeId: String(data.employeeId || ''),
-                managerId: String(data.managerId || ''),
+                managerId: String(managerId),
                 description: descripcion,
                 priority: data.priority ?? 2,
                 jobDate: this.fechaParaInput(data.jobDate),
@@ -779,7 +804,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     async deleteJob(job: Job): Promise<void> {
-        if (this.deletingId() !== null) return; // NOTA: quitamos `|| this.editorOpen()` porque ahora el modal puede estar "lógicamente cerrado"
+        if (this.deletingId() !== null) return;
         this.deletingId.set(job.jobId);
         try {
             const result = await Swal.fire({
@@ -1114,14 +1139,6 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         }
         return String(fecha).slice(0, 10);
-    }
-
-    private jobTime(fecha: string | number[] | null | undefined): number {
-        if (!fecha) return 0;
-        if (Array.isArray(fecha)) {
-            return new Date(fecha[0], fecha[1] - 1, fecha[2]).getTime();
-        }
-        return new Date(fecha).getTime();
     }
 
     viewBlueprints(job: Job): void {

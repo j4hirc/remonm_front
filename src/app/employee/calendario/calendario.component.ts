@@ -429,8 +429,8 @@ export class CalendarioEmployeeComponent
             plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
             initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
             locale: esLocale,
+            firstDay: 0, // <-- Agrega esta línea para que inicie en Domingo
             height: 'auto',
-            eventOrder: 'prioridad,start,title',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -442,14 +442,11 @@ export class CalendarioEmployeeComponent
                 week: 'Semana',
                 list: 'Agenda'
             },
-            noEventsContent: 'No tienes trabajos asignados por el momento.',
-            dayMaxEvents: 3,
             events,
             eventContent: this.eventContent,
             eventClick: this.onEventClick
         });
 
         this.calendar.render();
-        setTimeout(() => this.calendar?.updateSize(), 300);
     }
 }
