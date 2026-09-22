@@ -39,15 +39,20 @@ export class NominaJefeComponent implements OnInit {
     const data = this.data();
     if (!data) return { start: '', end: '', employees: [], total: 0 };
 
-    // Ordenamos los trabajos por fecha (de más antiguo a más reciente)
-    // ⚠️ IMPORTANTE: Cambia 'fecha' por el nombre real de tu campo (ej: 'date', 'fecha_creacion')
-    const sortedJobs = [...data.jobs].sort((a: any, b: any) => {
-      const dateA = new Date(a.fecha).getTime();
-      const dateB = new Date(b.fecha).getTime();
-      return dateA - dateB;
-    });
+    const built = buildPayrollReport(data.jobs, data.users, this.offset(), this.anchorDate);
 
-    return buildPayrollReport(sortedJobs, data.users, this.offset(), this.anchorDate);
+    // Ordenamos los trabajos de cada empleado por fecha (más antiguo a más reciente),
+    // usando el mismo job.date ya formateado ("MM/DD/YYYY") que se muestra en pantalla.
+    // Así no dependemos del nombre del campo crudo de fecha en data.jobs.
+    return {
+      ...built,
+      employees: built.employees.map(employee => ({
+        ...employee,
+        jobs: [...employee.jobs].sort(
+          (a, b) => this.parseUsDate(a.date).getTime() - this.parseUsDate(b.date).getTime()
+        )
+      }))
+    };
   });
 
   readonly empty = computed(() => this.report().employees.length === 0);
@@ -75,6 +80,14 @@ export class NominaJefeComponent implements OnInit {
     const text = comment ?? '';
     const lines = text.split('\n');
     return lines[0].trim().startsWith(this.OFFICE_ALERT_TAG) ? lines.slice(1).join('\n').trim() : text;
+  }
+
+  // Parseo robusto de "MM/DD/YYYY" -> Date. Si no matchea, cae a new Date(value) como respaldo.
+  private parseUsDate(value: string): Date {
+    const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value?.trim() ?? '');
+    if (!match) return new Date(value);
+    const [, month, day, year] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day));
   }
 
   private fetchData() {
