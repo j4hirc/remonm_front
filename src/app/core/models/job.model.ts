@@ -23,6 +23,8 @@ export interface JobUpdate {
   jobUpdateId: number;
   comment?: string | null;
   date: string | number[];
+  price?: number | null;
+  status?: string | null;
   evidences?: Evidence[];
 }
 

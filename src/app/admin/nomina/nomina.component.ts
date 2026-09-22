@@ -24,6 +24,7 @@ export class NominaComponent implements OnInit {
   private readonly template = viewChild.required(PayrollPdfComponent);
   private readonly anchorDate = new Date();
   private readonly data = signal<Awaited<ReturnType<typeof this.fetchData>> | null>(null);
+  private readonly OFFICE_ALERT_TAG = '[ALERTA DE OFICINA]';
   
   readonly offset = signal(0);
   readonly loading = signal(false);
@@ -34,9 +35,19 @@ export class NominaComponent implements OnInit {
   readonly generatedAt = signal('');
   readonly pdfSnapshot = signal<PayrollReport>({ start: '', end: '', employees: [], total: 0 });
   
-  readonly report = computed<PayrollReport>(() => {
+readonly report = computed<PayrollReport>(() => {
     const data = this.data();
-    return data ? buildPayrollReport(data.jobs, data.users, this.offset(), this.anchorDate) : { start: '', end: '', employees: [], total: 0 };
+    if (!data) return { start: '', end: '', employees: [], total: 0 };
+
+    // Ordenamos los trabajos por fecha (de más antiguo a más reciente)
+    // ⚠️ IMPORTANTE: Cambia 'fecha' por el nombre real de tu campo (ej: 'date', 'fecha_creacion')
+    const sortedJobs = [...data.jobs].sort((a: any, b: any) => {
+      const dateA = new Date(a.fecha).getTime();
+      const dateB = new Date(b.fecha).getTime();
+      return dateA - dateB;
+    });
+
+    return buildPayrollReport(sortedJobs, data.users, this.offset(), this.anchorDate);
   });
   
   readonly empty = computed(() => this.report().employees.length === 0);
@@ -50,6 +61,21 @@ export class NominaComponent implements OnInit {
   }
   
   ngOnInit(): void { void this.load(); }
+
+  // Texto de la alerta de oficina (sin la etiqueta), o '' si el comentario no tiene alerta.
+  alertText(comment: string | null | undefined): string {
+    const first = (comment ?? '').split('\n')[0].trim();
+    return first.startsWith(this.OFFICE_ALERT_TAG)
+      ? first.slice(this.OFFICE_ALERT_TAG.length).replace(/^:\s*/, '')
+      : '';
+  }
+
+  // Comentario del avance sin la línea de alerta.
+  bodyText(comment: string | null | undefined): string {
+    const text = comment ?? '';
+    const lines = text.split('\n');
+    return lines[0].trim().startsWith(this.OFFICE_ALERT_TAG) ? lines.slice(1).join('\n').trim() : text;
+  }
   
   private fetchData() {
     return firstValueFrom(this.api.payroll().pipe(takeUntilDestroyed(this.destroyRef)));

@@ -1,35 +1,105 @@
+<p class="intro">
+  Trabajos en proceso y completados de la quincena. <strong>En proceso:</strong> se suman los importes de los avances
+  del período. <strong>Completado:</strong> se usa el precio al momento de cerrar el trabajo (no el acumulado).
+</p>
+
 <div class="toolbar">
-  <button type="button" [disabled]="busy()" (click)="changePeriod(-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Anterior</button>
+  <button type="button" [disabled]="busy()" (click)="load()">Actualizar</button>
+  <button type="button" [disabled]="busy()" (click)="changePeriod(-1)"><i class="fa-solid fa-chevron-left"
+      aria-hidden="true"></i> Anterior</button>
   <div class="date-label"><small>Quincena del</small><strong>{{ report().start }} al {{ report().end }}</strong></div>
-  <button class="pdf-button" type="button" [disabled]="busy() || empty()" (click)="exportPdf()"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ exporting() ? 'Generando...' : 'PDF' }}</button>
-  <button type="button" [disabled]="busy()" (click)="changePeriod(1)">Siguiente <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+  <button class="pdf-button" type="button" [disabled]="busy() || empty()" (click)="exportPdf()"><i
+      class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ exporting() ? 'Generando...' : 'PDF' }}</button>
+  <button type="button" [disabled]="busy()" (click)="changePeriod(1)">Siguiente <i class="fa-solid fa-chevron-right"
+      aria-hidden="true"></i></button>
 </div>
+
 @if (downloadUrl(); as url) {
-  <div class="download-actions"><a [href]="url" [download]="filename()">Descargar PDF</a><a [href]="url" target="_blank" rel="noopener">Abrir PDF</a></div>
+<div class="download-actions">
+  <a [href]="url" [download]="filename()">Descargar PDF</a>
+  <a [href]="url" target="_blank" rel="noopener">Abrir PDF</a>
+</div>
 }
+
 @if (error()) {
-  <div class="empty"><p>{{ error() }}</p><button type="button" [disabled]="busy()" (click)="load()">Reintentar carga</button></div>
+<div class="empty">
+  <p>{{ error() }}</p><button type="button" [disabled]="busy()" (click)="load()">Reintentar carga</button>
+</div>
 }
 
 @if (loading()) { <p class="empty" role="status">Obteniendo registros globales...</p> }
 @else if (!error()) {
-  @if (empty()) { <p class="empty">No hay trabajos completados en esta quincena.</p> }
-  @else {
-    <div class="report-list">
-      @for (employee of report().employees; track employee.employeeId) {
-        <article class="employee">
-          <div class="employee-title">{{ employee.name }}</div>
-          <table>
-            <thead><tr><th>Fecha</th><th>Cliente / Trabajo</th><th class="money">Monto</th></tr></thead>
-            <tbody>@for (job of employee.jobs; track job.jobId) {
-              <tr><td>{{ job.date }}</td><td>{{ job.clientName }}</td><td class="money">{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</td></tr>
-            }</tbody>
-            <tfoot><tr><td colspan="2" class="money">Subtotal</td><td class="money gold">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td></tr></tfoot>
-          </table>
-        </article>
-      }
-      <div class="grand-total"><strong>Total Nómina Global</strong><strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong></div>
-    </div>
+@if (empty()) { <p class="empty">No hay trabajos en proceso o completados con avances en este período ni trabajos sin
+  avances fechados programados para estas fechas.</p> }
+@else {
+<div class="report-container">
+
+  @for (employee of report().employees; track employee.employeeId) {
+  <section class="employee">
+
+    <header class="employee-head">
+      <h2>{{ employee.name }}</h2>
+      <div class="employee-total">
+        <span>Le corresponde</span>
+        <strong>{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+      </div>
+    </header>
+
+    @for (job of employee.jobs; track job.jobId) {
+    <article class="job">
+
+      <div class="job-head">
+        <div class="job-title">
+          <h3>{{ job.clientName }}</h3>
+          <span class="badge" [class.badge-done]="job.statusLabel === 'Completado'">{{ job.statusLabel }}</span>
+        </div>
+        <div class="job-pay">
+          <small>{{ job.statusLabel === 'Completado' ? 'Precio al cerrar el trabajo' : 'Suma de los avances' }}</small>
+          <strong>{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+        </div>
+      </div>
+
+      <p class="job-meta">{{ job.dateSource }}: <strong>{{ job.date }}</strong></p>
+
+      <ol class="advances">
+        @for (advance of job.advances; track advance.id) {
+        <li class="advance">
+          <div class="advance-top">
+            <span class="advance-date">{{ advance.date }}</span>
+            <span class="advance-id">Avance #{{ advance.id }}</span>
+            @if (advance.price != null) {
+            <span class="advance-price">{{ advance.price | currency:'USD':'symbol':'1.2-2':'en-US' }}</span>
+            }
+          </div>
+
+          @if (alertText(advance.comment); as alert) {
+          <div class="office-alert" role="note">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <div><strong>Pendiente de revisión del Manager</strong><span>{{ alert }}</span></div>
+          </div>
+          }
+
+          <p class="advance-text">{{ bodyText(advance.comment) }}</p>
+
+          <div class="files">
+            @for (file of advance.files; track file.id) {
+            <a class="file-chip" [href]="file.url" target="_blank" rel="noopener noreferrer">{{ file.label }}</a>
+            } @empty { <small>Sin archivos adjuntos.</small> }
+          </div>
+        </li>
+        } @empty { <li class="advance"><p class="advance-text">Sin avances fechados; se muestra la fecha programada.</p></li> }
+      </ol>
+    </article>
+    }
+  </section>
   }
+
+  <div class="grand-total">
+    <span>Total del período</span>
+    <strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+  </div>
+</div>
 }
-<div class="pdf-stage" aria-hidden="true" inert><app-nomina-pdf [report]="pdfSnapshot()" [generatedAt]="generatedAt()" /></div>
+}
+<div class="pdf-stage" aria-hidden="true" inert><app-nomina-pdf [report]="pdfSnapshot()"
+    [generatedAt]="generatedAt()" /></div>

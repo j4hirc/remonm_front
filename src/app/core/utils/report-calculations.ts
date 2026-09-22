@@ -74,23 +74,68 @@ export function buildWarehouseReport(jobs: readonly Job[], users: readonly User[
   // Siempre devuelve la selección actual, incluso si está vacía.
   return { date: formatDay(day), label, orders };
 }
+// Fecha civil del reporte: soporta LocalDateTime ISO y arrays de Jackson.
+function updateDay(value: string | number[]): number | null {
+  if (Array.isArray(value)) return parseJobDay(value.slice(0, 3));
+  const match = /^(\d{4}-\d{2}-\d{2})(?:T|\s|$)/.exec(value);
+  return match ? parseJobDay(match[1]) : null;
+}
 export function buildPayrollReport(jobs: readonly Job[], users: readonly User[], offset: number, today = new Date()): PayrollReport {
   const epoch = civilDay(2023, 12, 31);
   const start = epoch + (Math.floor((todayDay(today) - epoch) / 14) + offset) * 14;
   const end = start + 13;
   const groups = new Map<number, PayrollEmployee>();
+  const seenJobs = new Set<number>();
   for (const job of jobs) {
-    const day = parseJobDay(job.jobDate);
-    if (job.status !== 'COMPLETED' || !job.employeeId || day === null || day < start || day > end) continue;
+    if (!['IN_PROGRESS', 'COMPLETED'].includes(job.status) || !job.employeeId || seenJobs.has(job.jobId)) continue;
+    seenJobs.add(job.jobId);
+    const seenUpdates = new Set<number>();
+    const datedUpdates = (job.updateJob || []).filter(update => {
+      if (seenUpdates.has(update.jobUpdateId)) return false;
+      seenUpdates.add(update.jobUpdateId);
+      return true;
+    }).map(update => ({update, day: updateDay(update.date)}))
+      .filter((item): item is {update: NonNullable<Job['updateJob']>[number]; day: number} => item.day !== null)
+      .sort((a,b) => a.day - b.day || a.update.jobUpdateId - b.update.jobUpdateId);
+    const inPeriod = datedUpdates.filter(item => item.day >= start && item.day <= end);
+    const fallbackDay = parseJobDay(job.jobDate);
+    const day = inPeriod.length ? inPeriod[inPeriod.length - 1].day : datedUpdates.length ? null : fallbackDay;
+    if (day === null || day < start || day > end) continue;
     let group = groups.get(job.employeeId);
     if (!group) {
-      group = { employeeId: job.employeeId, name: employeeName(users, job.employeeId), jobs: [], total: 0 };
+      group = {employeeId: job.employeeId, name: employeeName(users, job.employeeId), jobs: [], total: 0};
       groups.set(job.employeeId, group);
     }
-    const pay = numberOr(job.pay || 0, 0);
-    group.jobs.push({ jobId: job.jobId, date: formatDay(day), clientName: job.clientName || 'Cliente sin nombre', pay });
-    group.total += pay;
+    // Cada avance tiene precio y estado independientes.
+    // Se SUMAN los precios de todos los avances del período (en proceso o completado).
+    // Sin precios en avances: fallback al pay actual del trabajo.
+    const pricedInPeriod = inPeriod.filter(item => item.update.price != null && Number.isFinite(Number(item.update.price)));
+    let payRaw: number;
+    if (pricedInPeriod.length > 0) {
+      payRaw = pricedInPeriod.reduce((sum, item) => sum + Number(item.update.price), 0);
+    } else {
+      payRaw = numberOr(job.pay, 0);
+    }
+    const pay = Math.round(Math.max(0, payRaw) * 100) / 100;
+    const lastUpdate = inPeriod[inPeriod.length - 1];
+    const statusForLabel = (lastUpdate?.update.status || job.status || '').toUpperCase();
+    const statusLabel = statusForLabel === 'COMPLETED' ? 'Completado'
+      : statusForLabel === 'IN_PROGRESS' ? 'En proceso'
+      : job.status === 'IN_PROGRESS' ? 'En proceso' : 'Completado';
+    group.jobs.push({jobId: job.jobId, date: formatDay(day),
+      dateSource: inPeriod.length ? 'Último avance del período' : 'Fecha programada · sin avances fechados',
+      statusLabel,
+      clientName: job.clientName || 'Cliente sin nombre', pay,
+      advances: inPeriod.map(({update, day}) => ({
+        id: update.jobUpdateId, date: formatDay(day), comment: update.comment || 'Sin comentario',
+        price: update.price != null && Number.isFinite(Number(update.price)) ? Math.round(Math.max(0, Number(update.price)) * 100) / 100 : null,
+        status: update.status || null,
+        files: (update.evidences || []).map((e, index) => ({id: e.evidenceId, url: e.imageUri,
+          label: /\.pdf(?:[?#]|$)/i.test(e.imageUri) ? 'Reporte PDF' : `Evidencia ${index + 1}`}))
+      }))});
+    group.total = Math.round((group.total + pay) * 100) / 100;
   }
   const employees = [...groups.values()].sort((a, b) => a.employeeId - b.employeeId);
-  return { start: formatDay(start), end: formatDay(end), employees, total: employees.reduce((sum, employee) => sum + employee.total, 0) };
+  return {start: formatDay(start), end: formatDay(end), employees,
+    total: Math.round(employees.reduce((sum, employee) => sum + employee.total, 0) * 100) / 100};
 }
