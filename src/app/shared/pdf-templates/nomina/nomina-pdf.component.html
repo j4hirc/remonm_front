@@ -1,9 +1,9 @@
-@for (employee of report().employees; track employee.employeeId) {
+@for (employee of sortedReport().employees; track employee.employeeId) {
   <section class="pdf-page">
     <header>
       <img src="img/logonegro.png" alt="RemoMN" />
       <div><h1>Nómina Quincenal</h1><p class="subtitle">REMOMN — COPIA SUBCONTRATISTA</p></div>
-      <div class="period"><small>PERÍODO</small><p>{{ report().start }} — {{ report().end }}</p></div>
+      <div class="period"><small>PERÍODO</small><p>{{ sortedReport().start }} — {{ sortedReport().end }}</p></div>
     </header>
     <div class="group-title">Trabajos realizados por: {{ employee.name }}</div>
     <table>
@@ -37,7 +37,7 @@
   <header>
     <img src="img/logonegro.png" alt="RemoMN" />
     <div><h1>Resumen de Nómina</h1><p class="subtitle">REMOMN — COPIA ADMINISTRACIÓN</p></div>
-    <div class="period"><small>PERÍODO</small><p>{{ report().start }} — {{ report().end }}</p></div>
+    <div class="period"><small>PERÍODO</small><p>{{ sortedReport().start }} — {{ sortedReport().end }}</p></div>
   </header>
   <div class="group-title">Desglose de Pagos por Subcontratista</div>
   <table>
@@ -48,7 +48,7 @@
       </tr>
     </thead>
     <tbody>
-      @for (employee of report().employees; track employee.employeeId) {
+      @for (employee of sortedReport().employees; track employee.employeeId) {
         <tr>
           <td>{{ employee.name }}</td>
           <td class="money">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
@@ -58,7 +58,7 @@
   </table>
   <div class="grand-total">
     <strong>Total Nómina Global Empresa</strong>
-    <strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+    <strong>{{ sortedReport().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
   </div>
   <footer>Documento administrativo confidencial · {{ generatedAt() }}</footer>
 </section>
