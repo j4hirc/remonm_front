@@ -61,9 +61,10 @@ export class JefeLayoutComponent {
   );
 
   readonly menuItems: readonly JefeMenuItem[] = [
-  { label: 'Clientes frecuentes', icon: 'fa-solid fa-address-book', route: '/jefe/clientes-frecuentes' },
+
   { label: 'Inicio', icon: 'fa-solid fa-house', route: '/jefe/dashboard' },
   { label: 'Usuarios', icon: 'fa-solid fa-users-gear', route: '/jefe/usuarios' },
+  { label: 'Clientes frecuentes', icon: 'fa-solid fa-address-book', route: '/jefe/clientes-frecuentes' },
   { label: 'Trabajos', icon: 'fa-solid fa-hammer', route: '/jefe/trabajos' },
   { label: 'Evidencias', icon: 'fa-solid fa-camera', route: '/jefe/evidencias' },
   { label: 'Bodega', icon: 'fa-solid fa-truck-fast', route: '/jefe/bodega' },

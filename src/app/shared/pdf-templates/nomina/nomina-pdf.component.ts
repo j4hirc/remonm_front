@@ -18,7 +18,7 @@ export class PayrollPdfComponent {
   // parseando el string "MM/DD/YYYY" que ya viene formateado en job.date.
   readonly sortedReport = computed<PayrollReport>(() => {
     const r = this.report();
-    return {
+    const result = {
       ...r,
       employees: r.employees.map(employee => ({
         ...employee,
@@ -27,6 +27,16 @@ export class PayrollPdfComponent {
         )
       }))
     };
+    // DEBUG TEMPORAL: quitar después de confirmar el orden
+    console.log('[nomina-pdf] sortedReport employees:', result.employees.map(e => ({
+      name: e.name,
+      jobs: e.jobs.map(j => ({
+        raw: j.date,
+        parsed: this.parseUsDate(j.date).toISOString(),
+        time: this.parseUsDate(j.date).getTime()
+      }))
+    })));
+    return result;
   });
 
   private parseUsDate(value: string): Date {
