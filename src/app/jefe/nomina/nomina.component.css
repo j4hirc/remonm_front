@@ -1,4 +1,6 @@
 :host { display: block; min-width: 0; color: var(--navy); font-family: 'Poppins', sans-serif; text-align: left; }
+
+/* ---------- Barra superior ---------- */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; background: #f4f7fe; padding: 12px; border: 1px solid var(--cyan); border-radius: 12px; margin-bottom: 15px; }
 button { background: var(--navy); color: white; border: none; padding: 8px 12px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
 button:disabled { opacity: .5; cursor: not-allowed; }
@@ -7,21 +9,68 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--cyan); outline-
 .date-label { flex: 1; min-width: 140px; text-align: center; font-size: 13px; }
 .date-label small { display: block; text-transform: uppercase; font-size: 10px; color: var(--slate); }
 .empty { color: #888; text-align: center; padding: 15px; font-size: 13px; }
-.report-list { max-height: 450px; overflow: auto; border: 1px solid #d4d4d4; border-radius: 8px; }
-.gold { color: var(--gold); }
 .download-actions { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; }
 .download-actions a { color: #0f4c81; font-weight: 600; }
 .pdf-stage { position: fixed; left: -10000px; top: 0; width: 680px; pointer-events: none; }
-@media (max-width: 480px) { .date-label { order: -1; flex-basis: 100%; } .toolbar { justify-content: center; } }
 
-.report-list { max-height: 380px; }
-.employee { border-bottom: 2px solid #e2e8f0; }
-.employee-title { padding: 10px 15px; background: var(--navy); color: white; font-size: 14px; font-weight: 700; }
-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-th { padding: 6px 15px; text-align: left; background: #f1f5f9; color: #475569; }
-td { padding: 8px 15px; border-bottom: 1px solid #f1f5f9; color: #334155; overflow-wrap: anywhere; }
-.money { text-align: right; white-space: nowrap; }
-tfoot { background: #f8fafc; font-weight: 700; }
-.grand-total { display: flex; justify-content: space-between; gap: 12px; background: #e8f5e9; color: #1b5e20; padding: 14px 15px; font-size: 13px; }
-.grand-total strong:last-child { color: #2e7d32; font-size: 18px; }
-@media (max-width: 480px) { th,td { padding: 8px 6px; font-size: 11px; } }
+/* ---------- Explicación ---------- */
+.intro { margin: 0 0 14px; padding: 10px 14px; background: #f1f5f9; border-radius: 8px; color: #334155; font-size: 12.5px; line-height: 1.5; }
+
+.report-container { display: grid; gap: 20px; }
+
+/* ---------- Empleado ---------- */
+.employee { background: #fff; border: 1px solid #dbe3ec; border-radius: 12px; overflow: hidden; }
+.employee-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 20px; background: var(--navy); color: #fff; }
+.employee-head h2 { margin: 0; font-size: 16px; }
+.employee-total { text-align: right; }
+.employee-total span { display: block; font-size: 11px; opacity: .8; }
+.employee-total strong { font-size: 20px; color: var(--gold); }
+
+/* ---------- Trabajo ---------- */
+.job { padding: 18px 20px; border-bottom: 1px solid #e2e8f0; }
+.job:last-child { border-bottom: 0; }
+.job-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.job-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.job-title h3 { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #fff3cd; color: #7a5b00; }
+.badge-done { background: #d1f0dd; color: #146c43; }
+.job-pay { text-align: right; }
+.job-pay small { display: block; font-size: 11px; color: #64748b; }
+.job-pay strong { font-size: 20px; }
+.job-meta { margin: 6px 0 14px; font-size: 12px; color: #64748b; }
+.job-meta strong { color: #334155; }
+
+/* ---------- Avances (línea de tiempo) ---------- */
+.advances { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 3px solid #cbd5e1; display: grid; gap: 16px; }
+.advance { position: relative; padding-left: 16px; }
+.advance::before { content: ""; position: absolute; left: -23px; top: 4px; width: 13px; height: 13px; border-radius: 50%; background: var(--navy); border: 3px solid #fff; }
+.advance-top { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.advance-date { font-weight: 700; font-size: 13px; }
+.advance-id { font-size: 11px; color: #94a3b8; }
+.advance-price { margin-left: auto; padding: 2px 10px; border-radius: 6px; background: #e6f6ec; color: #146c43; font-weight: 700; font-size: 13px; }
+.advance-text { margin: 6px 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; color: #1e293b; font-size: 13px; line-height: 1.5; }
+
+/* Alerta de oficina */
+.office-alert { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: #fff8e1; border: 1px solid #f5d67a; border-left: 4px solid #f0a500; color: #5c4400; }
+.office-alert i { margin-top: 3px; color: #f0a500; }
+.office-alert strong { display: block; font-size: 12.5px; }
+.office-alert span { font-size: 12.5px; }
+
+/* Archivos */
+.files { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.files small { color: #94a3b8; }
+.file-chip { padding: 4px 12px; border: 1px solid #cbd5e1; border-radius: 999px; font-size: 12px; text-decoration: none; color: var(--navy); background: #f8fafc; }
+.file-chip:hover { background: var(--navy); color: #fff; }
+
+/* ---------- Total general ---------- */
+.grand-total { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 12px; background: #e8f5e9; color: #1b5e20; }
+.grand-total span { font-weight: 700; font-size: 14px; }
+.grand-total strong { color: #2e7d32; font-size: 24px; }
+
+@media (max-width: 480px) {
+  .date-label { order: -1; flex-basis: 100%; }
+  .toolbar { justify-content: center; }
+  .job { padding: 14px; }
+  .job-pay, .employee-total { text-align: left; }
+  .advance-price { margin-left: 0; }
+}

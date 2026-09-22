@@ -1,6 +1,8 @@
-<p class="empty" style="text-align:left">Incluye trabajos en proceso y completados. El precio se toma del historial de
-  avances: en proceso se suman los importes de los reportes del período; al completar se usa el precio del momento de
-  cierre (no el acumulado).</p>
+<p class="intro">
+  Trabajos en proceso y completados de la quincena. <strong>En proceso:</strong> se suman los importes de los avances
+  del período. <strong>Completado:</strong> se usa el precio al momento de cerrar el trabajo (no el acumulado).
+</p>
+
 <div class="toolbar">
   <button type="button" [disabled]="busy()" (click)="load()">Actualizar</button>
   <button type="button" [disabled]="busy()" (click)="changePeriod(-1)"><i class="fa-solid fa-chevron-left"
@@ -11,6 +13,13 @@
   <button type="button" [disabled]="busy()" (click)="changePeriod(1)">Siguiente <i class="fa-solid fa-chevron-right"
       aria-hidden="true"></i></button>
 </div>
+
+@if (downloadUrl(); as url) {
+<div class="download-actions">
+  <a [href]="url" [download]="filename()">Descargar PDF</a>
+  <a [href]="url" target="_blank" rel="noopener">Abrir PDF</a>
+</div>
+}
 
 @if (error()) {
 <div class="empty">
@@ -24,63 +33,69 @@
   avances fechados programados para estas fechas.</p> }
 @else {
 <div class="report-container">
-  <div class="report-list">
-    @for (employee of report().employees; track employee.employeeId) {
-    <article class="employee">
-      <div class="employee-title">{{ employee.name }}</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Cliente / Trabajo y avances</th>
-            <th>Estado</th>
-            <th class="money">Precio estimado actual</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (job of employee.jobs; track job.jobId) {
-          <tr>
-            <td>{{ job.date }}<small style="display:block">{{ job.dateSource }}</small></td>
-            <td><strong>{{ job.clientName }}</strong>
-              <details style="margin-top:8px">
-                <summary style="cursor:pointer">Ver avances del período ({{ job.advances.length }})</summary>
-                @for (advance of job.advances; track advance.id) {
-                <div style="padding:10px 0;border-bottom:1px solid #e2e8f0;text-align:left">
-                  <strong>Avance #{{ advance.id }} · {{ advance.date }}</strong>
-                  @if (advance.status) {
-                  <span style="margin-left:8px;font-size:0.8rem;color:#64748b">({{ advance.status === 'COMPLETED' ?
-                    'Completado' : advance.status === 'IN_PROGRESS' ? 'En proceso' : advance.status }})</span>
-                  }
-                  @if (advance.price != null) {
-                  <span style="margin-left:8px;font-weight:600;color:#198754">{{ advance.price |
-                    currency:'USD':'symbol':'1.2-2':'en-US' }}</span>
-                  }
-                  <p style="white-space:pre-wrap;overflow-wrap:anywhere">{{ advance.comment }}</p>
-                  @for (file of advance.files; track file.id) {
-                  <a [href]="file.url" target="_blank" rel="noopener noreferrer"
-                    style="display:inline-block;margin-right:12px">{{ file.label }}</a>
-                  } @empty { <small>Sin archivos adjuntos.</small> }
-                </div>
-                } @empty { <p>Sin avances fechados; se muestra la fecha programada.</p> }
-              </details>
-            </td>
-            <td>{{ job.statusLabel }}</td>
-            <td class="money">{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
-          </tr>
+
+  @for (employee of report().employees; track employee.employeeId) {
+  <section class="employee">
+
+    <header class="employee-head">
+      <h2>{{ employee.name }}</h2>
+      <div class="employee-total">
+        <span>Le corresponde</span>
+        <strong>{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+      </div>
+    </header>
+
+    @for (job of employee.jobs; track job.jobId) {
+    <article class="job">
+
+      <div class="job-head">
+        <div class="job-title">
+          <h3>{{ job.clientName }}</h3>
+          <span class="badge" [class.badge-done]="job.statusLabel === 'Completado'">{{ job.statusLabel }}</span>
+        </div>
+        <div class="job-pay">
+          <small>{{ job.statusLabel === 'Completado' ? 'Precio al cerrar el trabajo' : 'Suma de los avances' }}</small>
+          <strong>{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+        </div>
+      </div>
+
+      <p class="job-meta">{{ job.dateSource }}: <strong>{{ job.date }}</strong></p>
+
+      <ol class="advances">
+        @for (advance of job.advances; track advance.id) {
+        <li class="advance">
+          <div class="advance-top">
+            <span class="advance-date">{{ advance.date }}</span>
+            <span class="advance-id">Avance #{{ advance.id }}</span>
+            @if (advance.price != null) {
+            <span class="advance-price">{{ advance.price | currency:'USD':'symbol':'1.2-2':'en-US' }}</span>
+            }
+          </div>
+
+          @if (alertText(advance.comment); as alert) {
+          <div class="office-alert" role="note">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <div><strong>Pendiente de revisión del Manager</strong><span>{{ alert }}</span></div>
+          </div>
           }
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" class="money">Subtotal estimado</td>
-            <td class="money gold">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
-          </tr>
-        </tfoot>
-      </table>
+
+          <p class="advance-text">{{ bodyText(advance.comment) }}</p>
+
+          <div class="files">
+            @for (file of advance.files; track file.id) {
+            <a class="file-chip" [href]="file.url" target="_blank" rel="noopener noreferrer">{{ file.label }}</a>
+            } @empty { <small>Sin archivos adjuntos.</small> }
+          </div>
+        </li>
+        } @empty { <li class="advance"><p class="advance-text">Sin avances fechados; se muestra la fecha programada.</p></li> }
+      </ol>
     </article>
     }
-  </div>
+  </section>
+  }
+
   <div class="grand-total">
-    <strong>Total estimado del período</strong>
+    <span>Total del período</span>
     <strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
   </div>
 </div>
