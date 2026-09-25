@@ -202,9 +202,7 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
 
     private crearEventos(trabajos: Job[]) {
         return trabajos.map((job) => {
-            const bgColor = job.status === 'COMPLETED'
-                ? '#6c757d'
-                : this.employeeColor(job.employeeId);
+            const bgColor = this.employeeColor(job.employeeId);
 
             return {
                 id: String(job.jobId),
@@ -260,6 +258,7 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
               <i class="fa-solid ${icon}" style="color:${arg.event.backgroundColor}"></i>
               ${this.escapeHtml(arg.event.title)}
             </span>
+            <span class="fc-list-pay">$${Number(p.pay || 0).toFixed(2)}</span>
           </div>
           <div class="fc-list-meta">
             <span><i class="fa-solid fa-user-tie"></i> ${this.escapeHtml(p.employee)}</span>
