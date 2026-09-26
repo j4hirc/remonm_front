@@ -180,6 +180,18 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
         return this.colorByEmployeeId[employeeId] || '#CCCCCC';
     }
 
+    /** Texto blanco u oscuro según el brillo del color de fondo */
+    private textColorForBackground(hex: string): string {
+        if (!hex || !/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+            return '#ffffff';
+        }
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.55 ? '#1a1a1a' : '#ffffff';
+    }
+
     /** Icono + clase según estado (con animación) */
     private statusIcon(status: string): string {
         switch (status) {
@@ -197,6 +209,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     private crearEventos(trabajos: Job[]) {
         return trabajos.map((job) => {
             const bgColor = this.employeeColor(job.employeeId);
+            const textColor = this.textColorForBackground(bgColor);
 
             return {
                 id: String(job.jobId),
@@ -204,6 +217,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
                 start: this.toDateStr(job.jobDate),
                 backgroundColor: bgColor,
                 borderColor: bgColor,
+                textColor, // ← FullCalendar aplica el color del texto
                 extendedProps: {
                     address: jobLocation(job),
                     description: this.cleanDescription(job.description),
@@ -212,7 +226,8 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
                     employee: job.nameEmployee || 'Sin asignar',
                     clientPhone: job.clientPhone || '',
                     employeeId: job.employeeId,
-                    icon: this.statusIcon(job.status)
+                    icon: this.statusIcon(job.status),
+                    textColor // por si lo usas en el HTML custom
                 }
             };
         });
@@ -260,10 +275,10 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
             };
         }
 
-        // Vista MES / SEMANA: compacto con icono animado
+        // Vista MES / SEMANA
         return {
             html: `
-      <div class="fc-day-event-custom" title="${arg.event.title} · ${p.employee}">
+      <div class="fc-day-event-custom" style="color:${arg.event.textColor || '#fff'}" title="${arg.event.title} · ${p.employee}">
         <i class="fa-solid ${icon}"></i>
         <span>${arg.event.title}</span>
       </div>

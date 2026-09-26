@@ -144,7 +144,7 @@ export class ReporteEmployeeComponent
         rows.push({
           materialId: id,
           name: m.name || info?.name || 'Material',
-          quantity: m.quantity || 1,
+          quantity: m.quantity ?? 1,
           unit: m.unit && m.unit !== 'N/A' ? m.unit : info?.unit || '',
           price: info?.price ?? m.price ?? 0
         });
@@ -164,15 +164,16 @@ export class ReporteEmployeeComponent
     return this.necessary().reduce((s, r) => s + r.quantity * r.price, 0);
   }
 
-  updateQty(materialId: number, qty: number): void {
-    this.necessary.update((rows) =>
-      rows.map((r) =>
-        r.materialId === materialId
-          ? { ...r, quantity: Math.max(1, qty || 1) }
-          : r
-      )
-    );
-  }
+updateQty(materialId: number, qty: number): void {
+  const cantidadSegura = Number.isFinite(qty) && qty >= 0 ? qty : 0;
+  this.necessary.update((rows) =>
+    rows.map((r) =>
+      r.materialId === materialId
+        ? { ...r, quantity: cantidadSegura }
+        : r
+    )
+  );
+}
 
   removeNec(materialId: number): void {
     if (!this.originalMaterialIds.has(materialId)) return;

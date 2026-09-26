@@ -25,7 +25,7 @@ import {
     SwalPortalTargets
 } from '@sweetalert2/ngx-sweetalert2';
 import Swal, { SweetAlertOptions } from 'sweetalert2';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 
 import { Job, JobRequest } from '../../core/models/job.model';
@@ -100,7 +100,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.marker?.setLatLng([cliente.latitude, cliente.longitude]);
             this.map?.setView([cliente.latitude, cliente.longitude], 16);
         }
-        
+
         this.clientSearchModal.set('');
         this.showClientList.set(false); // <--- Ocultamos la lista al seleccionar
     }
@@ -120,6 +120,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
     private readonly editor = viewChild.required<SwalComponent>('editor');
     private readonly invoicePdf = inject(InvoicePdfService);
+
+    private readonly route = inject(ActivatedRoute);
 
     readonly swalTargets = inject(SwalPortalTargets);
 
@@ -150,8 +152,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     readonly filteredClientesModal = computed(() => {
         const term = this.clientSearchModal().trim().toLowerCase();
         if (!term) return this.clientes();
-        return this.clientes().filter(c => 
-            c.clientName.toLowerCase().includes(term) || 
+        return this.clientes().filter(c =>
+            c.clientName.toLowerCase().includes(term) ||
             (c.clientPhone || '').toLowerCase().includes(term) ||
             c.address.toLowerCase().includes(term)
         );
@@ -228,33 +230,39 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.destroyMap();
     }
 
-    private async bootstrap(): Promise<void> {
-        this.isLoading.set(true);
+private async bootstrap(): Promise<void> {
+    this.isLoading.set(true);
 
-        // MODAL DE CARGA AÑADIDO
-        void Swal.fire({
-            title: 'Cargando datos del sistema...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+    void Swal.fire({
+        title: 'Cargando datos del sistema...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
 
-        try {
-            await Promise.all([this.loadUsers(), this.loadMaterials()]);
-            await this.loadJobs();
+    try {
+        await Promise.all([this.loadUsers(), this.loadMaterials()]);
+        await this.loadJobs();
 
-            // Si loadJobs falló y mostró la alerta de error, no la cerramos
-            if (this.loadError()) {
-                return;
-            }
+        if (this.loadError()) {
+            return;
+        }
 
-            // Si todo cargó bien, cerramos el modal
-            if (Swal.isVisible()) {
-                Swal.close();
-            }
-        } finally {
-            this.isLoading.set(false);
+        if (Swal.isVisible()) {
+            Swal.close();
+        }
+    } finally {
+        this.isLoading.set(false);
+    }
+
+    const abrir = this.route.snapshot.queryParamMap.get('abrir');
+    if (abrir) {
+        const id = parseInt(abrir, 10);
+        if (!Number.isNaN(id)) {
+            void this.openEdit(id);
         }
     }
+}
+
 
     async loadJobs(): Promise<void> {
         this.loadError.set(false);
@@ -470,7 +478,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
      * aquí: siempre queda tal cual vino del inventario (mat.price).
      */
     updateNecessaryQty(materialId: number, qty: number): void {
-        const cantidadSegura = Number.isFinite(qty) && qty > 0 ? qty : 1;
+        // Permitir 0. Si no es un número válido, usar 0.
+        const cantidadSegura = Number.isFinite(qty) && qty >= 0 ? qty : 0;
         this.necessaryMaterials.update((rows) =>
             rows.map((r) =>
                 r.materialId === materialId ? { ...r, quantity: cantidadSegura } : r
@@ -617,7 +626,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                         categoryName: '',
                         unit: m.unit || ''
                     },
-                    m.quantity || 1
+                    m.quantity ?? 1   // ← ?? mantiene el 0; || lo convertía en 1
                 );
             });
             this.selectedMaterialIds.set(set);
@@ -965,51 +974,153 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     searchAddressOnMap(): void {
-        const texto = this.form.controls.address.value.trim();
-        if (!texto) return;
+        const textoOriginal = this.form.controls.address.value?.trim();
+        if (!textoOriginal) return;
 
-        const regexCoords = /^[-+]?\d+(\.\d+)?,\s*[-+]?\d+(\.\d+)?$/;
-        if (regexCoords.test(texto)) {
-            const partes = texto.split(',');
-            const latV = parseFloat(partes[0]);
-            const lngV = parseFloat(partes[1]);
+        // 1. Coordenadas pegadas (lat, lng)
+        const regexCoords = /^[-+]?\d+(\.\d+)?\s*,\s*[-+]?\d+(\.\d+)?$/;
+        if (regexCoords.test(textoOriginal)) {
+            const [latStr, lngStr] = textoOriginal.split(',');
+            const latV = parseFloat(latStr.trim());
+            const lngV = parseFloat(lngStr.trim());
             if (!isNaN(latV) && !isNaN(lngV)) {
-                this.form.controls.latitude.setValue(Number(latV.toFixed(6)));
-                this.form.controls.longitude.setValue(Number(lngV.toFixed(6)));
-                if (this.map && this.marker) {
-                    this.marker.setLatLng([latV, lngV]);
-                    this.map.setView([latV, lngV], 16);
-                }
+                this.setMapPosition(latV, lngV);
             }
             return;
         }
 
+        // 2. Normalizar dirección
+        const texto = this.normalizeAddress(textoOriginal);
+
+        // Importante: NO usamos Swal de loading aquí (causa el NotFoundError)
+        // Si quieres feedback visual, usa un spinner pequeño en el botón
+
         fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto)}&accept-language=es&limit=1`
+            `https://nominatim.openstreetmap.org/search?` +
+            `format=json&q=${encodeURIComponent(texto)}` +
+            `&addressdetails=1&limit=5&accept-language=es,en`,
+            {
+                headers: {
+                    'Accept-Language': 'es,en',
+                    // Obligatorio según política de Nominatim
+                    'User-Agent': 'TrabajosApp/1.0 (contacto@tuempresa.com)'
+                }
+            }
         )
-            .then((res) => res.json())
-            .then((results) => {
-                if (results && results.length > 0) {
-                    const latV = parseFloat(results[0].lat);
-                    const lngV = parseFloat(results[0].lon);
-                    this.form.controls.latitude.setValue(Number(latV.toFixed(6)));
-                    this.form.controls.longitude.setValue(Number(lngV.toFixed(6)));
-                    if (this.map && this.marker) {
-                        this.marker.setLatLng([latV, lngV]);
-                        this.map.setView([latV, lngV], 16);
-                    }
+            .then(r => r.json())
+            .then((results: any[]) => {
+                if (results?.length > 0) {
+                    const best = results[0];
+                    this.setMapPosition(parseFloat(best.lat), parseFloat(best.lon));
+
+                    // Opcional: actualizar el input con el nombre limpio que devolvió Nominatim
+                    // this.form.controls.address.setValue(best.display_name);
                 } else {
                     void Swal.fire({
                         icon: 'warning',
                         title: 'No encontrado',
-                        text: 'No se encontró esa dirección. Intenta ser más específico o usa el mapa.',
+                        text: 'No se encontró esa dirección. Intenta ser más específico o mueve el marcador en el mapa.',
                         confirmButtonColor: '#12CFF4',
-                        timer: 3000,
+                        timer: 3200,
                         timerProgressBar: true
                     });
                 }
             })
-            .catch((err) => console.error('Error geocoding:', err));
+            .catch(err => {
+                console.error('Error geocoding:', err);
+                void Swal.fire({
+                    icon: 'error',
+                    title: 'Error de búsqueda',
+                    text: 'No se pudo buscar la dirección. Intenta de nuevo.',
+                    confirmButtonColor: '#12CFF4'
+                });
+            });
+    }
+
+    /** Normaliza fracciones y abreviaturas para mejorar resultados */
+    private normalizeAddress(address: string): string {
+        return address
+            // Fracciones americanas
+            .replace(/\b(\d+)\s+1\/2\b/gi, '$1th')
+            .replace(/\b(\d+)\s+½\b/gi, '$1th')
+            .replace(/\b(\d+)\s+1\/4\b/gi, '$1th')
+            .replace(/\b(\d+)\s+3\/4\b/gi, '$1th')
+            // Abreviaturas comunes
+            .replace(/\bSt\b\.?/gi, 'Street')
+            .replace(/\bAve\b\.?/gi, 'Avenue')
+            .replace(/\bBlvd\b\.?/gi, 'Boulevard')
+            .replace(/\bRd\b\.?/gi, 'Road')
+            .replace(/\bDr\b\.?/gi, 'Drive')
+            .replace(/\bLn\b\.?/gi, 'Lane')
+            .replace(/\bCt\b\.?/gi, 'Court')
+            .replace(/\bW\b(?=\s)/gi, 'West')
+            .replace(/\bE\b(?=\s)/gi, 'East')
+            .replace(/\bN\b(?=\s)/gi, 'North')
+            .replace(/\bS\b(?=\s)/gi, 'South')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    private geocodeWithNominatim(query: string): Promise<{ lat: number; lon: number } | null> {
+        const url = `https://nominatim.openstreetmap.org/search?` +
+            `format=json&q=${encodeURIComponent(query)}` +
+            `&countrycodes=us&addressdetails=1&limit=3&accept-language=en`;
+
+        return fetch(url, {
+            headers: {
+                'Accept-Language': 'en',
+                // Nominatim recomienda un User-Agent identificable
+                'User-Agent': 'TrabajosApp/1.0 (tu-email@empresa.com)'
+            }
+        })
+            .then(r => r.json())
+            .then((results: any[]) => {
+                if (results?.length > 0) {
+                    return {
+                        lat: parseFloat(results[0].lat),
+                        lon: parseFloat(results[0].lon)
+                    };
+                }
+                return null;
+            })
+            .catch(() => null);
+    }
+
+    /** Fallback gratuito y muy bueno para direcciones de EE.UU. */
+    private geocodeWithCensus(address: string): Promise<{ lat: number; lon: number } | null> {
+        // API del Census Bureau (100% gratis, sin key)
+        const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?` +
+            `address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&format=json`;
+
+        return fetch(url)
+            .then(r => r.json())
+            .then((data: any) => {
+                const matches = data?.result?.addressMatches;
+                if (matches?.length > 0) {
+                    const coords = matches[0].coordinates;
+                    return {
+                        lat: coords.y,
+                        lon: coords.x
+                    };
+                }
+                return null;
+            })
+            .catch(() => null);
+    }
+
+    private setMapPosition(lat: number, lng: number): void {
+        this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
+        this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
+
+        if (this.map && this.marker) {
+            this.marker.setLatLng([lat, lng]);
+            this.map.setView([lat, lng], 17);
+            // Pequeño delay para que Leaflet recalcule tamaño dentro del modal
+            setTimeout(() => this.map?.invalidateSize(true), 100);
+        }
+
+        // Actualizar dirección legible (opcional)
+        this.reverseGeocode(lat, lng);
     }
 
     onAddressKeydown(e: KeyboardEvent): void {

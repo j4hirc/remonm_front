@@ -464,13 +464,9 @@
             <div class="necessary-row">
                 <div class="nec-name" [title]="row.name">{{ row.name }}</div>
                 <div class="nec-fields">
-                    <input type="number" class="input-field nec-qty" min="1" [value]="row.quantity"
-                        [readOnly]="isSaving()" (input)="
-                  updateNecessaryQty(
-                    row.materialId,
-                    +$any($event.target).value || 1
-                  )
-                " title="Cantidad" />
+                    <input type="number" class="input-field nec-qty" min="0" step="any" [value]="row.quantity"
+                        [readOnly]="isSaving()" (input)="updateNecessaryQty(row.materialId, +$any($event.target).value)"
+                        title="Cantidad" />
                     <input type="text" class="input-field nec-unit" [value]="row.unit" readonly title="Unidad" />
                     <input type="number" class="input-field nec-price" [value]="row.price" readonly
                         title="Precio unitario" />

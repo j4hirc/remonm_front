@@ -374,12 +374,13 @@ export class MaterialesComponent implements OnInit {
     }
 
     formatPrice(value: number): string {
-        return new Intl.NumberFormat('es-CO', {
-            style: 'currency',
-            currency: 'COP',
-            maximumFractionDigits: 0
-        }).format(value ?? 0);
-    }
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2  
+    }).format(value ?? 0);
+}
 
     private getErrorMessage(error: unknown, deleting = false): string {
         if (error instanceof HttpErrorResponse) {

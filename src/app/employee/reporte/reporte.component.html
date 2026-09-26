@@ -1,66 +1,63 @@
 @if (loading()) {
-  <p class="state">Cargando trabajo...</p>
+<p class="state">Cargando trabajo...</p>
 } @else if (job(); as j) {
-  <section class="reporte-box">
+<section class="reporte-box">
     <header class="reporte-header">
-      <h2>Reporte — {{ j.clientName }}</h2>
-      <p>{{ j.address }} @if (j.buildingNumber) { · Edificio: {{ j.buildingNumber }} } @if (j.apartment) { · Departamento: {{ j.apartment }} }</p>
+        <h2>Reporte — {{ j.clientName }}</h2>
+        <p>{{ j.address }} @if (j.buildingNumber) { · Edificio: {{ j.buildingNumber }} } @if (j.apartment) { ·
+            Departamento: {{ j.apartment }} }</p>
     </header>
 
     <label class="field">
-      <span>Estado del trabajo</span>
-      <select [(ngModel)]="status">
-        <option value="IN_PROGRESS">En Progreso</option>
-        <option value="COMPLETED">Completado</option>
-      </select>
+        <span>Estado del trabajo</span>
+        <select [(ngModel)]="status">
+            <option value="IN_PROGRESS">En Progreso</option>
+            <option value="COMPLETED">Completado</option>
+        </select>
     </label>
 
     <label class="field">
-      <span>Comentario / avance</span>
-      <textarea rows="3" [(ngModel)]="comment" placeholder="Describe el avance..."></textarea>
+        <span>Comentario / avance</span>
+        <textarea rows="3" [(ngModel)]="comment" placeholder="Describe el avance..."></textarea>
     </label>
 
     <label class="check">
-      <input type="checkbox" [(ngModel)]="hasModifications" />
-      Hubo modificaciones a la orden original
+        <input type="checkbox" [(ngModel)]="hasModifications" />
+        Hubo modificaciones a la orden original
     </label>
 
     <h3>Materiales de la orden</h3>
     <p class="hint">Solo puedes ajustar cantidades de los materiales ya asignados.</p>
 
     <div class="nec-list">
-      @for (row of necessary(); track row.materialId) {
+        @for (row of necessary(); track row.materialId) {
         <div class="nec-row">
-          <div class="nec-name">{{ row.name }}</div>
-          <div class="nec-fields">
-            <input
-              type="number"
-              min="1"
-              [ngModel]="row.quantity"
-              (ngModelChange)="updateQty(row.materialId, $event)"
-            />
-            <input type="text" [value]="row.unit" readonly />
-            <input type="number" [value]="row.price" readonly />
-            <button type="button" class="btn-del" (click)="removeNec(row.materialId)">
-              <i class="fa-solid fa-trash"></i>
-            </button>
-          </div>
+            <div class="nec-name">{{ row.name }}</div>
+            <div class="nec-fields">
+                <input type="number" min="0" step="any" [ngModel]="row.quantity"
+                    (ngModelChange)="updateQty(row.materialId, $event)" />
+                <input type="text" [value]="row.unit" readonly />
+                <input type="number" [value]="row.price" readonly />
+                <button type="button" class="btn-del" (click)="removeNec(row.materialId)">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
         </div>
-      } @empty {
+        } @empty {
         <p class="hint">Sin materiales en la orden.</p>
-      }
+        }
     </div>
     <p class="total">Total estimado: ${{ necessaryTotal().toFixed(2) }}</p>
 
     <h3>Fotos</h3>
     <input type="file" accept="image/*" multiple (change)="onPhotos($event)" />
     <div class="previews">
-      @for (src of photoPreviews(); track $index) {
+        @for (src of photoPreviews(); track $index) {
         <div class="prev">
-          <img [src]="src" alt="" />
-          <button type="button" (click)="removePhoto($index)">✕</button>
+            <img [src]="src" alt="" />
+            <button type="button" (click)="removePhoto($index)">✕</button>
         </div>
-      }
+        }
     </div>
 
     <h3>Firma</h3>
@@ -68,14 +65,14 @@
     <button type="button" class="btn-link" (click)="clearSignature()">Limpiar firma</button>
 
     <div class="actions">
-      <button type="button" class="btn-cancel" [disabled]="saving()" (click)="cancel()">
-        Cancelar
-      </button>
-      <button type="button" class="btn-save" [disabled]="saving()" (click)="submit()">
-        {{ saving() ? 'Guardando...' : 'Guardar reporte y PDF' }}
-      </button>
+        <button type="button" class="btn-cancel" [disabled]="saving()" (click)="cancel()">
+            Cancelar
+        </button>
+        <button type="button" class="btn-save" [disabled]="saving()" (click)="submit()">
+            {{ saving() ? 'Guardando...' : 'Guardar reporte y PDF' }}
+        </button>
     </div>
-  </section>
+</section>
 }
 
 <!--
@@ -100,8 +97,8 @@
                                   Ajusta esta ruta al logo dentro de tus assets de Angular,
                                   por ejemplo: assets/img/logonegro.png
                                 -->
-                                <img src="img/logonegro.png"
-                                    style="max-height: 55px; width: auto; object-fit: contain;" alt="Logo">
+                                <img src="img/logonegro.png" style="max-height: 55px; width: auto; object-fit: contain;"
+                                    alt="Logo">
                             </td>
                             <td style="vertical-align: middle;">
                                 <h1
@@ -118,8 +115,8 @@
                     style="text-align: right; vertical-align: bottom; padding-bottom: 15px; color: #2E3238; font-size: 13px;">
                     <div style="display: inline-block; text-align: left;">
                         <p style="margin: 0; font-weight: bold;">Fecha de Emisión:</p>
-                        <p style="margin: 2px 0 0 0; font-size: 15px; color: #12CFF4; font-weight: bold;"
-                            id="pdfDate"></p>
+                        <p style="margin: 2px 0 0 0; font-size: 15px; color: #12CFF4; font-weight: bold;" id="pdfDate">
+                        </p>
                     </div>
                 </td>
             </tr>
@@ -131,8 +128,8 @@
                 <td
                     style="padding: 10px; border: 1px solid #ddd; background: #0F2D4A; color: #FFFFFF; font-weight: bold; width: 25%;">
                     Proyecto / Contacto:</td>
-                <td id="pdfJobName"
-                    style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #0F2D4A;"></td>
+                <td id="pdfJobName" style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #0F2D4A;">
+                </td>
             </tr>
             <tr>
                 <td

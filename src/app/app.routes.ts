@@ -31,6 +31,15 @@ export const routes: Routes = [
                 loadComponent: () => import('./admin/clientes-frecuentes/clientes-frecuentes.component').then(c => c.ClientesFrecuentesAdminComponent)
             },
             {
+                path: 'calendario',
+                canActivate: [roleGuard],
+                data: { role: 'ROLE_ADMIN', heading: 'Calendario de Obras' },
+                loadComponent: () =>
+                    import('./admin/calendario/calendario.component').then(
+                        (c) => c.CalendarioAdminComponent
+                    )
+            },
+            {
                 path: 'dashboard',
                 canActivate: [roleGuard],
                 data: { role: 'ROLE_ADMIN', heading: 'Resumen del Sistema' },

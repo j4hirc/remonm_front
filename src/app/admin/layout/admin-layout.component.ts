@@ -79,6 +79,11 @@ readonly menuItems: readonly AdminMenuItem[] = [
   },
   { label: 'Clientes frecuentes', icon: 'fa-solid fa-address-book', route: '/admin/clientes-frecuentes' },
   {
+  label: 'Calendario',
+  icon: 'fa-solid fa-calendar-days',
+  route: '/admin/calendario'
+},
+  {
     label: 'Evidencias',
     icon: 'fa-solid fa-camera',
     route: '/admin/evidencias'

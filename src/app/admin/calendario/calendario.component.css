@@ -1,0 +1,355 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.calendario-wrapper {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(46, 50, 56, 0.05);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-bar label {
+  font-weight: 600;
+  color: #2e3238;
+  font-size: 0.95rem;
+}
+
+.filter-bar select {
+  flex: 1;
+  min-width: 180px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e0e5f2;
+  border-radius: 8px;
+  background: #f9fafc;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.btn-reset {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #0f2d4a;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.loading-msg {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+}
+
+/* Contenedor FullCalendar */
+#calendar {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Toolbar */
+:host ::ng-deep .fc .fc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  align-items: center;
+}
+
+:host ::ng-deep .fc .fc-toolbar-title {
+  font-size: 1.4rem !important;
+  color: #0f2d4a !important;
+  font-weight: 800 !important;
+  text-transform: capitalize;
+  margin: 0 !important;
+}
+
+:host ::ng-deep .fc .fc-button-primary {
+  background-color: #0f2d4a !important;
+  border-color: #0f2d4a !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  text-transform: capitalize !important;
+  font-size: 0.9rem !important;
+  padding: 8px 14px !important;
+}
+
+:host ::ng-deep .fc .fc-button-primary:hover,
+:host ::ng-deep .fc .fc-button-primary:not(:disabled).fc-button-active {
+  background-color: #12cff4 !important;
+  border-color: #12cff4 !important;
+  color: #0f2d4a !important;
+}
+
+:host ::ng-deep .fc-col-header-cell-cushion,
+:host ::ng-deep .fc-daygrid-day-number {
+  color: #2e3238 !important;
+  text-decoration: none !important;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+:host ::ng-deep .fc-theme-standard td,
+:host ::ng-deep .fc-theme-standard th {
+  border-color: #e2e8f0 !important;
+}
+
+/* Celdas más altas para que quepa mejor la info */
+:host ::ng-deep .fc-daygrid-day-frame {
+  min-height: 110px;
+}
+
+/* Eventos en MES / SEMANA (más grandes) */
+:host ::ng-deep .fc-daygrid-event {
+  border-radius: 8px !important;
+  margin: 2px 3px !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+:host ::ng-deep .fc-day-event-custom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  /* color lo define textColor del evento (contraste automático) */
+  line-height: 1.35;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+:host ::ng-deep .fc-day-event-custom i {
+  flex-shrink: 0;
+  font-size: 0.85rem;          /* ← icono más grande */
+}
+
+:host ::ng-deep .fc-day-event-custom span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "+N más" más legible */
+:host ::ng-deep .fc-daygrid-more-link {
+  font-size: 0.85rem !important;
+  font-weight: 700 !important;
+  color: #0f4c81 !important;
+  padding: 3px 6px !important;
+}
+
+/* Lista (Agenda) – más grande */
+:host ::ng-deep .fc-list-event-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 6px;
+  width: 100%;
+  color: #2e3238;
+}
+
+:host ::ng-deep .fc-list-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+:host ::ng-deep .fc-list-title {
+  font-weight: 700;
+  font-size: 1.1rem;            /* ← más grande */
+  color: #0f4c81;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:host ::ng-deep .fc-list-title i {
+  margin-right: 4px;
+  font-size: 1rem;
+}
+
+:host ::ng-deep .fc-list-pay {
+  font-weight: 700;
+  color: #2e7d32;
+  font-size: 1.1rem;
+}
+
+:host ::ng-deep .fc-list-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+:host ::ng-deep .fc-list-meta i {
+  color: #198754;
+  margin-right: 4px;
+}
+
+:host ::ng-deep .fc-list-desc {
+  font-size: 0.9rem;
+  color: #444;
+  font-style: italic;
+  background: #f9fafc;
+  padding: 12px;
+  border-left: 4px solid #ff9800;
+  border-radius: 6px;
+}
+
+:host ::ng-deep .fc-list-event:hover td {
+  background: #f8faff !important;
+}
+
+/* Leyenda */
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #2B3674;
+  font-weight: 600;
+  align-items: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.legend-item i {
+  font-size: 0.95rem;
+}
+
+/* Hover general de eventos */
+:host ::ng-deep .fc-event {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+:host ::ng-deep .fc-event:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(15, 45, 74, 0.18);
+  z-index: 5 !important;
+}
+
+/* ---------- MÓVIL ---------- */
+@media (max-width: 768px) {
+  .calendario-wrapper {
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-bar select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .btn-reset {
+    width: 100%;
+  }
+
+  :host ::ng-deep .fc .fc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  :host ::ng-deep .fc .fc-toolbar-chunk {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  :host ::ng-deep .fc .fc-toolbar-title {
+    font-size: 1.15rem !important;
+    text-align: center;
+    width: 100%;
+  }
+
+  :host ::ng-deep .fc .fc-button-primary {
+    font-size: 0.8rem !important;
+    padding: 8px 12px !important;
+    min-height: 40px;
+  }
+
+  :host ::ng-deep .fc-daygrid-day-frame {
+    min-height: 85px;
+  }
+
+  :host ::ng-deep .fc-day-event-custom {
+    font-size: 0.75rem;
+    padding: 4px 6px;
+  }
+
+  :host ::ng-deep .fc-day-event-custom i {
+    font-size: 0.75rem;
+  }
+
+  :host ::ng-deep .fc-col-header-cell-cushion {
+    font-size: 0.8rem !important;
+  }
+
+  :host ::ng-deep .fc-daygrid-day-number {
+    font-size: 0.85rem !important;
+    padding: 4px !important;
+  }
+
+  :host ::ng-deep .fc-list-title {
+    font-size: 1rem;
+  }
+
+  :host ::ng-deep .fc-list-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .calendar-legend {
+    font-size: 0.8rem;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  :host ::ng-deep .fc-day-event-custom {
+    font-size: 0.7rem;
+    padding: 3px 5px;
+  }
+
+  :host ::ng-deep .fc-daygrid-event {
+    margin: 1px 2px !important;
+  }
+}

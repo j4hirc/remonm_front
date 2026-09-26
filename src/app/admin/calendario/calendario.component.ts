@@ -13,6 +13,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 
@@ -29,16 +30,17 @@ import { Job } from '../../core/models/job.model';
 import { User } from '../../core/models/user.model';
 
 @Component({
-    selector: 'app-bodeguero-calendario',
+    selector: 'app-admin-calendario',
     standalone: true,
     imports: [CommonModule, FormsModule],
     templateUrl: './calendario.component.html',
     styleUrl: './calendario.component.css'
 })
-export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDestroy {
+export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly jobsService = inject(JobsService);
     private readonly usersService = inject(UsersService);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly router = inject(Router);
     readonly error = signal('');
 
     private readonly calendarEl =
@@ -53,7 +55,6 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
     private viewReady = false;
     private dataReady = false;
 
-    /** Mapa userId → color (igual que en Trabajos) */
     private colorByEmployeeId: Record<number, string> = {};
 
     ngOnInit(): void {
@@ -87,7 +88,6 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
             next: ({ jobs, users }) => {
                 this.allJobs = jobs;
 
-                // Construir mapa de colores (igual que en Trabajos)
                 const colors: Record<number, string> = {};
                 users.forEach((u: User) => {
                     colors[u.userId] = u.color || '#CCCCCC';
@@ -179,14 +179,12 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
         return desc;
     }
 
-    /** Color del subcontratista (fallback gris) */
     private employeeColor(employeeId?: number | null): string {
         if (!employeeId) return '#CCCCCC';
         const color = this.colorByEmployeeId[employeeId] || '';
         return /^#[0-9a-f]{3,8}$/i.test(color) ? color : '#CCCCCC';
     }
 
-    /** Texto blanco u oscuro según el brillo del color de fondo */
     private textColorForBackground(hex: string): string {
         if (!hex || !/^#[0-9A-Fa-f]{6}$/.test(hex)) {
             return '#ffffff';
@@ -198,7 +196,6 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
         return luminance > 0.55 ? '#1a1a1a' : '#ffffff';
     }
 
-    /** Icono + clase según estado (con animación) */
     private statusIcon(status: string): string {
         switch (status) {
             case 'IN_PROGRESS':
@@ -239,7 +236,6 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
         });
     }
 
-    /** Contenido visual del evento con iconos animados */
     private escapeHtml(value: unknown): string {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -263,7 +259,6 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
             viewType === 'listMonth' ||
             viewType === 'listDay';
 
-        // Vista LISTA: detalle completo
         if (isList) {
             return {
                 html: `
@@ -287,7 +282,6 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
             };
         }
 
-        // Vista MES / SEMANA: compacto con icono animado
         return {
             html: `
       <div class="fc-day-event-custom" style="color:${arg.event.textColor || '#fff'}" title="${this.escapeHtml(arg.event.title)} · ${this.escapeHtml(p.employee)}">
@@ -307,6 +301,7 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
             description: string;
             clientPhone: string;
         };
+        const jobId = info.event.id;
 
         let estadoTxt = 'Pendiente';
         let badgeColor = '#ff9800';
@@ -328,6 +323,9 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding-bottom:12px;border-bottom:1px dashed #ccc;">
             <span style="background:${badgeColor};color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:bold;">
               ${estadoTxt}
+            </span>
+            <span style="font-weight:bold;color:#2e7d32;font-size:1.2rem;">
+              $${Number(p.pay || 0).toFixed(2)}
             </span>
           </div>
           <div style="padding-left:5px;">
@@ -351,11 +349,26 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
           </div>
         </div>
       `,
-            showCancelButton: false,
-            showDenyButton: false,
-            confirmButtonColor: '#0f4c81',
-            confirmButtonText: 'Cerrar',
-            width: '500px'
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonColor: '#12CFF4',
+            denyButtonColor: '#198754',
+            cancelButtonColor: '#2E3238',
+            confirmButtonText:
+                '<i class="fa-solid fa-pen-to-square"></i> Abrir Trabajo',
+            denyButtonText: '<i class="fa-solid fa-camera"></i> Ver Evidencias',
+            cancelButtonText: 'Cerrar',
+            width: '450px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                void this.router.navigate(['/admin/trabajos'], {
+                    queryParams: { abrir: jobId }
+                });
+            } else if (result.isDenied) {
+                void this.router.navigate(['/admin/evidencias'], {
+                    queryParams: { jobId }
+                });
+            }
         });
     };
 
@@ -372,6 +385,7 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
             plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
             initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
             locale: esLocale,
+            firstDay: 0,
             height: 'auto',
             headerToolbar: {
                 left: 'prev,next today',
