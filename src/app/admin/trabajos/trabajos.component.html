@@ -187,6 +187,12 @@
                                 <i class="fa-solid fa-pen" aria-hidden="true"></i>
                             </button>
 
+                            <button type="button" class="btn-action btn-duplicate" title="Duplicar trabajo"
+                                [disabled]="editorOpen() || deletingId() !== null"
+                                (click)="openDuplicate(job.jobId)">
+                                <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                            </button>
+
                             <button type="button" class="btn-action btn-delete" title="Eliminar"
                                 [disabled]="editorOpen() || deletingId() !== null" (click)="deleteJob(job)">
                                 <i class="fa-solid fa-trash" aria-hidden="true"></i>
@@ -267,6 +273,12 @@
                     Editar
                 </button>
 
+                <button type="button" class="btn-card btn-duplicate"
+                    [disabled]="editorOpen() || deletingId() !== null" (click)="openDuplicate(job.jobId)">
+                    <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                    Duplicar
+                </button>
+
                 <button type="button" class="btn-card btn-delete" [disabled]="editorOpen() || deletingId() !== null"
                     (click)="deleteJob(job)">
                     <i class="fa-solid fa-trash" aria-hidden="true"></i>
@@ -284,13 +296,14 @@
     }
 </section>
 
-<!-- ========== MODAL CREAR / EDITAR ========== -->
+<!-- ========== MODAL CREAR / EDITAR / DUPLICAR ========== -->
 
 <swal #editor [swalOptions]="editorOptions" (didOpen)="onEditorDidOpen()" (willClose)="onEditorWillClose()">
 
     <span *swalPortal="swalTargets.title" class="editor-title">
-        <i [class]="editingId() === null ? 'fa-solid fa-hammer' : 'fa-solid fa-pen'" aria-hidden="true"></i>
-        {{ editingId() === null ? 'Nuevo Trabajo' : 'Editar Trabajo' }}
+        <i [class]="isDuplicating() ? 'fa-solid fa-copy' : (editingId() === null ? 'fa-solid fa-hammer' : 'fa-solid fa-pen')"
+            aria-hidden="true"></i>
+        {{ isDuplicating() ? 'Duplicar Trabajo' : (editingId() === null ? 'Nuevo Trabajo' : 'Editar Trabajo') }}
     </span>
 
     <form *swalPortal="swalTargets.content" class="job-form" [formGroup]="form" (ngSubmit)="submitEditor()" novalidate>
@@ -300,13 +313,11 @@
         <div class="form-row" style="position: relative;">
             <label>Completar desde un cliente registrado</label>
 
-            <!-- BUSCADOR CON AUTOCOMPLETADO (Abre la lista al hacer foco) -->
             <input type="text" class="input-field" placeholder="🔍 Haz clic para ver todos o escribe para filtrar..."
                 [value]="clientSearchModal()" (input)="clientSearchModal.set($any($event.target).value)"
                 (focus)="showClientList.set(true)" (blur)="hideClientList()"
                 [disabled]="isSaving() || clientesLoading()" autocomplete="off" />
 
-            <!-- LISTA FLOTANTE QUE SE MUESTRA AL HACER CLIC EN EL INPUT -->
             @if (showClientList()) {
             <ul class="autocomplete-list"
                 style="position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; list-style: none; padding: 0; margin-top: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">

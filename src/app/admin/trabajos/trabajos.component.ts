@@ -3,12 +3,11 @@ import { ClientesService } from '../../core/services/clientes.service';
 import {
     Component,
     DestroyRef,
-    ElementRef,
     inject,
     OnDestroy,
     OnInit,
     signal,
-    computed, // Añadido computed
+    computed,
     viewChild
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -26,7 +25,7 @@ import {
 } from '@sweetalert2/ngx-sweetalert2';
 import Swal, { SweetAlertOptions } from 'sweetalert2';
 import { RouterLink, ActivatedRoute } from '@angular/router';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 
 import { Job, JobRequest } from '../../core/models/job.model';
 import { User } from '../../core/models/user.model';
@@ -68,7 +67,6 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
     readonly managerFijoId = 5;
 
-
     async loadClientes(): Promise<void> {
         if (this.clientesLoading()) return;
         this.clientesLoading.set(true);
@@ -102,10 +100,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         }
 
         this.clientSearchModal.set('');
-        this.showClientList.set(false); // <--- Ocultamos la lista al seleccionar
+        this.showClientList.set(false);
     }
 
-    // NUEVA FUNCIÓN para ocultar la lista al salir del buscador
     hideClientList(): void {
         setTimeout(() => {
             this.showClientList.set(false);
@@ -137,6 +134,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     readonly deletingId = signal<number | null>(null);
     readonly loadError = signal(false);
     readonly editingId = signal<number | null>(null);
+    readonly isDuplicating = signal(false);
 
     // Filtros de la tabla principal
     readonly searchText = signal('');
@@ -146,7 +144,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     readonly dateTo = signal('');
     readonly employeeFilter = signal('');
 
-    // Búsqueda de clientes dentro del modal (NUEVO)
+    // Búsqueda de clientes dentro del modal
     readonly clientSearchModal = signal('');
     readonly showClientList = signal(false);
     readonly filteredClientesModal = computed(() => {
@@ -189,7 +187,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         status: ['PENDING', Validators.required]
     });
 
-    // IMPORTANTE: Quitamos el `readonly` para poder cambiar las opciones al vuelo
+    // Sin `readonly` para poder cambiar las opciones al vuelo
     editorOptions: SweetAlertOptions = {
         width: 780,
         showCancelButton: true,
@@ -205,19 +203,16 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     };
 
     constructor() {
-        // Libera la pantalla si cambias de pestaña o destruyes el componente
         this.destroyRef.onDestroy(() => {
             if (Swal.isVisible()) Swal.close();
         });
     }
 
-    /** Bindear en el template: <swal #editor (didOpen)="onEditorDidOpen()"> */
     onEditorDidOpen(): void {
         void this.loadClientes();
         this.initMapFromForm();
     }
 
-    /** Bindear en el template: <swal #editor (willClose)="onEditorWillClose()"> */
     onEditorWillClose(): void {
         this.destroyMap();
     }
@@ -230,39 +225,38 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.destroyMap();
     }
 
-private async bootstrap(): Promise<void> {
-    this.isLoading.set(true);
+    private async bootstrap(): Promise<void> {
+        this.isLoading.set(true);
 
-    void Swal.fire({
-        title: 'Cargando datos del sistema...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
+        void Swal.fire({
+            title: 'Cargando datos del sistema...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
 
-    try {
-        await Promise.all([this.loadUsers(), this.loadMaterials()]);
-        await this.loadJobs();
+        try {
+            await Promise.all([this.loadUsers(), this.loadMaterials()]);
+            await this.loadJobs();
 
-        if (this.loadError()) {
-            return;
+            if (this.loadError()) {
+                return;
+            }
+
+            if (Swal.isVisible()) {
+                Swal.close();
+            }
+        } finally {
+            this.isLoading.set(false);
         }
 
-        if (Swal.isVisible()) {
-            Swal.close();
+        const abrir = this.route.snapshot.queryParamMap.get('abrir');
+        if (abrir) {
+            const id = parseInt(abrir, 10);
+            if (!Number.isNaN(id)) {
+                void this.openEdit(id);
+            }
         }
-    } finally {
-        this.isLoading.set(false);
     }
-
-    const abrir = this.route.snapshot.queryParamMap.get('abrir');
-    if (abrir) {
-        const id = parseInt(abrir, 10);
-        if (!Number.isNaN(id)) {
-            void this.openEdit(id);
-        }
-    }
-}
-
 
     async loadJobs(): Promise<void> {
         this.loadError.set(false);
@@ -274,7 +268,6 @@ private async bootstrap(): Promise<void> {
         } catch (error: unknown) {
             this.loadError.set(true);
 
-            // Esto sobrescribirá automáticamente el modal de "Cargando datos..."
             await Swal.fire({
                 icon: 'error',
                 title: 'No se pudieron cargar los trabajos',
@@ -337,13 +330,12 @@ private async bootstrap(): Promise<void> {
         const emp = this.employeeFilter().trim().toLowerCase();
 
         let list = [...this.jobs()].filter((job) => {
-            // CAMBIO: Se agregó la validación para quickbooksInvoice
             const coincideTexto =
                 (job.clientName || '').toLowerCase().includes(text) ||
                 (job.description || '').toLowerCase().includes(text) ||
                 (job.nameEmployee || '').toLowerCase().includes(text) ||
                 (job.nameManager || '').toLowerCase().includes(text) ||
-                (job.quickbooksInvoice || '').toLowerCase().includes(text); // ¡Nuevo!
+                (job.quickbooksInvoice || '').toLowerCase().includes(text);
 
             const coincideEstado = status === 'ALL' || job.status === status;
 
@@ -478,7 +470,6 @@ private async bootstrap(): Promise<void> {
      * aquí: siempre queda tal cual vino del inventario (mat.price).
      */
     updateNecessaryQty(materialId: number, qty: number): void {
-        // Permitir 0. Si no es un número válido, usar 0.
         const cantidadSegura = Number.isFinite(qty) && qty >= 0 ? qty : 0;
         this.necessaryMaterials.update((rows) =>
             rows.map((r) =>
@@ -506,7 +497,8 @@ private async bootstrap(): Promise<void> {
     async openCreate(): Promise<void> {
         if (this.isLoading() || this.editorOpen()) return;
         this.editingId.set(null);
-        this.clientSearchModal.set(''); // Limpia el buscador de clientes
+        this.isDuplicating.set(false);
+        this.clientSearchModal.set('');
         this.necessaryMaterials.set([]);
         this.selectedMaterialIds.set(new Set());
         this.blueprintFiles.set([]);
@@ -537,6 +529,7 @@ private async bootstrap(): Promise<void> {
         const editorCmp = this.editor();
         editorCmp.swalOptions = {
             ...this.editorOptions,
+            confirmButtonText: 'Guardar Trabajo',
             showDenyButton: false
         };
         this.editorOptions = editorCmp.swalOptions;
@@ -544,7 +537,6 @@ private async bootstrap(): Promise<void> {
         this.editorOpen.set(true);
         try {
             const result = await editorCmp.fire();
-            // El modal ya está cerrado físicamente en este punto.
             this.editorOpen.set(false);
 
             if (result.isConfirmed && !this.destroyRef.destroyed) {
@@ -561,7 +553,12 @@ private async bootstrap(): Promise<void> {
         }
     }
 
-    async openEdit(jobId: number): Promise<void> {
+    /** Duplicar = abrir el editor con todo precargado, pero guardando como trabajo nuevo. */
+    openDuplicate(jobId: number): Promise<void> {
+        return this.openEdit(jobId, true);
+    }
+
+    async openEdit(jobId: number, duplicate = false): Promise<void> {
         if (this.isLoading() || this.editorOpen()) return;
 
         Swal.fire({
@@ -577,12 +574,15 @@ private async bootstrap(): Promise<void> {
 
             await Swal.close();
 
-            this.editingId.set(jobId);
-            this.clientSearchModal.set(''); // Limpia el buscador de clientes
+            // Duplicar: sin id, para que persistJob use create()
+            this.isDuplicating.set(duplicate);
+            this.editingId.set(duplicate ? null : jobId);
+            this.clientSearchModal.set('');
             this.necessaryMaterials.set([]);
             this.selectedMaterialIds.set(new Set());
             this.blueprintFiles.set([]);
-            this.existingBlueprintUrls.set(data.blueprintUrls || []);
+            // Los planos ya subidos no se copian al duplicado
+            this.existingBlueprintUrls.set(duplicate ? [] : data.blueprintUrls || []);
 
             let descripcion = data.description || '';
             if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
@@ -600,14 +600,15 @@ private async bootstrap(): Promise<void> {
                 latitude: data.latitude,
                 longitude: data.longitude,
                 employeeId: String(data.employeeId || ''),
-                managerId: String(this.managerFijoId),
+                managerId: String(data.managerId ?? this.managerFijoId),
                 description: descripcion,
                 priority: data.priority ?? 2,
                 jobDate: this.fechaParaInput(data.jobDate),
                 pay: data.pay || 0,
                 safeDepositBoxCodes: data.safeDepositBoxCodes || '',
-                quickbooksInvoice: data.quickbooksInvoice || '',
-                status: data.status || 'PENDING'
+                // El duplicado empieza sin factura y en Pendiente
+                quickbooksInvoice: duplicate ? '' : data.quickbooksInvoice || '',
+                status: duplicate ? 'PENDING' : data.status || 'PENDING'
             });
 
             // Materiales asignados.
@@ -626,36 +627,40 @@ private async bootstrap(): Promise<void> {
                         categoryName: '',
                         unit: m.unit || ''
                     },
-                    m.quantity ?? 1   // ← ?? mantiene el 0; || lo convertía en 1
+                    m.quantity ?? 1
                 );
             });
             this.selectedMaterialIds.set(set);
 
-            // Al editar, mostramos el botón "Eliminar".
             const editorCmp = this.editor();
-            editorCmp.swalOptions = {
-                ...this.editorOptions,
-                showDenyButton: true,
-                denyButtonText: 'Eliminar',
-                denyButtonColor: '#d33'
-            };
+            editorCmp.swalOptions = duplicate
+                ? {
+                    ...this.editorOptions,
+                    confirmButtonText: 'Guardar Duplicado',
+                    showDenyButton: false
+                }
+                : {
+                    ...this.editorOptions,
+                    confirmButtonText: 'Guardar Trabajo',
+                    showDenyButton: true,
+                    denyButtonText: 'Eliminar',
+                    denyButtonColor: '#d33'
+                };
             this.editorOptions = editorCmp.swalOptions;
 
             this.editorOpen.set(true);
             const result = await editorCmp.fire();
 
-            // CLAVE DEL FIX: el modal de edición ya se cerró físicamente.
             this.editorOpen.set(false);
 
             if (result.isConfirmed && !this.destroyRef.destroyed) {
                 await Swal.fire({
                     icon: 'success',
                     title: '¡Éxito!',
-                    text: 'Trabajo actualizado.',
+                    text: duplicate ? 'Trabajo duplicado correctamente.' : 'Trabajo actualizado.',
                     confirmButtonColor: '#12CFF4'
                 });
             } else if (result.isDenied && !this.destroyRef.destroyed) {
-                // Si presiona el botón "Eliminar", buscamos el trabajo y lanzamos la alerta de borrado
                 const jobToDel = this.jobs().find(j => j.jobId === jobId);
                 if (jobToDel) {
                     await this.deleteJob(jobToDel);
@@ -671,6 +676,7 @@ private async bootstrap(): Promise<void> {
             });
         } finally {
             this.editorOpen.set(false);
+            this.isDuplicating.set(false);
             this.destroyMap();
         }
     }
@@ -704,6 +710,22 @@ private async bootstrap(): Promise<void> {
                 'Completa Cliente, Dirección, Empleado, Manager, Fecha y Ubicación.'
             );
             return false;
+        }
+
+        // Validación al duplicar: misma fecha + edificio + departamento = error
+        if (this.isDuplicating()) {
+            const v = this.form.getRawValue();
+            const conflicto = this.duplicateConflict(
+                v.clientName,
+                v.address,
+                v.jobDate,
+                v.buildingNumber,
+                v.apartment
+            );
+            if (conflicto) {
+                Swal.showValidationMessage(conflicto);
+                return false;
+            }
         }
 
         this.isSaving.set(true);
@@ -830,6 +852,46 @@ private async bootstrap(): Promise<void> {
         } finally {
             this.deletingId.set(null);
         }
+    }
+
+    // ---------- VALIDACIÓN AL DUPLICAR ----------
+
+    private normalizeText(v: string | null | undefined): string {
+        return (v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    /**
+     * Devuelve un mensaje si ya existe un trabajo del mismo cliente y dirección
+     * con la misma fecha + edificio + departamento. Si no, devuelve null.
+     * - Fecha nueva → OK.
+     * - Fecha repetida → debe cambiar edificio o departamento.
+     * - Fecha, edificio y departamento repetidos → error.
+     */
+    private duplicateConflict(
+        clientName: string,
+        address: string,
+        date: string,
+        building: string,
+        apartment: string
+    ): string | null {
+        const cliente = this.normalizeText(clientName);
+        const direccion = this.normalizeText(address);
+        const bld = this.normalizeText(building);
+        const apt = this.normalizeText(apartment);
+
+        const existe = this.jobs().some(
+            (j) =>
+                this.normalizeText(j.clientName) === cliente &&
+                this.normalizeText(j.address) === direccion &&
+                this.fechaParaInput(j.jobDate) === date &&
+                this.normalizeText(j.buildingNumber) === bld &&
+                this.normalizeText(j.apartment) === apt
+        );
+
+        return existe
+            ? 'Ya existe un trabajo con esa fecha, edificio y departamento. ' +
+              'Cambia la fecha, o cambia el edificio/departamento.'
+            : null;
     }
 
     // ---------- MAPA ----------
@@ -992,9 +1054,6 @@ private async bootstrap(): Promise<void> {
         // 2. Normalizar dirección
         const texto = this.normalizeAddress(textoOriginal);
 
-        // Importante: NO usamos Swal de loading aquí (causa el NotFoundError)
-        // Si quieres feedback visual, usa un spinner pequeño en el botón
-
         fetch(
             `https://nominatim.openstreetmap.org/search?` +
             `format=json&q=${encodeURIComponent(texto)}` +
@@ -1002,7 +1061,6 @@ private async bootstrap(): Promise<void> {
             {
                 headers: {
                     'Accept-Language': 'es,en',
-                    // Obligatorio según política de Nominatim
                     'User-Agent': 'TrabajosApp/1.0 (contacto@tuempresa.com)'
                 }
             }
@@ -1012,9 +1070,6 @@ private async bootstrap(): Promise<void> {
                 if (results?.length > 0) {
                     const best = results[0];
                     this.setMapPosition(parseFloat(best.lat), parseFloat(best.lon));
-
-                    // Opcional: actualizar el input con el nombre limpio que devolvió Nominatim
-                    // this.form.controls.address.setValue(best.display_name);
                 } else {
                     void Swal.fire({
                         icon: 'warning',
@@ -1040,12 +1095,10 @@ private async bootstrap(): Promise<void> {
     /** Normaliza fracciones y abreviaturas para mejorar resultados */
     private normalizeAddress(address: string): string {
         return address
-            // Fracciones americanas
             .replace(/\b(\d+)\s+1\/2\b/gi, '$1th')
             .replace(/\b(\d+)\s+½\b/gi, '$1th')
             .replace(/\b(\d+)\s+1\/4\b/gi, '$1th')
             .replace(/\b(\d+)\s+3\/4\b/gi, '$1th')
-            // Abreviaturas comunes
             .replace(/\bSt\b\.?/gi, 'Street')
             .replace(/\bAve\b\.?/gi, 'Avenue')
             .replace(/\bBlvd\b\.?/gi, 'Boulevard')
@@ -1069,7 +1122,6 @@ private async bootstrap(): Promise<void> {
         return fetch(url, {
             headers: {
                 'Accept-Language': 'en',
-                // Nominatim recomienda un User-Agent identificable
                 'User-Agent': 'TrabajosApp/1.0 (tu-email@empresa.com)'
             }
         })
@@ -1088,7 +1140,6 @@ private async bootstrap(): Promise<void> {
 
     /** Fallback gratuito y muy bueno para direcciones de EE.UU. */
     private geocodeWithCensus(address: string): Promise<{ lat: number; lon: number } | null> {
-        // API del Census Bureau (100% gratis, sin key)
         const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?` +
             `address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&format=json`;
 
@@ -1115,11 +1166,9 @@ private async bootstrap(): Promise<void> {
         if (this.map && this.marker) {
             this.marker.setLatLng([lat, lng]);
             this.map.setView([lat, lng], 17);
-            // Pequeño delay para que Leaflet recalcule tamaño dentro del modal
             setTimeout(() => this.map?.invalidateSize(true), 100);
         }
 
-        // Actualizar dirección legible (opcional)
         this.reverseGeocode(lat, lng);
     }
 

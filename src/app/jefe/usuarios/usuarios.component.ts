@@ -27,9 +27,9 @@ import { UsersService } from '../../core/services/users.service';
 
 const AVAILABLE_ROLES = [
   { value: 'ROLE_ADMIN', label: 'Administrador' },
-  { value: 'ROLE_JEFE', label: 'Jefe' },
-  { value: 'ROLE_EMPLOYEE', label: 'Empleado' },
-    { value: 'ROLE_BODEGUERO', label: 'Bodeguero' }
+  { value: 'ROLE_JEFE', label: 'Manager' },
+  { value: 'ROLE_EMPLOYEE', label: 'Subcontratista' },
+  { value: 'ROLE_BODEGUERO', label: 'Bodega' }
 ] as const;
 
 @Component({
@@ -263,9 +263,9 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
     return user.roles
       .map((r) => {
         if (r.name === 'ROLE_ADMIN') return 'Admin';
-        if (r.name === 'ROLE_JEFE') return 'Jefe';
-        if (r.name === 'ROLE_EMPLOYEE') return 'Empleado';
-        if (r.name === 'ROLE_BODEGUERO') return 'Bodeguero';
+        if (r.name === 'ROLE_JEFE') return 'Manager';
+        if (r.name === 'ROLE_EMPLOYEE') return 'Subcontratista';
+        if (r.name === 'ROLE_BODEGUERO') return 'Bodega';
         return r.name;
       })
       .join(', ');

@@ -808,3 +808,13 @@ input.nec-price {
         height: 36px;
     }
 }
+
+.btn-duplicate {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.btn-card.btn-duplicate {
+    background: #e0f2fe;
+    color: #0284c7;
+}

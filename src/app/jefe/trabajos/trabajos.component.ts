@@ -123,7 +123,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     readonly jobs = signal<readonly Job[]>([]);
     readonly employees = signal<readonly User[]>([]);
     readonly managers = signal<readonly User[]>([]);
-    // NUEVO: todos los usuarios (para poder mostrar un manager guardado aunque esté inactivo)
+    // Todos los usuarios (para poder mostrar un manager guardado aunque esté inactivo)
     private readonly allUsers = signal<readonly User[]>([]);
     readonly materials = signal<readonly Material[]>([]);
     readonly colorByEmployeeId = signal<Record<number, string>>({});
@@ -134,6 +134,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     readonly deletingId = signal<number | null>(null);
     readonly loadError = signal(false);
     readonly editingId = signal<number | null>(null);
+    readonly isDuplicating = signal(false);
 
     // Filtros de la tabla principal
     readonly searchText = signal('');
@@ -200,6 +201,22 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 Swal.showValidationMessage('Completa Cliente, Dirección, Empleado, Manager, Fecha y Ubicación.');
                 return false;
             }
+
+            // Validación al duplicar: misma fecha + edificio + departamento = error
+            if (this.isDuplicating()) {
+                const v = this.form.getRawValue();
+                const conflicto = this.duplicateConflict(
+                    v.clientName,
+                    v.address,
+                    v.jobDate,
+                    v.buildingNumber,
+                    v.apartment
+                );
+                if (conflicto) {
+                    Swal.showValidationMessage(conflicto);
+                    return false;
+                }
+            }
             return true;
         }
     };
@@ -225,7 +242,6 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     private async bootstrap(): Promise<void> {
         this.isLoading.set(true);
 
-        // MODAL DE CARGA
         void Swal.fire({
             title: 'Cargando trabajos...',
             allowOutsideClick: false,
@@ -236,7 +252,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             await Promise.all([this.loadUsers(), this.loadMaterials()]);
             await this.loadJobs();
 
-            Swal.close(); // CERRAMOS EL MODAL AL TERMINAR
+            Swal.close();
 
             // Abrir trabajo desde calendario (?abrir=jobId)
             const abrir = this.route.snapshot.queryParamMap.get('abrir');
@@ -271,7 +287,6 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         }
     }
 
-    // CAMBIO: guarda todos los usuarios, acepta ROLE_MANAGER y ya no ignora errores en silencio
     private async loadUsers(): Promise<void> {
         try {
             const users = await firstValueFrom(
@@ -316,7 +331,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         }
     }
 
-    // NUEVO: manager por defecto que SÍ exista en la lista del select
+    // Manager por defecto que SÍ exista en la lista del select
     private defaultManagerId(): string {
         const list = this.managers();
         if (list.some((m) => m.userId === this.managerFijoId)) {
@@ -325,7 +340,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         return list.length ? String(list[0].userId) : '';
     }
 
-    // NUEVO: garantiza que el manager guardado aparezca en el select (aunque esté inactivo)
+    // Garantiza que el manager guardado aparezca en el select (aunque esté inactivo)
     private ensureManagerInList(managerId: number): void {
         if (this.managers().some((m) => m.userId === managerId)) return;
         const found = this.allUsers().find((u) => u.userId === managerId);
@@ -506,6 +521,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     async openCreate(): Promise<void> {
         if (this.isLoading() || this.editorOpen()) return;
         this.editingId.set(null);
+        this.isDuplicating.set(false);
         this.clientSearchModal.set('');
         this.showClientList.set(false);
         this.necessaryMaterials.set([]);
@@ -524,7 +540,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             latitude: -2.900128,
             longitude: -79.005896,
             employeeId: '',
-            managerId: this.defaultManagerId(), // CAMBIO
+            managerId: this.defaultManagerId(),
             description: '',
             priority: 2,
             jobDate: '',
@@ -534,10 +550,11 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             status: 'PENDING'
         });
 
-        // Aseguramos que NO se muestre el botón eliminar al crear
+        // Al crear no se muestra el botón eliminar y el texto es el normal
         const editorCmp = this.editor();
         editorCmp.swalOptions = {
             ...this.editorOptions,
+            confirmButtonText: 'Guardar Trabajo',
             showDenyButton: false
         };
         this.editorOptions = editorCmp.swalOptions;
@@ -572,7 +589,12 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         }
     }
 
-    async openEdit(jobId: number): Promise<void> {
+    /** Duplicar = abrir el editor con todo precargado, pero guardando como trabajo nuevo. */
+    openDuplicate(jobId: number): Promise<void> {
+        return this.openEdit(jobId, true);
+    }
+
+    async openEdit(jobId: number, duplicate = false): Promise<void> {
         if (this.isLoading() || this.editorOpen()) return;
 
         Swal.fire({
@@ -588,13 +610,16 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
 
             await Swal.close();
 
-            this.editingId.set(jobId);
+            // Duplicar: sin id, para que persistJob use create()
+            this.isDuplicating.set(duplicate);
+            this.editingId.set(duplicate ? null : jobId);
             this.clientSearchModal.set('');
             this.showClientList.set(false);
             this.necessaryMaterials.set([]);
             this.selectedMaterialIds.set(new Set());
             this.blueprintFiles.set([]);
-            this.existingBlueprintUrls.set(data.blueprintUrls || []);
+            // Los planos ya subidos no se copian al duplicado
+            this.existingBlueprintUrls.set(duplicate ? [] : data.blueprintUrls || []);
 
             let descripcion = data.description || '';
             if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
@@ -603,7 +628,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                     .trim();
             }
 
-            // CAMBIO: el manager guardado siempre debe estar en la lista del select
+            // El manager guardado siempre debe estar en la lista del select
             const managerId = data.managerId ?? this.managerFijoId;
             this.ensureManagerInList(managerId);
 
@@ -622,8 +647,9 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 jobDate: this.fechaParaInput(data.jobDate),
                 pay: data.pay || 0,
                 safeDepositBoxCodes: data.safeDepositBoxCodes || '',
-                quickbooksInvoice: data.quickbooksInvoice || '',
-                status: data.status || 'PENDING'
+                // El duplicado empieza sin factura y en Pendiente
+                quickbooksInvoice: duplicate ? '' : data.quickbooksInvoice || '',
+                status: duplicate ? 'PENDING' : data.status || 'PENDING'
             });
 
             const mats = data.materials || [];
@@ -641,19 +667,25 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                         categoryName: '',
                         unit: m.unit || ''
                     },
-                    m.quantity ?? 1   // ← ?? mantiene el 0
+                    m.quantity ?? 1
                 );
             });
             this.selectedMaterialIds.set(set);
 
-            // Mostrar el botón eliminar al editar
             const editorCmp = this.editor();
-            editorCmp.swalOptions = {
-                ...this.editorOptions,
-                showDenyButton: true,
-                denyButtonText: 'Eliminar',
-                denyButtonColor: '#d33'
-            };
+            editorCmp.swalOptions = duplicate
+                ? {
+                    ...this.editorOptions,
+                    confirmButtonText: 'Guardar Duplicado',
+                    showDenyButton: false
+                }
+                : {
+                    ...this.editorOptions,
+                    confirmButtonText: 'Guardar Trabajo',
+                    showDenyButton: true,
+                    denyButtonText: 'Eliminar',
+                    denyButtonColor: '#d33'
+                };
             this.editorOptions = editorCmp.swalOptions;
 
             this.editorOpen.set(true);
@@ -664,7 +696,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
 
             if (result.isConfirmed && !this.destroyRef.destroyed) {
                 Swal.fire({
-                    title: 'Actualizando trabajo...',
+                    title: duplicate ? 'Duplicando trabajo...' : 'Actualizando trabajo...',
                     text: 'Por favor, espera.',
                     allowOutsideClick: false,
                     allowEscapeKey: false,
@@ -677,7 +709,9 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                     await Swal.fire({
                         icon: 'success',
                         title: '¡Éxito!',
-                        text: 'Trabajo actualizado correctamente.',
+                        text: duplicate
+                            ? 'Trabajo duplicado correctamente.'
+                            : 'Trabajo actualizado correctamente.',
                         confirmButtonColor: '#12CFF4'
                     });
                 } catch (error) {
@@ -698,6 +732,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 confirmButtonColor: '#12CFF4'
             });
         } finally {
+            this.isDuplicating.set(false);
             if (this.editorOpen()) {
                 this.editorOpen.set(false);
                 this.destroyMap();
@@ -850,6 +885,46 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         } finally {
             this.deletingId.set(null);
         }
+    }
+
+    // ---------- VALIDACIÓN AL DUPLICAR ----------
+
+    private normalizeText(v: string | null | undefined): string {
+        return (v ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    /**
+     * Devuelve un mensaje si ya existe un trabajo del mismo cliente y dirección
+     * con la misma fecha + edificio + departamento. Si no, devuelve null.
+     * - Fecha nueva → OK.
+     * - Fecha repetida → debe cambiar edificio o departamento.
+     * - Fecha, edificio y departamento repetidos → error.
+     */
+    private duplicateConflict(
+        clientName: string,
+        address: string,
+        date: string,
+        building: string,
+        apartment: string
+    ): string | null {
+        const cliente = this.normalizeText(clientName);
+        const direccion = this.normalizeText(address);
+        const bld = this.normalizeText(building);
+        const apt = this.normalizeText(apartment);
+
+        const existe = this.jobs().some(
+            (j) =>
+                this.normalizeText(j.clientName) === cliente &&
+                this.normalizeText(j.address) === direccion &&
+                this.fechaParaInput(j.jobDate) === date &&
+                this.normalizeText(j.buildingNumber) === bld &&
+                this.normalizeText(j.apartment) === apt
+        );
+
+        return existe
+            ? 'Ya existe un trabajo con esa fecha, edificio y departamento. ' +
+              'Cambia la fecha, o cambia el edificio/departamento.'
+            : null;
     }
 
     // ---------- MAPA ----------
@@ -1007,7 +1082,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             const latV = parseFloat(latStr.trim());
             const lngV = parseFloat(lngStr.trim());
             if (!isNaN(latV) && !isNaN(lngV)) {
-                this.setMapPosition(latV, lngV, false); // no sobrescribir dirección
+                this.setMapPosition(latV, lngV, false);
             }
             return;
         }
@@ -1024,7 +1099,6 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             .then((results: any[]) => {
                 if (results?.length > 0) {
                     const best = results[0];
-                    // false = NO sobrescribir la dirección que escribió el usuario
                     this.setMapPosition(parseFloat(best.lat), parseFloat(best.lon), false);
                 } else {
                     void Swal.fire({
@@ -1051,12 +1125,10 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     /** Normaliza fracciones y abreviaturas para mejorar resultados de Nominatim */
     private normalizeAddress(address: string): string {
         return address
-            // Fracciones americanas (caso 36 1/2)
             .replace(/\b(\d+)\s+1\/2\b/gi, '$1th')
             .replace(/\b(\d+)\s+½\b/gi, '$1th')
             .replace(/\b(\d+)\s+1\/4\b/gi, '$1th')
             .replace(/\b(\d+)\s+3\/4\b/gi, '$1th')
-            // Abreviaturas comunes
             .replace(/\bSt\b\.?/gi, 'Street')
             .replace(/\bAve\b\.?/gi, 'Avenue')
             .replace(/\bBlvd\b\.?/gi, 'Boulevard')
@@ -1110,7 +1182,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             (pos) => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
-                this.setMapPosition(lat, lng, true); // sí actualizar dirección
+                this.setMapPosition(lat, lng, true);
             },
             () => {
                 void Swal.fire('Error', 'No se pudo obtener tu ubicación.', 'error');

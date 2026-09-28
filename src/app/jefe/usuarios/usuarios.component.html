@@ -20,7 +20,7 @@
         [value]="statusFilter()"
         (change)="onStatusChange($event)"
       >
-        <option value="Active">Empleados Activos</option>
+        <option value="Active">Subcontratistas Activos</option>
         <option value="Unemployed">Desempleados</option>
         <option value="All">Ver Todos</option>
       </select>
@@ -353,13 +353,16 @@
       </label>
       <label class="role-check">
         <input type="checkbox" formControlName="roleJefe" [disabled]="isSaving()" />
-        Jefe
+        Manager
       </label>
       <label class="role-check">
         <input type="checkbox" formControlName="roleEmployee" [disabled]="isSaving()" />
-        Empleado
+        Subcontratista
       </label>
-<label class="role-check"><input type="checkbox" formControlName="roleBodeguero" /> Bodeguero</label>
+      <label class="role-check">
+        <input type="checkbox" formControlName="roleBodeguero" [disabled]="isSaving()" />
+        Bodega
+      </label>
     </fieldset>
   </form>
 </swal>
