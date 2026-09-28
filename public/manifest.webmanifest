@@ -4,7 +4,7 @@
   "short_name": "RemoMN",
   "description": "Gestión de trabajos, materiales y evidencias de RemoMN.",
   "lang": "es",
-  "theme_color": "#e65100",
+  "theme_color": "#0F2D4A",
   "background_color": "#ffffff",
   "display": "standalone",
   "scope": "/",
