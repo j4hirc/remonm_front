@@ -5,11 +5,8 @@ import {
 } from '@sweetalert2/ngx-sweetalert2';
 import { Component, inject, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BodegaComponent } from '../../admin/bodega/bodega.component';
-import { NominaComponent } from '../../admin/nomina/nomina.component';
 import { BodegaJefeComponent } from '../bodega/bodega.component';
 import { NominaJefeComponent } from '../nomina/nomina.component';
-
 
 interface DashboardCard {
   title: string;
@@ -35,10 +32,8 @@ interface DashboardCard {
 })
 export class JefeDashboardComponent {
   readonly swalTargets = inject(SwalPortalTargets);
-  private readonly bodegaModal =
-    viewChild.required<SwalComponent>('bodegaModal');
-  private readonly nominaModal =
-    viewChild.required<SwalComponent>('nominaModal');
+  private readonly bodegaModal = viewChild.required<SwalComponent>('bodegaModal');
+  private readonly nominaModal = viewChild.required<SwalComponent>('nominaModal');
 
   openReport(action: 'bodega' | 'nomina' | undefined): void {
     if (action === 'bodega') void this.bodegaModal().fire();
@@ -46,61 +41,25 @@ export class JefeDashboardComponent {
   }
 
   readonly cards: readonly DashboardCard[] = [
-    {
-      title: 'Gestión de Usuarios',
-      description: 'Administra empleados, jefes y roles.',
-      icon: 'fa-solid fa-users',
-      className: 'card card-blue',
-      route: '/jefe/usuarios'
-    },
-    {
-      title: 'Trabajos y Proyectos',
-      description: 'Asignación de obras y seguimiento.',
-      icon: 'fa-solid fa-hammer',
-      className: 'card card-purple',
-      route: '/jefe/trabajos'
-    },
-    {
-      title: 'Evidencias',
-      description: 'Revisión visual de los avances de obra.',
-      icon: 'fa-solid fa-camera',
-      className: 'card card-blue',
-      route: '/jefe/evidencias'
-    },
-    {
-      title: 'Categorías',
-      description: 'Clasificación de materiales y servicios.',
-      icon: 'fa-solid fa-tags',
-      className: 'card card-orange',
-      route: '/jefe/categorias'
-    },
-    {
-      title: 'Materiales',
-      description: 'Control de Materiales e Inventario.',
-      icon: 'fa-solid fa-boxes-stacked',
-      className: 'card card-green',
-      route: '/jefe/materiales'
-    },
-    {
-      title: 'Resumen de Bodega Global',
-      description: 'Materiales y estado de todos los proyectos por día',
-      icon: 'fa-solid fa-truck-fast',
-      className: 'card card-orange',
-      route: '/jefe/bodega'
-    },
-    {
-      title: 'Nómina Quincenal Global',
-      description: 'Pagos completados de todo el personal',
-      icon: 'fa-solid fa-money-check-dollar',
-      className: 'card card-green',
-      route: '/jefe/nomina'
-    },
-    {
-      title: 'Calendario',
-      description: 'Cronograma de todas las obras',
-      icon: 'fa-solid fa-calendar-days',
-      className: 'card card-purple',
-      route: '/jefe/calendario'
-    }
+    // 1. Usuarios
+    { title: 'Gestión de Usuarios', description: 'Administra empleados, jefes y roles.', icon: 'fa-solid fa-users', className: 'card card-blue', route: '/jefe/usuarios' },
+    // 2. Clientes Frecuentes
+    { title: 'Clientes frecuentes', description: 'Gestión de clientes frecuentes', icon: 'fa-solid fa-address-book', className: 'card card-blue', route: '/jefe/clientes-frecuentes' },
+    
+    // 3. Bodega
+    { title: 'Resumen de Bodega Global', description: 'Materiales y estado de todos los proyectos por día', icon: 'fa-solid fa-truck-fast', className: 'card card-orange', route: '/jefe/bodega' },
+    // 4. Nómina
+    { title: 'Nómina Quincenal Global', description: 'Pagos completados de todo el personal', icon: 'fa-solid fa-money-check-dollar', className: 'card card-green', route: '/jefe/nomina' },
+    
+    // 5. Trabajos
+    { title: 'Trabajos y Proyectos', description: 'Asignación de obras y seguimiento.', icon: 'fa-solid fa-hammer', className: 'card card-purple', route: '/jefe/trabajos' },
+    // 6. Evidencias
+    { title: 'Evidencias', description: 'Revisión visual de los avances de obra.', icon: 'fa-solid fa-camera', className: 'card card-blue', route: '/jefe/evidencias' },
+    // 7. Calendario
+    { title: 'Calendario', description: 'Cronograma de todas las obras', icon: 'fa-solid fa-calendar-days', className: 'card card-purple', route: '/jefe/calendario' },
+
+    // Extra: Categorías y Materiales (No están en el layout, pero sí en el dashboard)
+    { title: 'Categorías', description: 'Clasificación de materiales y servicios.', icon: 'fa-solid fa-tags', className: 'card card-orange', route: '/jefe/categorias' },
+    { title: 'Materiales', description: 'Control de Materiales e Inventario.', icon: 'fa-solid fa-boxes-stacked', className: 'card card-green', route: '/jefe/materiales' }
   ];
 }

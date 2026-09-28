@@ -72,37 +72,42 @@ readonly menuItems: readonly AdminMenuItem[] = [
     icon: 'fa-solid fa-users-gear',
     route: '/admin/usuarios'
   },
+    {
+    label: 'Categorías',
+    icon: 'fa-solid fa-tags',
+    route: '/admin/categorias'
+  },
+  
+  {
+    label: 'Materiales',
+    icon: 'fa-solid fa-boxes-stacked',
+    route: '/admin/materiales'
+  },
+  { label: 'Clientes frecuentes', 
+    icon: 'fa-solid fa-address-book', 
+    route: '/admin/clientes-frecuentes' 
+  },
   {
     label: 'Trabajos',
     icon: 'fa-solid fa-hammer',
     route: '/admin/trabajos'
   },
-  { label: 'Clientes frecuentes', icon: 'fa-solid fa-address-book', route: '/admin/clientes-frecuentes' },
-  {
-  label: 'Calendario',
-  icon: 'fa-solid fa-calendar-days',
-  route: '/admin/calendario'
-},
-  {
+    {
     label: 'Evidencias',
     icon: 'fa-solid fa-camera',
     route: '/admin/evidencias'
-  },
-  {
-    label: 'Categorías',
-    icon: 'fa-solid fa-tags',
-    route: '/admin/categorias'
-  },
-  {
-    label: 'Materiales',
-    icon: 'fa-solid fa-boxes-stacked',
-    route: '/admin/materiales'
   },
   {
     label: 'Bodega',
     icon: 'fa-solid fa-truck-fast',
     route: '/admin/bodega'
   },
+    
+  {
+  label: 'Calendario',
+  icon: 'fa-solid fa-calendar-days',
+  route: '/admin/calendario'
+},
   {
     label: 'Nómina',
     icon: 'fa-solid fa-money-check-dollar',
