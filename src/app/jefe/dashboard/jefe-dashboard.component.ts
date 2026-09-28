@@ -57,9 +57,5 @@ export class JefeDashboardComponent {
     { title: 'Evidencias', description: 'Revisión visual de los avances de obra.', icon: 'fa-solid fa-camera', className: 'card card-blue', route: '/jefe/evidencias' },
     // 7. Calendario
     { title: 'Calendario', description: 'Cronograma de todas las obras', icon: 'fa-solid fa-calendar-days', className: 'card card-purple', route: '/jefe/calendario' },
-
-    // Extra: Categorías y Materiales (No están en el layout, pero sí en el dashboard)
-    { title: 'Categorías', description: 'Clasificación de materiales y servicios.', icon: 'fa-solid fa-tags', className: 'card card-orange', route: '/jefe/categorias' },
-    { title: 'Materiales', description: 'Control de Materiales e Inventario.', icon: 'fa-solid fa-boxes-stacked', className: 'card card-green', route: '/jefe/materiales' }
   ];
 }
