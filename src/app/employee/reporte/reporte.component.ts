@@ -45,8 +45,7 @@ interface NecRow {
   styleUrl: './reporte.component.css'
 })
 export class ReporteEmployeeComponent
-  implements OnInit, AfterViewInit, OnDestroy
-{
+  implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly jobsService = inject(JobsService);
@@ -164,16 +163,16 @@ export class ReporteEmployeeComponent
     return this.necessary().reduce((s, r) => s + r.quantity * r.price, 0);
   }
 
-updateQty(materialId: number, qty: number): void {
-  const cantidadSegura = Number.isFinite(qty) && qty >= 0 ? qty : 0;
-  this.necessary.update((rows) =>
-    rows.map((r) =>
-      r.materialId === materialId
-        ? { ...r, quantity: cantidadSegura }
-        : r
-    )
-  );
-}
+  updateQty(materialId: number, qty: number): void {
+    const cantidadSegura = Number.isFinite(qty) && qty >= 0 ? qty : 0;
+    this.necessary.update((rows) =>
+      rows.map((r) =>
+        r.materialId === materialId
+          ? { ...r, quantity: cantidadSegura }
+          : r
+      )
+    );
+  }
 
   removeNec(materialId: number): void {
     if (!this.originalMaterialIds.has(materialId)) return;
@@ -347,8 +346,14 @@ updateQty(materialId: number, qty: number): void {
       this.employeeName();
     (document.getElementById('pdfJobPay') as HTMLElement).textContent =
       `$${total.toFixed(2)}`;
+    const reportedStatus = this.getReportedStatus();
+
     (document.getElementById('pdfStatus') as HTMLElement).textContent =
-      this.status === 'COMPLETED' ? 'Completado' : 'En Progreso';
+      reportedStatus === 'REVIEW'
+        ? 'Revisión'
+        : reportedStatus === 'COMPLETED'
+          ? 'Completado'
+          : 'En Progreso';
 
     const hoy = new Date();
     (document.getElementById('pdfDate') as HTMLElement).textContent =
@@ -363,16 +368,16 @@ updateQty(materialId: number, qty: number): void {
     ) as HTMLElement;
     pdfMaterialsBody.innerHTML = materials.length
       ? materials
-          .map(
-            (m) => `
+        .map(
+          (m) => `
         <tr>
             <td style="padding: 8px; border: 1px solid #ddd; color: #2E3238;">${m.name}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center; color: #2E3238;">${m.quantityLabel}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #2E3238;">$${m.unitPrice.toFixed(2)}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #198754;">$${m.subtotal.toFixed(2)}</td>
         </tr>`
-          )
-          .join('')
+        )
+        .join('')
       : `<tr><td colspan="4" style="padding: 8px; border: 1px solid #ddd; text-align: center; color: #666;">No se reportaron materiales.</td></tr>`;
 
     (document.getElementById('pdfTotalMateriales') as HTMLElement).textContent =
@@ -380,7 +385,7 @@ updateQty(materialId: number, qty: number): void {
     (document.getElementById('pdfTotalGeneral') as HTMLElement).textContent =
       `$${total.toFixed(2)}`;
     (document.getElementById('pdfGuaranteeBox') as HTMLElement).style.display =
-      this.status === 'COMPLETED' ? 'block' : 'none';
+  reportedStatus === 'COMPLETED' ? 'block' : 'none';
 
     (document.getElementById('pdfImages') as HTMLElement).innerHTML = photos
       .map(
@@ -449,6 +454,14 @@ updateQty(materialId: number, qty: number): void {
     return pdfBlob;
   }
 
+  getReportedStatus(): string {
+    if (this.hasModifications || this.job()?.status === 'REVIEW') {
+      return 'REVIEW';
+    }
+
+    return this.status;
+  }
+
   async submit(): Promise<void> {
     const job = this.job();
     const empId = this.employeeId();
@@ -510,7 +523,8 @@ updateQty(materialId: number, qty: number): void {
         comment,
         jobId: job.jobId,
         employeeId: empId,
-        status: this.status,
+        hasModifications: this.hasModifications,
+        status: this.getReportedStatus(),
         materials,
         materialIds,
         newPrice

@@ -236,6 +236,8 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
         switch (status) {
             case 'IN_PROGRESS':
                 return 'fa-gear fa-spin';
+            case 'REVIEW':
+                return 'fa-clipboard-check';
             case 'COMPLETED':
                 return 'fa-check-double';
             case 'CANCELLED':
@@ -419,6 +421,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
         const estadoTxt = this.statusLabel(p.status);
         let badgeColor = '#ff9800';
         if (p.status === 'IN_PROGRESS') badgeColor = '#12CFF4';
+        else if (p.status === 'REVIEW') badgeColor = '#9333ea';
         else if (p.status === 'COMPLETED') badgeColor = '#6c757d';
         else if (p.status === 'CANCELLED') badgeColor = '#d32f2f';
 

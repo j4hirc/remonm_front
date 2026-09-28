@@ -16,6 +16,7 @@
                     <option value="ALL">Todos los Estados</option>
                     <option value="PENDING">Pendiente</option>
                     <option value="IN_PROGRESS">En Progreso</option>
+                    <option value="REVIEW">Revisión</option>
                     <option value="COMPLETED">Completado</option>
                     <option value="CANCELLED">Cancelado</option>
                 </select>
@@ -188,8 +189,7 @@
                             </button>
 
                             <button type="button" class="btn-action btn-duplicate" title="Duplicar trabajo"
-                                [disabled]="editorOpen() || deletingId() !== null"
-                                (click)="openDuplicate(job.jobId)">
+                                [disabled]="editorOpen() || deletingId() !== null" (click)="openDuplicate(job.jobId)">
                                 <i class="fa-solid fa-copy" aria-hidden="true"></i>
                             </button>
 
@@ -273,8 +273,8 @@
                     Editar
                 </button>
 
-                <button type="button" class="btn-card btn-duplicate"
-                    [disabled]="editorOpen() || deletingId() !== null" (click)="openDuplicate(job.jobId)">
+                <button type="button" class="btn-card btn-duplicate" [disabled]="editorOpen() || deletingId() !== null"
+                    (click)="openDuplicate(job.jobId)">
                     <i class="fa-solid fa-copy" aria-hidden="true"></i>
                     Duplicar
                 </button>
@@ -307,6 +307,35 @@
     </span>
 
     <form *swalPortal="swalTargets.content" class="job-form" [formGroup]="form" (ngSubmit)="submitEditor()" novalidate>
+
+        @if (editingId() !== null && !isDuplicating()) {
+        <div class="duplicate-toolbar">
+            <div>
+                <strong>Crear otro trabajo con estos datos</strong>
+                <p>Los cambios del formulario se usarán para la copia.</p>
+            </div>
+
+            <button type="button" class="btn-duplicate-editor" [disabled]="isSaving()" (click)="duplicateFromEditor()">
+                <i class="fa-solid fa-copy" aria-hidden="true"></i>
+                Duplicar como nuevo
+            </button>
+        </div>
+        }
+
+        @if (isDuplicating()) {
+        <div class="duplicate-notice" role="status">
+            <i class="fa-solid fa-copy" aria-hidden="true"></i>
+
+            <div>
+                <strong>Estás preparando un trabajo nuevo</strong>
+                <p>
+                    Al guardar se creará una copia. El trabajo original
+                    conservará sus datos.
+                </p>
+            </div>
+        </div>
+        }
+
         <!-- Cliente -->
         <h4 class="section-title">Datos del Cliente</h4>
 

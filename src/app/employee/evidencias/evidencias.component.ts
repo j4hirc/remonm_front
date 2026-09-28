@@ -287,6 +287,8 @@ export class EvidenciasEmployeeComponent implements OnInit {
         return { label: 'Pendiente', className: 'badge badge-pending' };
       case 'IN_PROGRESS':
         return { label: 'En Progreso', className: 'badge badge-progress' };
+      case 'REVIEW':
+        return { label: 'Revisión', className: 'badge badge-review' };
       case 'COMPLETED':
         return { label: 'Completado', className: 'badge badge-done' };
       case 'CANCELLED':

@@ -188,18 +188,29 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     });
 
     // Sin `readonly` para poder cambiar las opciones al vuelo
+
     editorOptions: SweetAlertOptions = {
         width: 780,
         showCancelButton: true,
-        showCloseButton: true,
-        confirmButtonText: 'Guardar Trabajo',
+        showCloseButton: false,
+        showDenyButton: true,
+
+        confirmButtonText: 'Guardar cambios',
+        denyButtonText: 'Guardar y enviar correo',
         cancelButtonText: 'Cancelar',
+
         confirmButtonColor: '#e65100',
+        denyButtonColor: '#1565c0',
         cancelButtonColor: '#2E3238',
+
         showLoaderOnConfirm: true,
+        showLoaderOnDeny: true,
+
         allowOutsideClick: () => !this.isSaving(),
         allowEscapeKey: () => !this.isSaving(),
-        preConfirm: () => this.persistJob()
+
+        preConfirm: () => this.persistJob(false),
+        preDeny: () => this.persistJob(true)
     };
 
     constructor() {
@@ -529,8 +540,10 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         const editorCmp = this.editor();
         editorCmp.swalOptions = {
             ...this.editorOptions,
-            confirmButtonText: 'Guardar Trabajo',
-            showDenyButton: false
+            confirmButtonText: 'Guardar trabajo',
+            showDenyButton: true,
+            denyButtonText: 'Guardar y enviar correo',
+            denyButtonColor: '#1565c0'
         };
         this.editorOptions = editorCmp.swalOptions;
 
@@ -539,7 +552,10 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             const result = await editorCmp.fire();
             this.editorOpen.set(false);
 
-            if (result.isConfirmed && !this.destroyRef.destroyed) {
+            if (
+                (result.isConfirmed || result.isDenied)
+                && !this.destroyRef.destroyed
+            ) {
                 await Swal.fire({
                     icon: 'success',
                     title: '¡Éxito!',
@@ -633,19 +649,15 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.selectedMaterialIds.set(set);
 
             const editorCmp = this.editor();
-            editorCmp.swalOptions = duplicate
-                ? {
-                    ...this.editorOptions,
-                    confirmButtonText: 'Guardar Duplicado',
-                    showDenyButton: false
-                }
-                : {
-                    ...this.editorOptions,
-                    confirmButtonText: 'Guardar Trabajo',
-                    showDenyButton: true,
-                    denyButtonText: 'Eliminar',
-                    denyButtonColor: '#d33'
-                };
+            editorCmp.swalOptions = {
+                ...this.editorOptions,
+                confirmButtonText: duplicate
+                    ? 'Guardar duplicado'
+                    : 'Guardar cambios',
+                showDenyButton: true,
+                denyButtonText: 'Guardar y enviar correo',
+                denyButtonColor: '#1565c0'
+            };
             this.editorOptions = editorCmp.swalOptions;
 
             this.editorOpen.set(true);
@@ -653,18 +665,18 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
             this.editorOpen.set(false);
 
-            if (result.isConfirmed && !this.destroyRef.destroyed) {
+            if (
+                (result.isConfirmed || result.isDenied)
+                && !this.destroyRef.destroyed
+            ) {
                 await Swal.fire({
                     icon: 'success',
                     title: '¡Éxito!',
-                    text: duplicate ? 'Trabajo duplicado correctamente.' : 'Trabajo actualizado.',
+                    text: this.isDuplicating()
+                        ? 'Copia creada correctamente. El trabajo original no fue modificado.'
+                        : 'Trabajo actualizado.',
                     confirmButtonColor: '#12CFF4'
                 });
-            } else if (result.isDenied && !this.destroyRef.destroyed) {
-                const jobToDel = this.jobs().find(j => j.jobId === jobId);
-                if (jobToDel) {
-                    await this.deleteJob(jobToDel);
-                }
             }
         } catch (error: unknown) {
             Swal.close();
@@ -685,6 +697,37 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         if (!this.isSaving()) Swal.clickConfirm();
     }
 
+    duplicateFromEditor(): void {
+        if (
+            this.isSaving()
+            || this.editingId() === null
+            || this.isDuplicating()
+        ) {
+            return;
+        }
+
+        // Al no tener ID, persistJob utilizará create() en lugar de update().
+        this.editingId.set(null);
+        this.isDuplicating.set(true);
+
+        // Conservamos los datos escritos, pero la copia inicia como trabajo nuevo.
+        this.form.patchValue({
+            status: 'PENDING',
+            quickbooksInvoice: ''
+        });
+
+        // Los planos guardados pertenecen al original.
+        // Los archivos nuevos seleccionados sí se mantienen para la copia.
+        this.existingBlueprintUrls.set([]);
+
+        Swal.resetValidationMessage();
+
+        Swal.update({
+            confirmButtonText: 'Guardar copia',
+            denyButtonText: 'Guardar copia y enviar correo'
+        });
+    }
+
     onBlueprintChange(event: Event): void {
         const input = event.target as HTMLInputElement;
         const files = input.files ? Array.from(input.files) : [];
@@ -702,7 +745,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.blueprintFiles.update((arr) => arr.filter((_, i) => i !== index));
     }
 
-    private async persistJob(): Promise<Job | false> {
+    private async persistJob(
+        sendNotification: boolean = false
+    ): Promise<Job | false> {
         if (this.isSaving()) return false;
         this.form.markAllAsTouched();
         if (this.form.invalid) {
@@ -761,6 +806,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         }));
 
         const request: JobRequest = {
+            sendNotification,
             clientName: raw.clientName.trim(),
             clientPhone: raw.clientPhone.trim(),
             description,
@@ -890,7 +936,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
         return existe
             ? 'Ya existe un trabajo con esa fecha, edificio y departamento. ' +
-              'Cambia la fecha, o cambia el edificio/departamento.'
+            'Cambia la fecha, o cambia el edificio/departamento.'
             : null;
     }
 
@@ -1218,6 +1264,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 return { label: 'Pendiente', className: 'badge badge-pending' };
             case 'IN_PROGRESS':
                 return { label: 'En Progreso', className: 'badge badge-progress' };
+            case 'REVIEW':
+                return { label: 'Revisión', className: 'badge badge-review' };
             case 'COMPLETED':
                 return { label: 'Completado', className: 'badge badge-done' };
             default:

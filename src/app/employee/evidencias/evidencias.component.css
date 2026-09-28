@@ -330,3 +330,9 @@ h2 {
     align-items: stretch;
   }
 }
+
+.badge.badge-review {
+    background: #f3e8ff;
+    color: #7e22ce;
+    border: 1px solid #d8b4fe;
+}

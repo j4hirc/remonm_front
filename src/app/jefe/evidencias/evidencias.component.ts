@@ -66,7 +66,7 @@ export class EvidenciasJefeComponent implements OnInit, OnDestroy {
 
     private async bootstrap(): Promise<void> {
         this.isLoading.set(true);
-        
+
         // MODAL DE CARGA
         void Swal.fire({
             title: 'Cargando evidencias...',
@@ -310,6 +310,8 @@ export class EvidenciasJefeComponent implements OnInit, OnDestroy {
                 return { label: 'Pendiente', className: 'badge badge-pending' };
             case 'IN_PROGRESS':
                 return { label: 'En Progreso', className: 'badge badge-progress' };
+            case 'REVIEW':
+                return { label: 'Revisión', className: 'badge badge-review' };
             case 'COMPLETED':
                 return { label: 'Completado', className: 'badge badge-done' };
             case 'CANCELLED':

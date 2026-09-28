@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface JobUpdateRequest {
+  hasModifications: boolean;
   comment: string;
   jobId: number;
   employeeId: number;

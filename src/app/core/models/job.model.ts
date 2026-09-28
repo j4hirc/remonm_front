@@ -3,6 +3,7 @@ import { Material } from './material.model';
 export type JobStatus =
   | 'PENDING'
   | 'IN_PROGRESS'
+  | 'REVIEW'
   | 'COMPLETED'
   | 'CANCELLED';
 
@@ -64,6 +65,7 @@ export interface Job {
 }
 
 export interface JobRequest {
+  sendNotification?: boolean;
   clientName: string;
   clientPhone: string;
   description?: string | null;

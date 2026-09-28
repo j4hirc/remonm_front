@@ -52,7 +52,7 @@ export class EvidenciasComponent implements OnInit {
   readonly photoError = signal(false);
   readonly failedImages = signal<ReadonlySet<string>>(new Set());
   readonly loadedImages = signal<ReadonlySet<string>>(new Set());
-  
+
   readonly selectedUpdates = computed(() => {
     const job = this.selectedJob();
     return job ? this.orderedUpdates(job) : [];
@@ -153,7 +153,7 @@ export class EvidenciasComponent implements OnInit {
     } catch (error: unknown) {
       if (this.destroyRef.destroyed) return;
       this.loadError.set(true);
-      
+
       // Este Swal.fire sobreescribirá automáticamente el modal de carga
       await Swal.fire({
         icon: 'error',
@@ -326,6 +326,8 @@ export class EvidenciasComponent implements OnInit {
         return { label: 'Pendiente', className: 'badge badge-pending' };
       case 'IN_PROGRESS':
         return { label: 'En Progreso', className: 'badge badge-progress' };
+      case 'REVIEW':
+        return { label: 'Revisión', className: 'badge badge-review' };
       case 'COMPLETED':
         return { label: 'Completado', className: 'badge badge-done' };
       case 'CANCELLED':

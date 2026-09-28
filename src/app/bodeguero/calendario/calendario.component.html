@@ -1,7 +1,8 @@
 <div class="calendario-wrapper">
     <div class="filter-bar">
         <label for="filterEmployee">Filtrar por subcontratista:</label>
-        <select id="filterEmployee" [disabled]="loading()" [(ngModel)]="filterEmployeeId" (ngModelChange)="onFilterChange()">
+        <select id="filterEmployee" [disabled]="loading()" [(ngModel)]="filterEmployeeId"
+            (ngModelChange)="onFilterChange()">
             <option value="">Todos los Subcontratistas</option>
             @for (emp of employees(); track emp.id) {
             <option [value]="emp.id">{{ emp.name }}</option>
@@ -19,6 +20,10 @@
         </div>
         <div class="legend-item">
             <i class="fa-solid fa-gear fa-spin" style="color:#12CFF4;"></i> En progreso
+        </div>
+        <div class="legend-item">
+            <i class="fa-solid fa-clipboard-check" style="color:#9333ea;"></i>
+            Revisión
         </div>
         <div class="legend-item">
             <i class="fa-solid fa-check-double" style="color:#6c757d;"></i> Completado

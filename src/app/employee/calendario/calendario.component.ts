@@ -171,6 +171,12 @@ export class CalendarioEmployeeComponent
             border = '#0EA5C4';
             icon = 'fa-spinner fa-spin';
         }
+        if (job.status === 'REVIEW') {
+            bg = '#9333EA';
+            border = '#7E22CE';
+            icon = 'fa-clipboard-check';
+        }
+
         if (job.status === 'COMPLETED') {
             bg = '#9CA3AF';
             border = '#6B7280';
@@ -264,6 +270,9 @@ export class CalendarioEmployeeComponent
         if (job.status === 'IN_PROGRESS') {
             estadoTxt = 'En Progreso';
             badgeColor = '#00B8A9';
+        } else if (job.status === 'REVIEW') {
+            estadoTxt = 'Revisión';
+            badgeColor = '#9333EA';
         } else if (job.status === 'COMPLETED') {
             estadoTxt = 'Completado';
             badgeColor = '#10B981';
