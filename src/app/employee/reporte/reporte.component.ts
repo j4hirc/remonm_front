@@ -1,4 +1,3 @@
-import { jobLocation } from '../../core/utils/job-location';
 import {
   AfterViewInit,
   Component,
@@ -337,11 +336,19 @@ export class ReporteEmployeeComponent
     }
 
     (document.getElementById('pdfJobName') as HTMLElement).textContent =
-      job.clientName || 'Sin asignar';
+      job.clientName?.trim() || 'Sin asignar';
+
     (document.getElementById('pdfAddress') as HTMLElement).textContent =
-      jobLocation(job);
+      job.address?.trim() || 'No registrada';
+
+    (document.getElementById('pdfBuildingNumber') as HTMLElement).textContent =
+      job.buildingNumber?.trim() || 'No registrado';
+
+    (document.getElementById('pdfApartment') as HTMLElement).textContent =
+      job.apartment?.trim() || 'No registrado';
+
     (document.getElementById('pdfClientPhone') as HTMLElement).textContent =
-      job.clientPhone || 'No registrado';
+      job.clientPhone?.trim() || 'No registrado';
     (document.getElementById('pdfEmployee') as HTMLElement).textContent =
       this.employeeName();
     (document.getElementById('pdfJobPay') as HTMLElement).textContent =
@@ -385,7 +392,7 @@ export class ReporteEmployeeComponent
     (document.getElementById('pdfTotalGeneral') as HTMLElement).textContent =
       `$${total.toFixed(2)}`;
     (document.getElementById('pdfGuaranteeBox') as HTMLElement).style.display =
-  reportedStatus === 'COMPLETED' ? 'block' : 'none';
+      reportedStatus === 'COMPLETED' ? 'block' : 'none';
 
     (document.getElementById('pdfImages') as HTMLElement).innerHTML = photos
       .map(

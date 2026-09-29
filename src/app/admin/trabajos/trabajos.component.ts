@@ -79,7 +79,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             if (!this.destroyRef.destroyed) {
                 this.clientesError.set('No se pudieron cargar los clientes. Puedes reintentar o ingresar sus datos manualmente.');
             }
-        } finally { this.clientesLoading.set(false); }
+        } finally {
+            this.clientesLoading.set(false);
+        }
     }
 
     seleccionarClienteManual(cliente: Cliente): void {
@@ -188,16 +190,15 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     });
 
     // Sin `readonly` para poder cambiar las opciones al vuelo
-
     editorOptions: SweetAlertOptions = {
         width: 780,
         showCancelButton: true,
         showCloseButton: false,
         showDenyButton: true,
 
-        confirmButtonText: 'Guardar cambios',
+        confirmButtonText: 'Guardar',
         denyButtonText: 'Guardar y enviar correo',
-        cancelButtonText: 'Cancelar',
+        cancelButtonText: 'Cerrar',
 
         confirmButtonColor: '#e65100',
         denyButtonColor: '#1565c0',
@@ -222,10 +223,12 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     onEditorDidOpen(): void {
         void this.loadClientes();
         this.initMapFromForm();
+        this.injectDeleteButtonInSwal();
     }
 
     onEditorWillClose(): void {
         this.destroyMap();
+        this.removeDeleteButtonFromSwal();
     }
 
     ngOnInit(): void {
@@ -726,6 +729,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             confirmButtonText: 'Guardar copia',
             denyButtonText: 'Guardar copia y enviar correo'
         });
+
+        // Quitar el botón Eliminar porque ya no es edición
+        this.removeDeleteButtonFromSwal();
     }
 
     onBlueprintChange(event: Event): void {
@@ -895,6 +901,123 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                     confirmButtonColor: '#12CFF4'
                 });
             }
+        } finally {
+            this.deletingId.set(null);
+        }
+    }
+
+    // ---------- ELIMINAR DESDE EL MODAL ----------
+
+    /** Inserta el botón Eliminar en la barra de acciones de SweetAlert (solo al editar). */
+    private injectDeleteButtonInSwal(): void {
+        // Solo al editar un trabajo existente (no crear ni duplicar)
+        if (this.editingId() === null || this.isDuplicating()) {
+            this.removeDeleteButtonFromSwal();
+            return;
+        }
+
+        const actions = document.querySelector('.swal2-actions') as HTMLElement | null;
+        if (!actions) return;
+
+        // Evitar duplicados
+        if (actions.querySelector('.btn-swal-delete')) return;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'swal2-styled btn-swal-delete';
+        btn.textContent = 'Eliminar';
+        btn.setAttribute('aria-label', 'Eliminar trabajo');
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!this.isSaving()) {
+                void this.deleteFromEditor();
+            }
+        });
+
+        // Orden: Guardar | Guardar y enviar correo | Eliminar | Cerrar
+        const cancelBtn = actions.querySelector('.swal2-cancel');
+        if (cancelBtn) {
+            actions.insertBefore(btn, cancelBtn);
+        } else {
+            actions.appendChild(btn);
+        }
+    }
+
+    /** Quita el botón Eliminar del DOM de SweetAlert. */
+    private removeDeleteButtonFromSwal(): void {
+        const btn = document.querySelector('.swal2-actions .btn-swal-delete');
+        btn?.remove();
+    }
+
+    /**
+     * Elimina el trabajo que se está editando desde el modal.
+     * Si la eliminación se confirma y tiene éxito, cierra el editor.
+     */
+    async deleteFromEditor(): Promise<void> {
+        const id = this.editingId();
+        if (id === null || this.isSaving() || this.isDuplicating()) return;
+
+        const job = this.jobs().find((j) => j.jobId === id);
+        if (!job) return;
+
+        const deleted = await this.deleteJobFromEditor(job);
+        if (deleted && !this.destroyRef.destroyed) {
+            if (Swal.isVisible()) {
+                Swal.close();
+            }
+            this.editorOpen.set(false);
+            this.editingId.set(null);
+        }
+    }
+
+    /**
+     * Confirmación + borrado desde el modal. Devuelve true si se eliminó correctamente.
+     */
+    private async deleteJobFromEditor(job: Job): Promise<boolean> {
+        if (this.deletingId() !== null) return false;
+
+        this.deletingId.set(job.jobId);
+        try {
+            const result = await Swal.fire({
+                title: '¿Eliminar Trabajo?',
+                text: 'Se borrará del sistema permanentemente.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#2E3238',
+                showLoaderOnConfirm: true,
+                preConfirm: async () => {
+                    try {
+                        await firstValueFrom(
+                            this.jobsService
+                                .delete(job.jobId)
+                                .pipe(takeUntilDestroyed(this.destroyRef))
+                        );
+                        this.jobs.update((list) =>
+                            list.filter((j) => j.jobId !== job.jobId)
+                        );
+                        return true;
+                    } catch (error: unknown) {
+                        Swal.showValidationMessage(this.getErrorMessage(error, true));
+                        return false;
+                    }
+                }
+            });
+
+            if (result.isConfirmed) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡Eliminado!',
+                    text: 'El trabajo fue eliminado.',
+                    confirmButtonColor: '#12CFF4'
+                });
+                return true;
+            }
+            return false;
         } finally {
             this.deletingId.set(null);
         }

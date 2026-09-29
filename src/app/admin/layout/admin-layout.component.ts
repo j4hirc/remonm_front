@@ -102,17 +102,16 @@ readonly menuItems: readonly AdminMenuItem[] = [
     icon: 'fa-solid fa-truck-fast',
     route: '/admin/bodega'
   },
-    
-  {
-  label: 'Calendario',
-  icon: 'fa-solid fa-calendar-days',
-  route: '/admin/calendario'
-},
   {
     label: 'Nómina',
     icon: 'fa-solid fa-money-check-dollar',
     route: '/admin/nomina'
-  }
+  },
+  {
+  label: 'Calendario',
+  icon: 'fa-solid fa-calendar-days',
+  route: '/admin/calendario'
+}
 ];
 
   async openExitDialog(): Promise<void> {
