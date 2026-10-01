@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { autoTable, UserOptions } from 'jspdf-autotable';
+import { lineTotal } from './report-material-comparison';
 
 export interface EvidenceReportData {
   clientName: string;
@@ -11,8 +12,11 @@ export interface EvidenceReportData {
   status: string;
   comment: string;
   total: number;
+  initialTotal: number | null;
+  originalAssignmentAvailable: boolean;
   date: Date;
-  materials: Array<{ name: string; quantity: number; unit: string; price: number }>;
+  materials: Array<{ name: string; quantity: number; unit: string; price: number;
+    initialQuantity: number | null; initialUnitPrice: number | null; changed: boolean }>;
   photos: File[];
   signature: string;
   logoUrl: string;
@@ -150,31 +154,45 @@ export async function buildEvidenceReportPdf(data: EvidenceReportData): Promise<
       bodyStyles: { fillColor: '#EDF9FB', fontStyle: 'bold' } });
   }
 
-  heading('Materiales Utilizados', 28);
+  heading('Materiales: asignación inicial y reporte', 28);
+  if (!data.originalAssignmentAvailable) {
+    table({ body: [['Inicial no disponible: este trabajo no tiene una asignación original registrada.']],
+      bodyStyles: { fillColor: '#FFF4DA' } });
+  }
   table({
-    head: [['Material', 'Cantidad', 'Precio Unit.', 'Subtotal']],
+    head: [['Material', 'Cant. inicial', 'Cant. reportada', 'Precio unit.', 'Total inicial', 'Total actualizado']],
     body: data.materials.length ? data.materials.map((m) => [
-      text(m.name), `${m.quantity}${m.unit ? ' ' + m.unit : ''}`, money(m.price), money(m.quantity * m.price)
-    ]) : [[{ content: 'No se reportaron materiales.', colSpan: 4 }]],
+      text(m.name) + (m.unit ? ` (${m.unit})` : '') + (m.changed ? ' - Modificado' : ''),
+      m.initialQuantity === null ? 'N/D' : String(m.initialQuantity),
+      String(m.quantity), money(m.price),
+      m.initialQuantity === null || m.initialUnitPrice === null ? 'N/D' : money(lineTotal(m.initialQuantity, m.initialUnitPrice)),
+      money(lineTotal(m.quantity, m.price))
+    ]) : [[{ content: 'No se reportaron materiales.', colSpan: 6 }]],
+    styles: { font: 'helvetica', fontSize: 8, cellPadding: 2, overflow: 'linebreak',
+      textColor: navy, lineColor: '#DCE3E8', lineWidth: 0.2 },
     columnStyles: {
-      0: { cellWidth: contentWidth - 90 },
-      1: { cellWidth: 28, halign: 'center' },
-      2: { cellWidth: 31, halign: 'right' },
-      3: { cellWidth: 31, halign: 'right', textColor: '#198754', fontStyle: 'bold' }
+      0: { cellWidth: contentWidth - 120 },
+      1: { cellWidth: 20, halign: 'center' },
+      2: { cellWidth: 22, halign: 'center' },
+      3: { cellWidth: 24, halign: 'right' },
+      4: { cellWidth: 27, halign: 'right' },
+      5: { cellWidth: 27, halign: 'right', textColor: '#198754', fontStyle: 'bold' }
     },
     didParseCell: (hook) => {
-      if (hook.section === 'head' && hook.column.index > 0) {
-        hook.cell.styles.halign = hook.column.index === 1 ? 'center' : 'right';
+      if (hook.section === 'body' && data.materials[hook.row.index]?.changed) {
+        hook.cell.styles.fillColor = '#FFF4DA';
       }
     },
     showHead: 'everyPage'
   });
-  ensureSpace(26);
+  ensureSpace(38);
+  const initialLabel = data.initialTotal === null ? 'No disponible' : money(data.initialTotal);
   table({ body: [
-    ['Total Materiales', money(data.materials.reduce((sum, m) => sum + m.quantity * m.price, 0))],
-    ['TOTAL A PAGAR', money(data.total)]
+    ['PRECIO INICIAL DEL TRABAJO', initialLabel],
+    ['PRECIO ACTUALIZADO', money(data.total)],
+    ['DIFERENCIA', data.initialTotal === null ? 'No disponible' : money(data.total - data.initialTotal)]
   ], bodyStyles: { fillColor: navy, textColor: '#FFFFFF', fontStyle: 'bold' },
-    columnStyles: { 0: { cellWidth: contentWidth - 40 }, 1: { cellWidth: 40, halign: 'right' } } });
+    columnStyles: { 0: { cellWidth: contentWidth - 45 }, 1: { cellWidth: 45, halign: 'right' } } });
 
   heading('Evidencias Fotográficas', data.photos.length ? 65 : 10);
   if (!data.photos.length) {

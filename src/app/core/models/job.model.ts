@@ -21,6 +21,10 @@ export interface Evidence {
 
 /** Avance que sube el empleado (comentario + evidencias) */
 export interface JobUpdate {
+  materialSnapshotAvailable?: boolean;
+  hasModifications?: boolean;
+  initialPay?: number | null;
+  reportedMaterials?: MaterialSnapshot[];
   jobUpdateId: number;
   comment?: string | null;
   date: string | number[];
@@ -29,7 +33,18 @@ export interface JobUpdate {
   evidences?: Evidence[];
 }
 
+export interface MaterialSnapshot {
+  materialId: number;
+  name: string;
+  quantity: number;
+  unit: string | null;
+  unitPrice: number;
+}
+
 export interface Job {
+  originalAssignmentAvailable?: boolean;
+  initialPay?: number | null;
+  originalMaterials?: MaterialSnapshot[];
   jobId: number;
   clientName: string;
   clientPhone: string;

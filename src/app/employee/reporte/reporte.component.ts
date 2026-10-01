@@ -1,6 +1,7 @@
 import {
   AfterViewInit,
   Component,
+  computed,
   ElementRef,
   OnDestroy,
   OnInit,
@@ -16,24 +17,16 @@ import Swal from 'sweetalert2';
 
 import { JobsService } from '../../core/services/jobs.service';
 import { UsersService } from '../../core/services/users.service';
-import { MaterialsService } from '../../core/services/materials.service';
 import { AuthService } from '../../core/services/auth.service';
 import {
   JobUpdatesService,
   JobUpdateRequest
 } from '../../core/services/job-updates.service';
 import { Job } from '../../core/models/job.model';
-import { Material } from '../../core/models/material.model';
 import { User } from '../../core/models/user.model';
 
 
-interface NecRow {
-  materialId: number;
-  name: string;
-  quantity: number;
-  unit: string;
-  price: number;
-}
+import { buildReportMaterialRows, lineTotal, materialChanged, ReportMaterialRow } from '../../core/services/utils/report-material-comparison';
 
 @Component({
   selector: 'app-employee-reporte',
@@ -48,7 +41,6 @@ export class ReporteEmployeeComponent
   private readonly router = inject(Router);
   private readonly jobsService = inject(JobsService);
   private readonly usersService = inject(UsersService);
-  private readonly materialsService = inject(MaterialsService);
   private readonly authService = inject(AuthService);
   private readonly updatesService = inject(JobUpdatesService);
 
@@ -63,17 +55,20 @@ export class ReporteEmployeeComponent
 
   status = 'IN_PROGRESS';
   comment = '';
-  hasModifications = false;
+  private manualModifications = false;
+  get hasModifications(): boolean { return this.manualModifications || this.materialsChanged(); }
+  set hasModifications(value: boolean) { this.manualModifications = value; }
 
-  readonly necessary = signal<NecRow[]>([]);
+  readonly necessary = signal<ReportMaterialRow[]>([]);
+  readonly materialsChanged = computed(() => this.necessary().some(materialChanged));
+  readonly materialChanged = materialChanged;
+  readonly lineTotal = lineTotal;
   readonly photoFiles = signal<File[]>([]);
   readonly photoPreviews = signal<string[]>([]);
 
   private ctx: CanvasRenderingContext2D | null = null;
   private drawing = false;
   private canvasReady = false;
-  private allMaterials: Material[] = [];
-  private originalMaterialIds = new Set<number>();
 
   ngOnInit(): void {
     void this.bootstrap();
@@ -101,9 +96,8 @@ export class ReporteEmployeeComponent
       }
 
       const email = (this.authService.email() || '').toLowerCase().trim();
-      const [users, mats, job] = await Promise.all([
+      const [users, job] = await Promise.all([
         firstValueFrom(this.usersService.getAll()),
-        firstValueFrom(this.materialsService.getAll()),
         firstValueFrom(this.jobsService.getById(jobId))
       ]);
 
@@ -129,25 +123,9 @@ export class ReporteEmployeeComponent
       this.employeeName.set(
         `${yo.firstName ?? ''} ${yo.lastName ?? ''}`.trim() || yo.email
       );
-      this.allMaterials = mats;
       this.job.set(job);
 
-      const rows: NecRow[] = [];
-      const ids = new Set<number>();
-      (job.materials || []).forEach((m: any) => {
-        const id = m.materialId;
-        ids.add(id);
-        const info = mats.find((x) => x.materialId === id);
-        rows.push({
-          materialId: id,
-          name: m.name || info?.name || 'Material',
-          quantity: m.quantity ?? 1,
-          unit: m.unit && m.unit !== 'N/A' ? m.unit : info?.unit || '',
-          price: info?.price ?? m.price ?? 0
-        });
-      });
-      this.originalMaterialIds = ids;
-      this.necessary.set(rows);
+      this.necessary.set(buildReportMaterialRows(job));
     } catch {
       await Swal.fire('Error', 'No se pudo cargar el trabajo.', 'error');
       void this.router.navigate(['/employee/calendario']);
@@ -158,10 +136,11 @@ export class ReporteEmployeeComponent
   }
 
   necessaryTotal(): number {
-    return this.necessary().reduce((s, r) => s + r.quantity * r.price, 0);
+    return this.necessary().reduce((s, r) => s + lineTotal(r.quantity, r.price), 0);
   }
 
   updateQty(materialId: number, qty: number): void {
+    if (this.saving()) return;
     const cantidadSegura = Number.isFinite(qty) && qty >= 0 ? qty : 0;
     this.necessary.update((rows) =>
       rows.map((r) =>
@@ -173,10 +152,8 @@ export class ReporteEmployeeComponent
   }
 
   removeNec(materialId: number): void {
-    if (!this.originalMaterialIds.has(materialId)) return;
-    this.necessary.update((rows) =>
-      rows.filter((r) => r.materialId !== materialId)
-    );
+    // Keep the original row for comparison and allow restoring its quantity.
+    this.updateQty(materialId, 0);
   }
 
   onPhotos(event: Event): void {
@@ -302,8 +279,10 @@ export class ReporteEmployeeComponent
       status: this.getReportedStatus(),
       comment,
       total,
+      initialTotal: job.originalAssignmentAvailable ? job.initialPay ?? null : null,
+      originalAssignmentAvailable: job.originalAssignmentAvailable === true,
       date: new Date(),
-      materials: this.necessary().map(({ name, quantity, unit, price }) => ({ name, quantity, unit, price })),
+      materials: this.necessary().map(row => ({ ...row, changed: materialChanged(row) })),
       photos: [...this.photoFiles()],
       signature: this.canvasRef()?.nativeElement.toDataURL('image/png') || '',
       logoUrl: new URL('img/logonegro.png', document.baseURI).href
