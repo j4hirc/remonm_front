@@ -74,3 +74,130 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--cyan); outline-
   .job-pay, .employee-total { text-align: left; }
   .advance-price { margin-left: 0; }
 }
+
+.jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.job-simple-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+.job-date {
+  color: #666;
+  font-size: 0.9em;
+  min-width: 85px;
+}
+
+.job-client {
+  flex: 1;
+  font-weight: 500;
+  margin: 0 15px;
+}
+
+.job-price {
+  color: #2c3e50;
+  font-size: 1.1em;
+}
+
+/* Contenedor principal de la tabla del empleado */
+.employee-table-wrapper {
+  margin-bottom: 30px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+/* Encabezado azul oscuro (Trabajos realizados por: Nombre) */
+.employee-header {
+  background-color: #1e293b; /* Color similar al de la imagen */
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 12px 16px;
+}
+
+/* Estilos generales de la tabla */
+.employee-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-family: inherit;
+}
+
+/* Encabezados de columnas grises */
+.employee-table th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+/* Celdas del cuerpo de la tabla */
+.employee-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  font-size: 14px;
+}
+
+/* Columna de montos alineada a la derecha */
+.col-amount {
+  text-align: right !important;
+}
+
+/* Fila final del total (Footer) */
+.employee-table tfoot {
+  background-color: #fafafa;
+}
+
+.employee-table tfoot td {
+  border-bottom: none;
+  padding: 14px 16px;
+}
+
+.total-label {
+  text-align: right;
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 15px;
+}
+
+/* Color naranja/dorado para el total */
+.total-amount {
+  text-align: right;
+  font-weight: 700;
+  color: #d97706; /* Color naranja/dorado de la imagen */
+  font-size: 15px;
+}
+
+/* Total global de la empresa al final (opcional, para mantener el resumen) */
+.grand-total {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  margin-top: 20px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  font-size: 1.1em;
+}
+
+.grand-total strong {
+  font-size: 1.3em;
+  color: #0f172a;
+}

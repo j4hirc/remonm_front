@@ -24,7 +24,6 @@ export class NominaJefeComponent implements OnInit {
   private readonly template = viewChild.required(PayrollPdfComponent);
   private readonly anchorDate = new Date();
   private readonly data = signal<Awaited<ReturnType<typeof this.fetchData>> | null>(null);
-  private readonly OFFICE_ALERT_TAG = '[ALERTA DE OFICINA]';
 
   readonly offset = signal(0);
   readonly loading = signal(false);
@@ -41,9 +40,6 @@ export class NominaJefeComponent implements OnInit {
 
     const built = buildPayrollReport(data.jobs, data.users, this.offset(), this.anchorDate);
 
-    // Ordenamos los trabajos de cada empleado por fecha (más antiguo a más reciente),
-    // usando el mismo job.date ya formateado ("MM/DD/YYYY") que se muestra en pantalla.
-    // Así no dependemos del nombre del campo crudo de fecha en data.jobs.
     return {
       ...built,
       employees: built.employees.map(employee => ({
@@ -61,28 +57,12 @@ export class NominaJefeComponent implements OnInit {
   constructor() {
     this.destroyRef.onDestroy(() => {
       this.clearDownload();
-      if (Swal.isVisible()) Swal.close(); // Libera la pantalla al cambiar de pestaña
+      if (Swal.isVisible()) Swal.close();
     });
   }
 
   ngOnInit(): void { void this.load(); }
 
-  // Texto de la alerta de oficina (sin la etiqueta), o '' si el comentario no tiene alerta.
-  alertText(comment: string | null | undefined): string {
-    const first = (comment ?? '').split('\n')[0].trim();
-    return first.startsWith(this.OFFICE_ALERT_TAG)
-      ? first.slice(this.OFFICE_ALERT_TAG.length).replace(/^:\s*/, '')
-      : '';
-  }
-
-  // Comentario del avance sin la línea de alerta.
-  bodyText(comment: string | null | undefined): string {
-    const text = comment ?? '';
-    const lines = text.split('\n');
-    return lines[0].trim().startsWith(this.OFFICE_ALERT_TAG) ? lines.slice(1).join('\n').trim() : text;
-  }
-
-  // Parseo robusto de "MM/DD/YYYY" -> Date. Si no matchea, cae a new Date(value) como respaldo.
   private parseUsDate(value: string): Date {
     const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value?.trim() ?? '');
     if (!match) return new Date(value);
@@ -100,7 +80,6 @@ export class NominaJefeComponent implements OnInit {
     this.error.set('');
     this.clearDownload();
 
-    // MODAL DE CARGA
     void Swal.fire({
       title: 'Cargando nómina...',
       allowOutsideClick: false,
@@ -109,10 +88,10 @@ export class NominaJefeComponent implements OnInit {
 
     try {
       this.data.set(await this.fetchData());
-      if (Swal.isVisible()) Swal.close(); // Cierra el modal de carga si fue exitoso
+      if (Swal.isVisible()) Swal.close();
     }
     catch {
-      if (Swal.isVisible()) Swal.close(); // Cerramos el loading antes de mostrar el error
+      if (Swal.isVisible()) Swal.close();
       if (!this.destroyRef.destroyed) {
         this.notifyError('No se pudieron cargar los registros. Revisa tu sesión y vuelve a intentar.');
       }
@@ -155,7 +134,6 @@ export class NominaJefeComponent implements OnInit {
       const blob = await this.pdf.create(this.template().nativeElement, filename);
       if (this.destroyRef.destroyed) return;
       this.downloadUrl.set(URL.createObjectURL(blob));
-      // En iOS se utiliza el enlace visible: lo abre un gesto del usuario.
       if (!this.pdf.isIOS()) this.pdf.download(blob, filename);
     } catch (error: unknown) {
       if (!this.destroyRef.destroyed) {
