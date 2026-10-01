@@ -36,86 +36,42 @@
     </label>
 
     @if (materialsChanged()) {
-    <p class="change-notice" role="status">Se detectaron cambios en los materiales. La casilla se marca automáticamente.
-    </p>
+    <p class="change-notice" role="status">Se detectaron cambios en los materiales. La casilla se marca automáticamente.</p>
     }
     <h3>Materiales usados y asignación inicial</h3>
     @if (!j.originalAssignmentAvailable) {
     <p class="change-notice">Inicial no disponible: este trabajo es anterior al registro de asignaciones originales.
         Los cambios se comparan con las cantidades cargadas al abrir este reporte.</p>
     }
-    <p class="hint">La cantidad inicial no se modifica. Ajusta la reportada; para quitar un material, déjalo en cero.
-    </p>
-    <div class="material-comparison" tabindex="0" role="region"
-        aria-label="Comparación de materiales, desplaza horizontalmente para ver todas las columnas">
+    <p class="hint">La cantidad inicial no se modifica. Ajusta la reportada; para quitar un material, déjalo en cero.</p>
+    <div class="material-comparison" tabindex="0" role="region" aria-label="Comparación de materiales, desplaza horizontalmente para ver todas las columnas">
         <table class="comparison-table">
-            <thead>
-                <tr>
-                    <th scope="col">Material</th>
-                    <th scope="col">Cant. inicial</th>
-                    <th scope="col">Cant. reportada</th>
-                    <th scope="col">Unidad</th>
-                    <th scope="col">Precio unit.</th>
-                    <th scope="col">Total inicial</th>
-                    <th scope="col">Total actualizado</th>
-                </tr>
-            </thead>
-
+            <thead><tr>
+                <th scope="col">Material</th><th scope="col">Cant. inicial</th><th scope="col">Cant. reportada</th>
+                <th scope="col">Precio unit.</th><th scope="col">Total inicial</th><th scope="col">Total actualizado</th>
+            </tr></thead>
             <tbody>
                 @for (row of necessary(); track row.materialId) {
                 <tr [class.material-changed]="materialChanged(row)">
-                    <th scope="row">
-                        {{ row.name }}
-
-                        @if (materialChanged(row)) {
-                        <span class="change-badge">Modificado</span>
-                        }
+                    <th scope="row">{{ row.name }} <small>{{ row.unit }}</small>
+                        @if (materialChanged(row)) { <span class="change-badge">Modificado</span> }
                     </th>
-
-                    <td>
-                        {{ row.initialQuantity === null ? 'N/D' : row.initialQuantity }}
-                    </td>
-
-                    <td>
-                        <input type="number" min="0" step="any" [ngModel]="row.quantity"
-                            (ngModelChange)="updateQty(row.materialId, $event)"
-                            [attr.aria-label]="'Cantidad reportada de ' + row.name" [disabled]="saving()" />
-                    </td>
-
-                    <td style="text-align: center; font-weight: 600;">
-                        {{ row.unit || 'Sin unidad' }}
-                    </td>
-
-                    <td>
-                        ${{ row.price.toFixed(2) }}
-                    </td>
-
-                    <td>
-                        {{
-                        row.initialQuantity === null || row.initialUnitPrice === null
-                        ? 'N/D'
-                        : '$' + lineTotal(
-                        row.initialQuantity,
-                        row.initialUnitPrice
-                        ).toFixed(2)
-                        }}
-                    </td>
-
-                    <td>
-                        ${{ lineTotal(row.quantity, row.price).toFixed(2) }}
-                    </td>
+                    <td>{{ row.initialQuantity === null ? 'N/D' : row.initialQuantity }}</td>
+                    <td><input type="number" min="0" step="any" [ngModel]="row.quantity"
+                        [attr.aria-label]="'Cantidad reportada de ' + row.name" [disabled]="saving()"
+                        (ngModelChange)="updateQty(row.materialId, $event)" /></td>
+                    <td>${{ row.price.toFixed(2) }}</td>
+                    <td>{{ row.initialQuantity === null || row.initialUnitPrice === null ? 'N/D' : '$' + lineTotal(row.initialQuantity, row.initialUnitPrice).toFixed(2) }}</td>
+                    <td>${{ lineTotal(row.quantity, row.price).toFixed(2) }}</td>
                 </tr>
                 } @empty {
-                <tr>
-                    <td colspan="7">Sin materiales en la orden.</td>
-                </tr>
+                <tr><td colspan="6">Sin materiales en la orden.</td></tr>
                 }
             </tbody>
         </table>
     </div>
     <div class="comparison-totals">
-        <p>Precio inicial del trabajo: <strong>{{ j.originalAssignmentAvailable && j.initialPay != null ? '$' +
-                j.initialPay.toFixed(2) : 'No disponible' }}</strong></p>
+        <p>Precio inicial del trabajo: <strong>{{ j.originalAssignmentAvailable && j.initialPay != null ? '$' + j.initialPay.toFixed(2) : 'No disponible' }}</strong></p>
         <p>Precio actualizado: <strong>${{ necessaryTotal().toFixed(2) }}</strong></p>
         @if (j.originalAssignmentAvailable && j.initialPay != null) {
         <p>Diferencia: <strong>${{ (necessaryTotal() - j.initialPay).toFixed(2) }}</strong></p>
