@@ -144,11 +144,6 @@ export async function buildEvidenceReportPdf(data: EvidenceReportData): Promise<
   heading('Comentarios del Avance');
   table({ body: [[text(data.comment) || 'Sin comentarios.']],
     bodyStyles: { fillColor: '#F8FAFC' } });
-  if (data.status === 'COMPLETED') {
-    ensureSpace(30);
-    table({ body: [['CERTIFICACIÓN DE GARANTÍA: El subcontratista certifica que el proyecto está terminado y los errores encontrados después de terminar el proyecto serán cobrados al subcontratista como garantías del trabajo.']],
-      bodyStyles: { fillColor: '#EDF9FB', fontStyle: 'bold' } });
-  }
 
   heading('Materiales Utilizados', 28);
   table({
