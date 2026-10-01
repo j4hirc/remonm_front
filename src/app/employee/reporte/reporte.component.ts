@@ -26,7 +26,6 @@ import { Job } from '../../core/models/job.model';
 import { Material } from '../../core/models/material.model';
 import { User } from '../../core/models/user.model';
 
-declare const html2pdf: any;
 
 interface NecRow {
   materialId: number;
@@ -291,174 +290,24 @@ export class ReporteEmployeeComponent
     return canvas.toDataURL() === blank.toDataURL();
   }
 
-  private async fileToDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result));
-      r.onerror = reject;
-      r.readAsDataURL(file);
+  private async buildPdfBlob(job: Job, comment: string, total: number): Promise<Blob> {
+    const { buildEvidenceReportPdf } = await import('../../core/services/utils/evidence-report-pdf');
+    return buildEvidenceReportPdf({
+      clientName: job.clientName?.trim() || 'Sin asignar',
+      address: job.address?.trim() || 'No registrada',
+      buildingNumber: job.buildingNumber?.trim() || 'No registrado',
+      apartment: job.apartment?.trim() || 'No registrado',
+      clientPhone: job.clientPhone?.trim() || 'No registrado',
+      employeeName: this.employeeName(),
+      status: this.getReportedStatus(),
+      comment,
+      total,
+      date: new Date(),
+      materials: this.necessary().map(({ name, quantity, unit, price }) => ({ name, quantity, unit, price })),
+      photos: [...this.photoFiles()],
+      signature: this.canvasRef()?.nativeElement.toDataURL('image/png') || '',
+      logoUrl: new URL('img/logonegro.png', document.baseURI).href
     });
-  }
-
-  /**
-   * IGUAL QUE EN employee-dashboard.js: en vez de construir el HTML del PDF
-   * con JS (createElement/innerHTML en memoria), usamos la plantilla que ya
-   * está en el DOM (ver reporte.component.html, bloque #pdfWrapper /
-   * #pdfTemplate) y solo la RELLENAMOS con document.getElementById(...),
-   * igual que hacía guardarReporteYPdf() en el JS original.
-   */
-  private async buildPdfBlob(
-    job: Job,
-    comment: string,
-    total: number
-  ): Promise<Blob> {
-    const photos = await Promise.all(
-      this.photoFiles().map((f) => this.fileToDataUrl(f))
-    );
-    const signatureDataUrl =
-      this.canvasRef()?.nativeElement.toDataURL('image/png') || '';
-
-    const materials = this.necessary().map((r) => ({
-      name: r.name,
-      quantityLabel: `${r.quantity}${r.unit ? ' ' + r.unit : ''}`,
-      unitPrice: r.price,
-      subtotal: r.quantity * r.price
-    }));
-    const totalMateriales = materials.reduce((s, m) => s + m.subtotal, 0);
-
-    const pdfWrapper = document.getElementById('pdfWrapper') as HTMLElement;
-    const pdfTemplate = document.getElementById('pdfTemplate') as HTMLElement;
-
-    if (!pdfWrapper || !pdfTemplate) {
-      throw new Error(
-        'No se encontró la plantilla #pdfWrapper/#pdfTemplate en el HTML.'
-      );
-    }
-
-    (document.getElementById('pdfJobName') as HTMLElement).textContent =
-      job.clientName?.trim() || 'Sin asignar';
-
-    (document.getElementById('pdfAddress') as HTMLElement).textContent =
-      job.address?.trim() || 'No registrada';
-
-    (document.getElementById('pdfBuildingNumber') as HTMLElement).textContent =
-      job.buildingNumber?.trim() || 'No registrado';
-
-    (document.getElementById('pdfApartment') as HTMLElement).textContent =
-      job.apartment?.trim() || 'No registrado';
-
-    (document.getElementById('pdfClientPhone') as HTMLElement).textContent =
-      job.clientPhone?.trim() || 'No registrado';
-    (document.getElementById('pdfEmployee') as HTMLElement).textContent =
-      this.employeeName();
-    (document.getElementById('pdfJobPay') as HTMLElement).textContent =
-      `$${total.toFixed(2)}`;
-    const reportedStatus = this.getReportedStatus();
-
-    (document.getElementById('pdfStatus') as HTMLElement).textContent =
-      reportedStatus === 'REVIEW'
-        ? 'Revisión'
-        : reportedStatus === 'COMPLETED'
-          ? 'Completado'
-          : 'En Progreso';
-
-    const hoy = new Date();
-    (document.getElementById('pdfDate') as HTMLElement).textContent =
-      `${String(hoy.getMonth() + 1).padStart(2, '0')}/${String(
-        hoy.getDate()
-      ).padStart(2, '0')}/${hoy.getFullYear()}`;
-    (document.getElementById('pdfComment') as HTMLElement).textContent =
-      comment;
-
-    const pdfMaterialsBody = document.getElementById(
-      'pdfMaterialsBody'
-    ) as HTMLElement;
-    pdfMaterialsBody.innerHTML = materials.length
-      ? materials
-        .map(
-          (m) => `
-        <tr>
-            <td style="padding: 8px; border: 1px solid #ddd; color: #2E3238;">${m.name}</td>
-            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; color: #2E3238;">${m.quantityLabel}</td>
-            <td style="padding: 8px; border: 1px solid #ddd; text-align: right; color: #2E3238;">$${m.unitPrice.toFixed(2)}</td>
-            <td style="padding: 8px; border: 1px solid #ddd; text-align: right; font-weight: bold; color: #198754;">$${m.subtotal.toFixed(2)}</td>
-        </tr>`
-        )
-        .join('')
-      : `<tr><td colspan="4" style="padding: 8px; border: 1px solid #ddd; text-align: center; color: #666;">No se reportaron materiales.</td></tr>`;
-
-    (document.getElementById('pdfTotalMateriales') as HTMLElement).textContent =
-      `$${totalMateriales.toFixed(2)}`;
-    (document.getElementById('pdfTotalGeneral') as HTMLElement).textContent =
-      `$${total.toFixed(2)}`;
-    (document.getElementById('pdfGuaranteeBox') as HTMLElement).style.display =
-      reportedStatus === 'COMPLETED' ? 'block' : 'none';
-
-    (document.getElementById('pdfImages') as HTMLElement).innerHTML = photos
-      .map(
-        (b64) => `
-        <div style="display: inline-block; width: 210px; margin: 8px; page-break-inside: avoid; border: 1px solid #E2E8F0; border-radius: 8px; padding: 5px; background: #ffffff; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <img src="${b64}" style="width: 100%; height: 140px; object-fit: cover; border-radius: 6px;">
-        </div>`
-      )
-      .join('');
-
-    const imgFirma = document.getElementById(
-      'pdfSignatureSubImg'
-    ) as HTMLImageElement;
-    imgFirma.src = signatureDataUrl;
-    imgFirma.style.width = '250px';
-    imgFirma.style.height = '75px';
-
-    window.scrollTo(0, 0);
-
-    // Mismo truco que el original: sacamos la plantilla de pantalla pero
-    // "visible" para que html2canvas pueda pintarla bien.
-    pdfWrapper.style.display = 'block';
-    pdfWrapper.style.position = 'fixed';
-    pdfWrapper.style.top = '0';
-    pdfWrapper.style.left = '-9999px';
-    pdfWrapper.style.width = '750px';
-    pdfWrapper.style.zIndex = '-1';
-    pdfWrapper.style.visibility = 'visible';
-
-    // Mismo "delay mágico" del original para que el DOM/imágenes terminen
-    // de pintarse antes de capturar con html2canvas.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    const safeName = (job.clientName || 'Trabajo').replace(
-      /[^a-zA-Z0-9]/g,
-      '_'
-    );
-
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `Reporte_${safeName}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        scrollX: 0,
-        scrollY: 0
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: {
-        mode: ['css', 'legacy'],
-        avoid: ['tr', 'h3', 'img', '.avoid-break']
-      }
-    };
-
-    let pdfBlob: Blob;
-    try {
-      pdfBlob = await html2pdf().set(opt).from(pdfTemplate).output('blob');
-    } finally {
-      pdfWrapper.style.display = 'none';
-      pdfWrapper.style.visibility = 'hidden';
-    }
-
-    return pdfBlob;
   }
 
   getReportedStatus(): string {
