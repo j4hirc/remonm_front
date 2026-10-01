@@ -53,6 +53,7 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
     private viewReady = false;
     private dataReady = false;
     private colorByEmployeeId: Record<number, string> = {};
+    private hierarchyByEmployeeId: Record<number, number> = {};
 
     ngOnInit(): void {
         this.loadData();
@@ -92,6 +93,22 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
                         colors[u.userId] = u.color || '#CCCCCC';
                     });
                     this.colorByEmployeeId = colors;
+
+                    const hierarchies: Record<number, number> = {};
+
+                    users.forEach((u: User) => {
+                        const level = u.hierarchyLevel;
+
+                        if (
+                            typeof level === 'number' &&
+                            Number.isInteger(level) &&
+                            level >= 1
+                        ) {
+                            hierarchies[u.userId] = level;
+                        }
+                    });
+
+                    this.hierarchyByEmployeeId = hierarchies;
 
                     const empleados = users
                         .filter((u: User) => {
@@ -180,6 +197,15 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
             return desc.split('[MATERIALES PRE-ASIGNADOS]:')[0].trim() || 'Sin descripción';
         }
         return desc;
+    }
+
+    private employeeHierarchy(employeeId?: number | null): number {
+        if (employeeId == null) {
+            return Number.MAX_SAFE_INTEGER;
+        }
+
+        return this.hierarchyByEmployeeId[employeeId]
+            ?? Number.MAX_SAFE_INTEGER;
     }
 
     private employeeColor(employeeId?: number | null): string {
@@ -277,7 +303,7 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
                 backgroundColor: bgColor,
                 borderColor: bgColor,
                 textColor,
-                order: this.colorPriority(bgColor),
+                order: this.employeeHierarchy(job.employeeId),
                 extendedProps: {
                     address: job.address || '',
                     buildingNumber: job.buildingNumber || '',
@@ -439,7 +465,8 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
             locale: esLocale,
             firstDay: 0,
             height: 'auto',
-            eventOrder: 'order',
+            eventOrder: 'order,title,id',
+            eventOrderStrict: true,
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',

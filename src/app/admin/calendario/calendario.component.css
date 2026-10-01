@@ -353,3 +353,35 @@
     margin: 1px 2px !important;
   }
 }
+.btn-new-job {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #12cff4;
+  color: #0f2d4a;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-new-job:hover {
+  background: #0fb9dc;
+}
+
+.btn-new-job:focus-visible {
+  outline: 3px solid #0f2d4a;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .btn-new-job {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

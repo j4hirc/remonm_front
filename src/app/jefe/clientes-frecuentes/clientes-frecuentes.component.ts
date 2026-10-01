@@ -53,16 +53,25 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
 
   readonly filtered = computed(() => {
     const text = this.search().trim().toLocaleLowerCase();
-    const listaFiltrada = this.clientes().filter((c) =>
-      `${c.clientName} ${c.clientPhone ?? ''} ${c.address}`
-        .toLocaleLowerCase()
-        .includes(text)
-    );
-    return listaFiltrada.sort((a, b) => {
-      const nombreA = a.clientName || '';
-      const nombreB = b.clientName || '';
-      return nombreA.localeCompare(nombreB, 'es');
-    });
+
+    return this.clientes()
+      .filter((cliente) => {
+        const contenido = [
+          cliente.clientName,
+          cliente.companyName ?? '',
+          cliente.contactName ?? '',
+          cliente.clientPhone ?? '',
+          cliente.address,
+          cliente.codeBox ?? ''
+        ]
+          .join(' ')
+          .toLocaleLowerCase();
+
+        return contenido.includes(text);
+      })
+      .sort((a, b) =>
+        (a.clientName || '').localeCompare(b.clientName || '', 'es')
+      );
   });
 
   readonly pageCount = computed(() =>
@@ -81,16 +90,32 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
       Validators.required,
       Validators.pattern(/\S/)
     ]),
+
+    companyName: this.fb.nonNullable.control('', [
+      Validators.maxLength(255)
+    ]),
+
+    contactName: this.fb.nonNullable.control('', [
+      Validators.maxLength(255)
+    ]),
+
     clientPhone: this.fb.nonNullable.control(''),
+
     address: this.fb.nonNullable.control('', [
       Validators.required,
       Validators.pattern(/\S/)
     ]),
+
+    codeBox: this.fb.nonNullable.control('', [
+      Validators.maxLength(255)
+    ]),
+
     latitude: this.fb.control<number | null>(null, [
       Validators.required,
       Validators.min(-90),
       Validators.max(90)
     ]),
+
     longitude: this.fb.control<number | null>(null, [
       Validators.required,
       Validators.min(-180),
@@ -293,7 +318,7 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
       const latV = parseFloat(latStr.trim());
       const lngV = parseFloat(lngStr.trim());
       if (!isNaN(latV) && !isNaN(lngV)) {
-        this.setMapPosition(latV, lngV, false); // no sobrescribir dirección
+        this.setMapPosition(latV, lngV, false);
       }
       return;
     }
@@ -303,14 +328,13 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
 
     fetch(
       `https://nominatim.openstreetmap.org/search?` +
-        `format=json&q=${encodeURIComponent(texto)}` +
-        `&addressdetails=1&limit=5&accept-language=es,en`
+      `format=json&q=${encodeURIComponent(texto)}` +
+      `&addressdetails=1&limit=5&accept-language=es,en`
     )
       .then((r) => r.json())
       .then((results: any[]) => {
         if (results?.length > 0) {
           const best = results[0];
-          // false = NO sobrescribir la dirección que escribió el usuario
           this.setMapPosition(
             parseFloat(best.lat),
             parseFloat(best.lon),
@@ -338,7 +362,6 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
       });
   }
 
-  /** Normaliza fracciones y abreviaturas para mejorar resultados de Nominatim */
   private normalizeAddress(address: string): string {
     return address
       .replace(/\b(\d+)\s+1\/2\b/gi, '$1th')
@@ -360,10 +383,6 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
       .trim();
   }
 
-  /**
-   * Coloca el marcador y actualiza lat/lng.
-   * @param updateAddress Si true, hace reverse geocode y reescribe el input.
-   */
   private setMapPosition(
     lat: number,
     lng: number,
@@ -443,8 +462,11 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
     this.editingId.set(cliente?.id ?? null);
     this.form.reset({
       clientName: cliente?.clientName ?? '',
+      companyName: cliente?.companyName ?? '',
+      contactName: cliente?.contactName ?? '',
       clientPhone: cliente?.clientPhone ?? '',
       address: cliente?.address ?? '',
+      codeBox: cliente?.codeBox ?? '',
       latitude: cliente?.latitude ?? -2.900128,
       longitude: cliente?.longitude ?? -79.005896
     });
@@ -478,15 +500,18 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
       !Number.isFinite(raw.longitude)
     ) {
       Swal.showValidationMessage(
-        'Completa nombre, dirección y selecciona una ubicación en el mapa.'
+        'Completa nombre, dirección y ubicación. Compañía, encargado y caja de código admiten hasta 255 caracteres.'
       );
       return false;
     }
 
     const data: ClienteRequest = {
       clientName: raw.clientName.trim(),
-      clientPhone: raw.clientPhone.trim(),
+      companyName: raw.companyName.trim() || null,
+      contactName: raw.contactName.trim() || null,
+      clientPhone: raw.clientPhone.trim() || null,
       address: raw.address.trim(),
+      codeBox: raw.codeBox.trim() || null,
       latitude: raw.latitude!,
       longitude: raw.longitude!
     };

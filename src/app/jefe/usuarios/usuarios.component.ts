@@ -71,11 +71,17 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
     dateOfEntry: ['', Validators.required],
     status: ['Active', Validators.required],
     title: ['', Validators.required],
+    hierarchyLevel: this.formBuilder.control<number | null>(null, [
+      Validators.required,
+      Validators.min(1),
+      Validators.max(2147483647),
+      Validators.pattern(/^[1-9]\d*$/)
+    ]),
     color: ['#12cff4', Validators.required],
     roleAdmin: [false],
     roleJefe: [false],
     roleEmployee: [false],
-        roleBodeguero: [false]
+    roleBodeguero: [false]
   });
 
   readonly editorOptions: SweetAlertOptions = {
@@ -160,9 +166,9 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
 
     // MODAL DE CARGA
     void Swal.fire({
-        title: 'Cargando usuarios...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
+      title: 'Cargando usuarios...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
     });
 
     try {
@@ -170,9 +176,9 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
         this.usersService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
       );
       this.users.set(users);
-      
+
       Swal.close(); // CERRAMOS EL MODAL AL TERMINAR CON ÉXITO
-      
+
     } catch (error: unknown) {
       if (this.destroyRef.destroyed) {
         return;
@@ -215,11 +221,12 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
         : '',
       status: user?.status ?? 'Active',
       title: user?.title ?? '',
+      hierarchyLevel: user?.hierarchyLevel ?? null,
       color: user?.color ?? '#12cff4',
       roleAdmin: roleNames.has('ROLE_ADMIN'),
       roleJefe: roleNames.has('ROLE_JEFE'),
       roleEmployee: roleNames.has('ROLE_EMPLOYEE'),
-        roleBodeguero: roleNames.has('ROLE_BODEGUERO')
+      roleBodeguero: roleNames.has('ROLE_BODEGUERO')
     });
 
     this.editorOpen.set(true);
@@ -279,6 +286,19 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
     this.form.markAllAsTouched();
 
     const raw = this.form.getRawValue();
+    const hierarchyLevel = raw.hierarchyLevel;
+
+if (
+  hierarchyLevel === null ||
+  !Number.isInteger(hierarchyLevel) ||
+  hierarchyLevel < 1 ||
+  hierarchyLevel > 2147483647
+) {
+  Swal.showValidationMessage(
+    'Ingresa una jerarquía válida: un número entero mayor o igual a 1.'
+  );
+  return false;
+}
     const roles: string[] = [];
     if (raw.roleAdmin) roles.push('ROLE_ADMIN');
     if (raw.roleJefe) roles.push('ROLE_JEFE');
@@ -316,6 +336,7 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
       dateOfEntry: raw.dateOfEntry,
       status: raw.status,
       title: raw.title.trim(),
+      hierarchyLevel,
       roles,
       color: raw.color
     };

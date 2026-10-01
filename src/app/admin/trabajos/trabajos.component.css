@@ -907,26 +907,35 @@ input.nec-price {
     }
 }
 
-/* Botón Eliminar dentro de la barra de acciones de SweetAlert */
-.swal2-actions .btn-swal-delete {
+/* Unificar el tamaño, fuente y espaciado de TODOS los botones de SweetAlert */
+::ng-deep .swal2-actions .swal2-styled {
+    min-height: 42px !important;
+    padding: 8px 18px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    margin: 5px 6px !important;
+    box-shadow: none !important;
+    border: none !important;
+    transition: transform 0.15s ease, background-color 0.15s ease !important;
+}
+
+/* Efecto hover general para los botones nativos (si no lo tienen) */
+::ng-deep .swal2-actions .swal2-styled:hover:not(:disabled) {
+    transform: scale(1.02) !important;
+}
+
+/* Colores específicos y hover para tu botón inyectado de Eliminar */
+::ng-deep .swal2-actions .btn-swal-delete {
     background-color: #d32f2f !important;
     color: #fff !important;
-    border: none !important;
-    box-shadow: none !important;
-    font-weight: 600;
-    margin: 0.3125em;
-    padding: 0.625em 1.1em;
-    border-radius: 0.25em;
-    cursor: pointer;
-    transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
-.swal2-actions .btn-swal-delete:hover {
+::ng-deep .swal2-actions .btn-swal-delete:hover:not(:disabled) {
     background-color: #b71c1c !important;
-    transform: scale(1.02);
 }
 
-.swal2-actions .btn-swal-delete:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+::ng-deep .swal2-actions .btn-swal-delete:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
 }

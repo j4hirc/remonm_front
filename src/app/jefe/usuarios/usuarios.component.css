@@ -387,3 +387,9 @@ button:disabled {
     justify-content: center;
   }
 }
+.hierarchy-error {
+  display: block;
+  margin-top: 4px;
+  color: #c62828;
+  font-size: 0.8rem;
+}

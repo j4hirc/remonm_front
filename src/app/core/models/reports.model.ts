@@ -8,6 +8,9 @@ export interface WarehouseMaterial {
 export interface WarehouseOrder {
   jobId: number;
   clientName: string;
+  address?: string;
+  buildingNumber?: string;
+  apartment?: string;
   employeeName: string;
   managerName: string;
   status: 'PENDING' | 'IN_PROGRESS';

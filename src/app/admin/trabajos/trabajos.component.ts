@@ -24,7 +24,7 @@ import {
     SwalPortalTargets
 } from '@sweetalert2/ngx-sweetalert2';
 import Swal, { SweetAlertOptions } from 'sweetalert2';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 
 import { Job, JobRequest } from '../../core/models/job.model';
@@ -121,6 +121,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     private readonly invoicePdf = inject(InvoicePdfService);
 
     private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
 
     readonly swalTargets = inject(SwalPortalTargets);
 
@@ -207,8 +208,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         showLoaderOnConfirm: true,
         showLoaderOnDeny: true,
 
-        allowOutsideClick: () => !this.isSaving(),
-        allowEscapeKey: () => !this.isSaving(),
+        allowOutsideClick: false,
+        allowEscapeKey: false,
 
         preConfirm: () => this.persistJob(false),
         preDeny: () => this.persistJob(true)
@@ -239,6 +240,20 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.destroyMap();
     }
 
+    private async volverAlCalendario(): Promise<void> {
+        if (
+            this.destroyRef.destroyed
+            || this.route.snapshot.queryParamMap.get('origen') !== 'calendario'
+        ) {
+            return;
+        }
+
+        await this.router.navigate(['calendario'], {
+            relativeTo: this.route.parent,
+            replaceUrl: true
+        });
+    }
+
     private async bootstrap(): Promise<void> {
         this.isLoading.set(true);
 
@@ -249,10 +264,14 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         });
 
         try {
-            await Promise.all([this.loadUsers(), this.loadMaterials()]);
+            await Promise.all([
+                this.loadUsers(),
+                this.loadMaterials()
+            ]);
+
             await this.loadJobs();
 
-            if (this.loadError()) {
+            if (this.destroyRef.destroyed || this.loadError()) {
                 return;
             }
 
@@ -263,9 +282,37 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.isLoading.set(false);
         }
 
+        if (this.destroyRef.destroyed) {
+            return;
+        }
+
+        const nuevo = this.route.snapshot.queryParamMap.get('nuevo');
+
+        if (nuevo === '1') {
+            await this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: {
+                    nuevo: null
+                },
+                queryParamsHandling: 'merge',
+                replaceUrl: true
+            });
+
+            if (this.destroyRef.destroyed) {
+                return;
+            }
+
+            // Abrir el formulario vacío para crear un trabajo.
+            void this.openCreate();
+            return;
+        }
+
+        // Mantener la apertura de trabajos existentes.
         const abrir = this.route.snapshot.queryParamMap.get('abrir');
+
         if (abrir) {
             const id = parseInt(abrir, 10);
+
             if (!Number.isNaN(id)) {
                 void this.openEdit(id);
             }
@@ -381,11 +428,12 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             );
         });
 
-        // Ordenado alfabéticamente por el nombre del cliente (A - Z)
+        // Ordenado por fecha del trabajo: del más reciente al más antiguo.
+        // Si dos trabajos tienen la misma fecha, desempata por nombre de cliente.
         list.sort((a, b) => {
-            const nombreA = (a.clientName || '').toLowerCase();
-            const nombreB = (b.clientName || '').toLowerCase();
-            return nombreA.localeCompare(nombreB, 'es');
+            const diff = this.jobTime(b.jobDate) - this.jobTime(a.jobDate);
+            if (diff !== 0) return diff;
+            return (a.clientName || '').localeCompare(b.clientName || '', 'es');
         });
 
         return list;
@@ -555,6 +603,12 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             const result = await editorCmp.fire();
             this.editorOpen.set(false);
 
+            if (result.isDismissed) {
+                this.destroyMap();
+                await this.volverAlCalendario();
+                return;
+            }
+
             if (
                 (result.isConfirmed || result.isDenied)
                 && !this.destroyRef.destroyed
@@ -565,6 +619,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                     text: 'Trabajo asignado correctamente.',
                     confirmButtonColor: '#12CFF4'
                 });
+
+                await this.volverAlCalendario();
             }
         } finally {
             this.editorOpen.set(false);
@@ -578,123 +634,148 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     async openEdit(jobId: number, duplicate = false): Promise<void> {
-        if (this.isLoading() || this.editorOpen()) return;
+    if (this.isLoading() || this.editorOpen()) return;
 
-        Swal.fire({
-            title: 'Cargando datos...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+    void Swal.fire({
+        title: 'Cargando datos...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const data = await firstValueFrom(
+            this.jobsService.getById(jobId).pipe(
+                takeUntilDestroyed(this.destroyRef)
+            )
+        );
+
+        Swal.close();
+
+        this.isDuplicating.set(duplicate);
+        this.editingId.set(duplicate ? null : jobId);
+        this.clientSearchModal.set('');
+        this.necessaryMaterials.set([]);
+        this.selectedMaterialIds.set(new Set());
+        this.blueprintFiles.set([]);
+
+        this.existingBlueprintUrls.set(
+            duplicate ? [] : data.blueprintUrls || []
+        );
+
+        let descripcion = data.description || '';
+
+        if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
+            descripcion = descripcion
+                .split('[MATERIALES PRE-ASIGNADOS]:')[0]
+                .trim();
+        }
+
+        this.form.reset({
+            clientName: data.clientName || '',
+            clientPhone: data.clientPhone || '',
+            address: data.address || '',
+            buildingNumber: data.buildingNumber ?? '',
+            apartment: data.apartment ?? '',
+            latitude: data.latitude,
+            longitude: data.longitude,
+            employeeId: String(data.employeeId || ''),
+            managerId: String(
+                data.managerId ?? this.managerFijoId
+            ),
+            description: descripcion,
+            priority: data.priority ?? 2,
+            jobDate: this.fechaParaInput(data.jobDate),
+            pay: data.pay || 0,
+            safeDepositBoxCodes: data.safeDepositBoxCodes || '',
+            quickbooksInvoice: duplicate
+                ? ''
+                : data.quickbooksInvoice || '',
+            status: duplicate
+                ? 'PENDING'
+                : data.status || 'PENDING'
         });
 
-        try {
-            const data = await firstValueFrom(
-                this.jobsService.getById(jobId).pipe(takeUntilDestroyed(this.destroyRef))
+        const mats = data.materials || [];
+        const set = new Set<number>();
+
+        mats.forEach((m) => {
+            const id = m.materialId;
+            set.add(id);
+
+            const info = this.materials().find(
+                (x) => x.materialId === id
             );
 
-            await Swal.close();
+            this.addNecessary(
+                info || {
+                    materialId: id,
+                    name: m.name || 'Material',
+                    count: 0,
+                    price: m.price || 0,
+                    categoryName: '',
+                    unit: m.unit || ''
+                },
+                m.quantity ?? 1
+            );
+        });
 
-            // Duplicar: sin id, para que persistJob use create()
-            this.isDuplicating.set(duplicate);
-            this.editingId.set(duplicate ? null : jobId);
-            this.clientSearchModal.set('');
-            this.necessaryMaterials.set([]);
-            this.selectedMaterialIds.set(new Set());
-            this.blueprintFiles.set([]);
-            // Los planos ya subidos no se copian al duplicado
-            this.existingBlueprintUrls.set(duplicate ? [] : data.blueprintUrls || []);
+        this.selectedMaterialIds.set(set);
 
-            let descripcion = data.description || '';
-            if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
-                descripcion = descripcion
-                    .split('[MATERIALES PRE-ASIGNADOS]:')[0]
-                    .trim();
-            }
+        const editorCmp = this.editor();
 
-            this.form.reset({
-                clientName: data.clientName || '',
-                clientPhone: data.clientPhone || '',
-                address: data.address || '',
-                buildingNumber: data.buildingNumber ?? '',
-                apartment: data.apartment ?? '',
-                latitude: data.latitude,
-                longitude: data.longitude,
-                employeeId: String(data.employeeId || ''),
-                managerId: String(data.managerId ?? this.managerFijoId),
-                description: descripcion,
-                priority: data.priority ?? 2,
-                jobDate: this.fechaParaInput(data.jobDate),
-                pay: data.pay || 0,
-                safeDepositBoxCodes: data.safeDepositBoxCodes || '',
-                // El duplicado empieza sin factura y en Pendiente
-                quickbooksInvoice: duplicate ? '' : data.quickbooksInvoice || '',
-                status: duplicate ? 'PENDING' : data.status || 'PENDING'
-            });
+        editorCmp.swalOptions = {
+            ...this.editorOptions,
+            confirmButtonText: duplicate
+                ? 'Guardar duplicado'
+                : 'Guardar cambios',
+            showDenyButton: true,
+            denyButtonText: 'Guardar y enviar correo',
+            denyButtonColor: '#1565c0'
+        };
 
-            // Materiales asignados.
-            const mats = data.materials || [];
-            const set = new Set<number>();
-            mats.forEach((m: any) => {
-                const id = m.materialId;
-                set.add(id);
-                const info = this.materials().find((x) => x.materialId === id);
-                this.addNecessary(
-                    info || {
-                        materialId: id,
-                        name: m.name || 'Material',
-                        count: 0,
-                        price: m.price || 0,
-                        categoryName: '',
-                        unit: m.unit || ''
-                    },
-                    m.quantity ?? 1
-                );
-            });
-            this.selectedMaterialIds.set(set);
+        this.editorOptions = editorCmp.swalOptions;
+        this.editorOpen.set(true);
 
-            const editorCmp = this.editor();
-            editorCmp.swalOptions = {
-                ...this.editorOptions,
-                confirmButtonText: duplicate
-                    ? 'Guardar duplicado'
-                    : 'Guardar cambios',
-                showDenyButton: true,
-                denyButtonText: 'Guardar y enviar correo',
-                denyButtonColor: '#1565c0'
-            };
-            this.editorOptions = editorCmp.swalOptions;
+        const result = await editorCmp.fire();
 
-            this.editorOpen.set(true);
-            const result = await editorCmp.fire();
+        this.editorOpen.set(false);
 
-            this.editorOpen.set(false);
+        if (result.isDismissed) {
+            this.destroyMap();
+            await this.volverAlCalendario();
+            return;
+        }
 
-            if (
-                (result.isConfirmed || result.isDenied)
-                && !this.destroyRef.destroyed
-            ) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: this.isDuplicating()
-                        ? 'Copia creada correctamente. El trabajo original no fue modificado.'
-                        : 'Trabajo actualizado.',
-                    confirmButtonColor: '#12CFF4'
-                });
-            }
-        } catch (error: unknown) {
-            Swal.close();
+        if (
+            (result.isConfirmed || result.isDenied)
+            && !this.destroyRef.destroyed
+        ) {
             await Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: this.getErrorMessage(error),
+                icon: 'success',
+                title: '¡Éxito!',
+                text: this.isDuplicating()
+                    ? 'Copia creada correctamente. El trabajo original no fue modificado.'
+                    : 'Trabajo actualizado.',
                 confirmButtonColor: '#12CFF4'
             });
-        } finally {
-            this.editorOpen.set(false);
-            this.isDuplicating.set(false);
-            this.destroyMap();
+
+            await this.volverAlCalendario();
         }
+    } catch (error: unknown) {
+        Swal.close();
+
+        await Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: this.getErrorMessage(error),
+            confirmButtonColor: '#12CFF4'
+        });
+    } finally {
+        this.editorOpen.set(false);
+        this.isDuplicating.set(false);
+        this.destroyMap();
     }
+}
 
     submitEditor(): void {
         if (!this.isSaving()) Swal.clickConfirm();

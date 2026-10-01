@@ -57,6 +57,7 @@
                     <th scope="col">Email</th>
                     <th scope="col">Teléfono</th>
                     <th scope="col">Roles</th>
+                    <th scope="col">Jerarquía</th>
                     <th scope="col">Estado</th>
                     <th scope="col">Acciones</th>
                 </tr>
@@ -74,6 +75,7 @@
                     <td>{{ user.email }}</td>
                     <td>{{ user.phone }}</td>
                     <td>{{ rolesLabel(user) }}</td>
+                    <td>{{ user.hierarchyLevel ?? '—' }}</td>
                     <td>
                         <span class="status-badge" [class.active]="user.status === 'Active'">
                             {{ user.status }}
@@ -116,6 +118,10 @@
                 <li>
                     <span>Roles</span>
                     <strong>{{ rolesLabel(user) }}</strong>
+                </li>
+                <li>
+                    <span>Jerarquía</span>
+                    <strong>{{ user.hierarchyLevel ?? '—' }}</strong>
                 </li>
                 <li>
                     <span>Estado</span>
@@ -229,6 +235,26 @@
             <label for="user-color">Color identificador</label>
             <input id="user-color" class="input-field input-color" type="color" formControlName="color"
                 [disabled]="isSaving()" />
+        </div>
+        <div class="form-row">
+            <label for="user-hierarchyLevel">Jerarquía</label>
+
+            <input id="user-hierarchyLevel" class="input-field" type="number" min="1" max="2147483647" step="1"
+                formControlName="hierarchyLevel" placeholder="Ej: 1, 2, 3, 4..." [readOnly]="isSaving()"
+                aria-describedby="hierarchy-help" />
+
+            <small id="hierarchy-help">
+                Cada usuario debe tener un número de jerarquía diferente.
+            </small>
+
+            @if (
+            form.controls.hierarchyLevel.touched &&
+            form.controls.hierarchyLevel.invalid
+            ) {
+            <small class="hierarchy-error" role="alert">
+                Ingresa un número entero entre 1 y 2147483647.
+            </small>
+            }
         </div>
 
         <fieldset class="roles-fieldset">

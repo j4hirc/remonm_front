@@ -384,3 +384,10 @@ button:disabled {
         grid-template-columns: 1fr;
     }
 }
+
+.hierarchy-error {
+  display: block;
+  margin-top: 4px;
+  color: #c62828;
+  font-size: 0.8rem;
+}

@@ -1,42 +1,67 @@
 <div class="calendario-wrapper">
     <div class="filter-bar">
-        <label for="filterEmployee">Filtrar por subcontratista:</label>
+        <label for="filterEmployee">
+            Filtrar por subcontratista:
+        </label>
+
         <select id="filterEmployee" [(ngModel)]="filterEmployeeId" (ngModelChange)="onFilterChange()">
             <option value="">Todos los Subcontratistas</option>
+
             @for (emp of employees(); track emp.id) {
-            <option [value]="emp.id">{{ emp.name }}</option>
+            <option [value]="emp.id">
+                {{ emp.name }}
+            </option>
             }
         </select>
+
         <button type="button" class="btn-reset" (click)="resetFilter()">
             Limpiar filtro
         </button>
+
+        <a class="btn-new-job" routerLink="/jefe/trabajos" [queryParams]="{
+        nuevo: '1',
+        origen: 'calendario'
+    }">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            Nuevo trabajo
+        </a>
     </div>
 
-    <!-- Leyenda de estados (iconos animados) -->
     <div class="calendar-legend">
         <div class="legend-item">
-            <i class="fa-solid fa-clock" style="color:#ff9800;"></i> Pendiente
+            <i class="fa-solid fa-clock" style="color: #ff9800;"></i>
+            Pendiente
         </div>
+
         <div class="legend-item">
-            <i class="fa-solid fa-gear fa-spin" style="color:#12CFF4;"></i> En progreso
+            <i class="fa-solid fa-gear fa-spin" style="color: #12cff4;"></i>
+            En progreso
         </div>
+
         <div class="legend-item">
-            <i class="fa-solid fa-clipboard-check" style="color:#9333ea;"></i>
+            <i class="fa-solid fa-clipboard-check" style="color: #9333ea;"></i>
             Revisión
         </div>
+
         <div class="legend-item">
-            <i class="fa-solid fa-check-double" style="color:#6c757d;"></i> Completado
+            <i class="fa-solid fa-check-double" style="color: #6c757d;"></i>
+            Completado
         </div>
+
         <div class="legend-item">
-            <i class="fa-solid fa-ban" style="color:#d32f2f;"></i> Cancelado
+            <i class="fa-solid fa-ban" style="color: #d32f2f;"></i>
+            Cancelado
         </div>
-        <div class="legend-item" style="margin-left:auto; font-weight:500; color:#64748B;">
+
+        <div class="legend-item" style="margin-left: auto; font-weight: 500; color: #64748b;">
             El color del evento = color del subcontratista
         </div>
     </div>
 
     @if (loading()) {
-    <p class="loading-msg">Cargando cronograma...</p>
+    <p class="loading-msg">
+        Cargando cronograma...
+    </p>
     }
 
     <div #calendar id="calendar"></div>

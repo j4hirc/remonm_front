@@ -70,6 +70,12 @@ export class UsuariosComponent implements OnInit {
         dateOfEntry: ['', Validators.required],
         status: ['Active', Validators.required],
         title: ['', Validators.required],
+        hierarchyLevel: this.formBuilder.control<number | null>(null, [
+            Validators.required,
+            Validators.min(1),
+            Validators.max(2147483647),
+            Validators.pattern(/^[1-9]\d*$/)
+        ]),
         color: ['#12cff4', Validators.required],
         roleAdmin: [false],
         roleJefe: [false],
@@ -177,7 +183,7 @@ export class UsuariosComponent implements OnInit {
                 this.usersService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
             );
             this.users.set(users);
-            
+
             if (Swal.isVisible()) {
                 Swal.close();
             }
@@ -186,7 +192,7 @@ export class UsuariosComponent implements OnInit {
                 return;
             }
             this.loadError.set(true);
-            
+
             await Swal.fire({
                 icon: 'error',
                 title: 'No se pudieron cargar los usuarios',
@@ -226,11 +232,12 @@ export class UsuariosComponent implements OnInit {
                 : '',
             status: user?.status ?? 'Active',
             title: user?.title ?? '',
+            hierarchyLevel: user?.hierarchyLevel ?? null,
             color: user?.color ?? '#12cff4',
             roleAdmin: roleNames.has('ROLE_ADMIN'),
             roleJefe: roleNames.has('ROLE_JEFE'),
             roleEmployee: roleNames.has('ROLE_EMPLOYEE'),
-        roleBodeguero: roleNames.has('ROLE_BODEGUERO')
+            roleBodeguero: roleNames.has('ROLE_BODEGUERO')
         });
 
         this.editorOpen.set(true);
@@ -295,11 +302,25 @@ export class UsuariosComponent implements OnInit {
         this.form.markAllAsTouched();
 
         const raw = this.form.getRawValue();
+        const hierarchyLevel = raw.hierarchyLevel;
+
+        if (
+            hierarchyLevel === null ||
+            !Number.isInteger(hierarchyLevel) ||
+            hierarchyLevel < 1 ||
+            hierarchyLevel > 2147483647
+        ) {
+            Swal.showValidationMessage(
+                'Ingresa una jerarquía válida: un número entero mayor o igual a 1.'
+            );
+            return false;
+        }
+
         const roles: string[] = [];
         if (raw.roleAdmin) roles.push('ROLE_ADMIN');
         if (raw.roleJefe) roles.push('ROLE_JEFE');
         if (raw.roleEmployee) roles.push('ROLE_EMPLOYEE');
-    if (raw.roleBodeguero) roles.push('ROLE_BODEGUERO');
+        if (raw.roleBodeguero) roles.push('ROLE_BODEGUERO');
 
         if (this.form.invalid) {
             Swal.showValidationMessage('Revisa los campos obligatorios.');
@@ -332,6 +353,7 @@ export class UsuariosComponent implements OnInit {
             dateOfEntry: raw.dateOfEntry,
             status: raw.status,
             title: raw.title.trim(),
+            hierarchyLevel,
             roles,
             color: raw.color
         };

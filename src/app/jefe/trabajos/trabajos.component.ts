@@ -24,7 +24,7 @@ import {
     SwalPortalTargets
 } from '@sweetalert2/ngx-sweetalert2';
 import Swal, { SweetAlertOptions } from 'sweetalert2';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 
 import { Job, JobRequest } from '../../core/models/job.model';
@@ -117,6 +117,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     private readonly invoicePdf = inject(InvoicePdfService);
 
     private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
 
     readonly swalTargets = inject(SwalPortalTargets);
 
@@ -201,8 +202,8 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         denyButtonColor: '#1565c0',
         cancelButtonColor: '#2E3238',
 
-        allowOutsideClick: () => !this.isSaving(),
-        allowEscapeKey: () => !this.isSaving(),
+        allowOutsideClick: false,
+        allowEscapeKey: false,
 
         preConfirm: () => this.validateEditor(),
         preDeny: () => this.validateEditor()
@@ -262,6 +263,20 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         Swal.close();
     }
 
+    private async volverAlCalendario(): Promise<void> {
+        if (
+            this.destroyRef.destroyed
+            || this.route.snapshot.queryParamMap.get('origen') !== 'calendario'
+        ) {
+            return;
+        }
+
+        await this.router.navigate(['calendario'], {
+            relativeTo: this.route.parent,
+            replaceUrl: true
+        });
+    }
+
     private async bootstrap(): Promise<void> {
         this.isLoading.set(true);
 
@@ -272,23 +287,58 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         });
 
         try {
-            await Promise.all([this.loadUsers(), this.loadMaterials()]);
+            await Promise.all([
+                this.loadUsers(),
+                this.loadMaterials()
+            ]);
+
             await this.loadJobs();
 
-            Swal.close();
+            if (this.destroyRef.destroyed || this.loadError()) {
+                return;
+            }
 
-            // Abrir trabajo desde calendario (?abrir=jobId)
-            const abrir = this.route.snapshot.queryParamMap.get('abrir');
-            if (abrir) {
-                const id = parseInt(abrir, 10);
-                if (!Number.isNaN(id)) {
-                    this.isLoading.set(false);
-                    void this.openEdit(id);
-                    return;
-                }
+            if (Swal.isVisible()) {
+                Swal.close();
             }
         } finally {
             this.isLoading.set(false);
+        }
+
+        if (this.destroyRef.destroyed) {
+            return;
+        }
+
+        const nuevo = this.route.snapshot.queryParamMap.get('nuevo');
+
+        if (nuevo === '1') {
+            await this.router.navigate([], {
+                relativeTo: this.route,
+                queryParams: {
+                    nuevo: null
+                },
+                queryParamsHandling: 'merge',
+                replaceUrl: true
+            });
+
+            if (this.destroyRef.destroyed) {
+                return;
+            }
+
+            // Abrir el formulario vacío para crear un trabajo.
+            void this.openCreate();
+            return;
+        }
+
+        // Mantener la apertura de trabajos existentes.
+        const abrir = this.route.snapshot.queryParamMap.get('abrir');
+
+        if (abrir) {
+            const id = parseInt(abrir, 10);
+
+            if (!Number.isNaN(id)) {
+                void this.openEdit(id);
+            }
         }
     }
 
@@ -420,10 +470,12 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             );
         });
 
+        // Ordenado por fecha del trabajo: del más reciente al más antiguo.
+        // Si dos trabajos tienen la misma fecha, desempata por nombre de cliente.
         list.sort((a, b) => {
-            const nombreA = (a.clientName || '').toLowerCase();
-            const nombreB = (b.clientName || '').toLowerCase();
-            return nombreA.localeCompare(nombreB, 'es');
+            const diff = this.jobTime(b.jobDate) - this.jobTime(a.jobDate);
+            if (diff !== 0) return diff;
+            return (a.clientName || '').localeCompare(b.clientName || '', 'es');
         });
 
         return list;
@@ -542,60 +594,224 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     // ---------- EDITOR ----------
 
     async openCreate(): Promise<void> {
-        if (this.isLoading() || this.editorOpen()) return;
-        this.editingId.set(null);
-        this.isDuplicating.set(false);
+    if (this.isLoading() || this.editorOpen()) return;
+
+    this.editingId.set(null);
+    this.isDuplicating.set(false);
+    this.clientSearchModal.set('');
+    this.showClientList.set(false);
+    this.necessaryMaterials.set([]);
+    this.selectedMaterialIds.set(new Set());
+    this.blueprintFiles.set([]);
+    this.existingBlueprintUrls.set([]);
+    this.materialSearch.set('');
+    this.materialCategoryFilter.set('');
+
+    this.form.reset({
+        clientName: '',
+        clientPhone: '',
+        address: '',
+        buildingNumber: '',
+        apartment: '',
+        latitude: -2.900128,
+        longitude: -79.005896,
+        employeeId: '',
+        managerId: this.defaultManagerId(),
+        description: '',
+        priority: 2,
+        jobDate: '',
+        pay: 0,
+        safeDepositBoxCodes: '',
+        quickbooksInvoice: '',
+        status: 'PENDING'
+    });
+
+    const editorCmp = this.editor();
+
+    editorCmp.swalOptions = {
+        ...this.editorOptions,
+        confirmButtonText: 'Guardar trabajo',
+        showDenyButton: true,
+        denyButtonText: 'Guardar y enviar correo',
+        denyButtonColor: '#1565c0'
+    };
+
+    this.editorOptions = editorCmp.swalOptions;
+
+    this.editorOpen.set(true);
+
+    const result = await editorCmp.fire();
+
+    this.editorOpen.set(false);
+    this.destroyMap();
+
+    if (result.isDismissed) {
+        await this.volverAlCalendario();
+        return;
+    }
+
+    if (
+        (result.isConfirmed || result.isDenied)
+        && !this.destroyRef.destroyed
+    ) {
+        void Swal.fire({
+            title: 'Guardando trabajo...',
+            text: 'Por favor, espera.',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            await this.persistJob(result.isDenied);
+
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: 'Trabajo asignado correctamente.',
+                confirmButtonColor: '#12CFF4'
+            });
+
+            await this.volverAlCalendario();
+        } catch (error: unknown) {
+            await Swal.fire(
+                'Error',
+                this.getErrorMessage(error),
+                'error'
+            );
+        }
+    }
+}
+
+    /** Duplicar = abrir el editor con todo precargado, pero guardando como trabajo nuevo. */
+    openDuplicate(jobId: number): Promise<void> {
+        return this.openEdit(jobId, true);
+    }
+
+    async openEdit(jobId: number, duplicate = false): Promise<void> {
+    if (this.isLoading() || this.editorOpen()) return;
+
+    void Swal.fire({
+        title: 'Cargando datos...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const data = await firstValueFrom(
+            this.jobsService.getById(jobId).pipe(
+                takeUntilDestroyed(this.destroyRef)
+            )
+        );
+
+        Swal.close();
+
+        this.isDuplicating.set(duplicate);
+        this.editingId.set(duplicate ? null : jobId);
         this.clientSearchModal.set('');
         this.showClientList.set(false);
         this.necessaryMaterials.set([]);
         this.selectedMaterialIds.set(new Set());
         this.blueprintFiles.set([]);
-        this.existingBlueprintUrls.set([]);
-        this.materialSearch.set('');
-        this.materialCategoryFilter.set('');
+
+        this.existingBlueprintUrls.set(
+            duplicate ? [] : data.blueprintUrls || []
+        );
+
+        let descripcion = data.description || '';
+
+        if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
+            descripcion = descripcion
+                .split('[MATERIALES PRE-ASIGNADOS]:')[0]
+                .trim();
+        }
+
+        const managerId = data.managerId ?? this.managerFijoId;
+        this.ensureManagerInList(managerId);
 
         this.form.reset({
-            clientName: '',
-            clientPhone: '',
-            address: '',
-            buildingNumber: '',
-            apartment: '',
-            latitude: -2.900128,
-            longitude: -79.005896,
-            employeeId: '',
-            managerId: this.defaultManagerId(),
-            description: '',
-            priority: 2,
-            jobDate: '',
-            pay: 0,
-            safeDepositBoxCodes: '',
-            quickbooksInvoice: '',
-            status: 'PENDING'
+            clientName: data.clientName || '',
+            clientPhone: data.clientPhone || '',
+            address: data.address || '',
+            buildingNumber: data.buildingNumber ?? '',
+            apartment: data.apartment ?? '',
+            latitude: data.latitude,
+            longitude: data.longitude,
+            employeeId: String(data.employeeId || ''),
+            managerId: String(managerId),
+            description: descripcion,
+            priority: data.priority ?? 2,
+            jobDate: this.fechaParaInput(data.jobDate),
+            pay: data.pay || 0,
+            safeDepositBoxCodes: data.safeDepositBoxCodes || '',
+            quickbooksInvoice: duplicate
+                ? ''
+                : data.quickbooksInvoice || '',
+            status: duplicate
+                ? 'PENDING'
+                : data.status || 'PENDING'
         });
 
-        // Al crear no se muestra el botón eliminar y el texto es el normal
+        const mats = data.materials || [];
+        const set = new Set<number>();
+
+        mats.forEach((m) => {
+            const id = m.materialId;
+            set.add(id);
+
+            const info = this.materials().find(
+                (x) => x.materialId === id
+            );
+
+            this.addNecessary(
+                info || {
+                    materialId: id,
+                    name: m.name || 'Material',
+                    count: 0,
+                    price: m.price || 0,
+                    categoryName: '',
+                    unit: m.unit || ''
+                },
+                m.quantity ?? 1
+            );
+        });
+
+        this.selectedMaterialIds.set(set);
+
         const editorCmp = this.editor();
+
         editorCmp.swalOptions = {
             ...this.editorOptions,
-            confirmButtonText: 'Guardar trabajo',
+            confirmButtonText: duplicate
+                ? 'Guardar duplicado'
+                : 'Guardar cambios',
             showDenyButton: true,
             denyButtonText: 'Guardar y enviar correo',
             denyButtonColor: '#1565c0'
         };
-        this.editorOptions = editorCmp.swalOptions;
 
+        this.editorOptions = editorCmp.swalOptions;
         this.editorOpen.set(true);
+
         const result = await editorCmp.fire();
 
         this.editorOpen.set(false);
         this.destroyMap();
 
+        if (result.isDismissed) {
+            await this.volverAlCalendario();
+            return;
+        }
+
         if (
             (result.isConfirmed || result.isDenied)
             && !this.destroyRef.destroyed
         ) {
-            Swal.fire({
-                title: 'Guardando trabajo...',
+            void Swal.fire({
+                title: this.isDuplicating()
+                    ? 'Creando copia...'
+                    : 'Actualizando trabajo...',
                 text: 'Por favor, espera.',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
@@ -605,162 +821,43 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
 
             try {
                 await this.persistJob(result.isDenied);
+
                 await Swal.fire({
                     icon: 'success',
                     title: '¡Éxito!',
-                    text: 'Trabajo asignado correctamente.',
+                    text: this.isDuplicating()
+                        ? 'Copia creada correctamente. El trabajo original no fue modificado.'
+                        : 'Trabajo actualizado correctamente.',
                     confirmButtonColor: '#12CFF4'
                 });
-            } catch (error) {
-                await Swal.fire('Error', this.getErrorMessage(error), 'error');
+
+                await this.volverAlCalendario();
+            } catch (error: unknown) {
+                await Swal.fire(
+                    'Error',
+                    this.getErrorMessage(error),
+                    'error'
+                );
             }
         }
-    }
+    } catch (error: unknown) {
+        Swal.close();
 
-    /** Duplicar = abrir el editor con todo precargado, pero guardando como trabajo nuevo. */
-    openDuplicate(jobId: number): Promise<void> {
-        return this.openEdit(jobId, true);
-    }
-
-    async openEdit(jobId: number, duplicate = false): Promise<void> {
-        if (this.isLoading() || this.editorOpen()) return;
-
-        Swal.fire({
-            title: 'Cargando datos...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+        await Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: this.getErrorMessage(error),
+            confirmButtonColor: '#12CFF4'
         });
+    } finally {
+        this.isDuplicating.set(false);
 
-        try {
-            const data = await firstValueFrom(
-                this.jobsService.getById(jobId).pipe(takeUntilDestroyed(this.destroyRef))
-            );
-
-            await Swal.close();
-
-            // Duplicar: sin id, para que persistJob use create()
-            this.isDuplicating.set(duplicate);
-            this.editingId.set(duplicate ? null : jobId);
-            this.clientSearchModal.set('');
-            this.showClientList.set(false);
-            this.necessaryMaterials.set([]);
-            this.selectedMaterialIds.set(new Set());
-            this.blueprintFiles.set([]);
-            // Los planos ya subidos no se copian al duplicado
-            this.existingBlueprintUrls.set(duplicate ? [] : data.blueprintUrls || []);
-
-            let descripcion = data.description || '';
-            if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
-                descripcion = descripcion
-                    .split('[MATERIALES PRE-ASIGNADOS]:')[0]
-                    .trim();
-            }
-
-            // El manager guardado siempre debe estar en la lista del select
-            const managerId = data.managerId ?? this.managerFijoId;
-            this.ensureManagerInList(managerId);
-
-            this.form.reset({
-                clientName: data.clientName || '',
-                clientPhone: data.clientPhone || '',
-                address: data.address || '',
-                buildingNumber: data.buildingNumber ?? '',
-                apartment: data.apartment ?? '',
-                latitude: data.latitude,
-                longitude: data.longitude,
-                employeeId: String(data.employeeId || ''),
-                managerId: String(managerId),
-                description: descripcion,
-                priority: data.priority ?? 2,
-                jobDate: this.fechaParaInput(data.jobDate),
-                pay: data.pay || 0,
-                safeDepositBoxCodes: data.safeDepositBoxCodes || '',
-                // El duplicado empieza sin factura y en Pendiente
-                quickbooksInvoice: duplicate ? '' : data.quickbooksInvoice || '',
-                status: duplicate ? 'PENDING' : data.status || 'PENDING'
-            });
-
-            const mats = data.materials || [];
-            const set = new Set<number>();
-            mats.forEach((m: any) => {
-                const id = m.materialId;
-                set.add(id);
-                const info = this.materials().find((x) => x.materialId === id);
-                this.addNecessary(
-                    info || {
-                        materialId: id,
-                        name: m.name || 'Material',
-                        count: 0,
-                        price: m.price || 0,
-                        categoryName: '',
-                        unit: m.unit || ''
-                    },
-                    m.quantity ?? 1
-                );
-            });
-            this.selectedMaterialIds.set(set);
-
-            const editorCmp = this.editor();
-            editorCmp.swalOptions = {
-                ...this.editorOptions,
-                confirmButtonText: duplicate
-                    ? 'Guardar duplicado'
-                    : 'Guardar cambios',
-                showDenyButton: true,
-                denyButtonText: 'Guardar y enviar correo',
-                denyButtonColor: '#1565c0'
-            };
-            this.editorOptions = editorCmp.swalOptions;
-
-            this.editorOpen.set(true);
-            const result = await editorCmp.fire();
-
+        if (this.editorOpen()) {
             this.editorOpen.set(false);
             this.destroyMap();
-
-            if (
-                (result.isConfirmed || result.isDenied)
-                && !this.destroyRef.destroyed
-            ) {
-                Swal.fire({
-                    title: this.isDuplicating() ? 'Creando copia...' : 'Actualizando trabajo...',
-                    text: 'Por favor, espera.',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => Swal.showLoading()
-                });
-
-                try {
-                    await this.persistJob(result.isDenied);
-                    await Swal.fire({
-                        icon: 'success',
-                        title: '¡Éxito!',
-                        text: this.isDuplicating()
-                            ? 'Copia creada correctamente. El trabajo original no fue modificado.'
-                            : 'Trabajo actualizado correctamente.',
-                        confirmButtonColor: '#12CFF4'
-                    });
-                } catch (error) {
-                    await Swal.fire('Error', this.getErrorMessage(error), 'error');
-                }
-            }
-        } catch (error: unknown) {
-            Swal.close();
-            await Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: this.getErrorMessage(error),
-                confirmButtonColor: '#12CFF4'
-            });
-        } finally {
-            this.isDuplicating.set(false);
-            if (this.editorOpen()) {
-                this.editorOpen.set(false);
-                this.destroyMap();
-            }
         }
     }
+}
 
     submitEditor(): void {
         if (!this.isSaving()) Swal.clickConfirm();
@@ -1436,6 +1533,14 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         }
         return String(fecha).slice(0, 10);
+    }
+
+    private jobTime(fecha: string | number[] | null | undefined): number {
+        if (!fecha) return 0;
+        if (Array.isArray(fecha)) {
+            return new Date(fecha[0], fecha[1] - 1, fecha[2]).getTime();
+        }
+        return new Date(fecha).getTime();
     }
 
     viewBlueprints(job: Job): void {

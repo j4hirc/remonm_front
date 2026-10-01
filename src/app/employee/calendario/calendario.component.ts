@@ -321,6 +321,35 @@ export class CalendarioEmployeeComponent
          </div>`
             : '';
 
+        // BLOQUES HTML DE ÍCONOS OPCIONALES
+        const edificioHtml = job.buildingNumber
+            ? `<p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-building" style="color:#00B8A9;width:20px;"></i> Edificio:</strong> ${job.buildingNumber}</p>`
+            : '';
+
+        const deptoHtml = job.apartment
+            ? `<p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-door-open" style="color:#00B8A9;width:20px;"></i> Departamento:</strong> ${job.apartment}</p>`
+            : '';
+            
+        const empleadoHtml = job.nameEmployee
+            ? `<p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-user-tie" style="color:#00B8A9;width:20px;"></i> Subcontratista:</strong> ${job.nameEmployee}</p>`
+            : '';
+
+        const managerHtml = job.nameManager
+            ? `<p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-user-shield" style="color:#00B8A9;width:20px;"></i> Manager:</strong> ${job.nameManager}</p>`
+            : '';
+
+        const qbHtml = job.quickbooksInvoice
+            ? `<p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-file-invoice-dollar" style="color:#00B8A9;width:20px;"></i> QuickBooks:</strong> ${job.quickbooksInvoice}</p>`
+            : '';
+
+        const cajaHtml = job.safeDepositBoxCodes
+            ? `<p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-key" style="color:#00B8A9;width:20px;"></i> Caja seguridad:</strong> ${job.safeDepositBoxCodes}</p>`
+            : '';
+
+        // SEPARAMOS LA DIRECCIÓN PRINCIPAL DEL EDIFICIO/DEPTO AÑADIDO POR JOBLOCATION
+        const direccionCompleta = escapeLocationHtml(jobLocation(job));
+        const direccionLimpia = direccionCompleta.split(' · ')[0];
+
         void Swal.fire({
             title: `<h3 style="color:#111C44;margin:0;font-weight:700;">Detalles de la Orden</h3>`,
             html: `
@@ -329,13 +358,25 @@ export class CalendarioEmployeeComponent
             <span style="background:${badgeColor};color:#fff;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:bold;">Estado: ${estadoTxt}</span>
           </div>
           <div style="text-align:center;margin:12px 0 18px;">${prioridadHTML}</div>
+          
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-regular fa-calendar" style="color:#00B8A9;width:20px;"></i> Fecha:</strong> ${p.fechaHermosa}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-house" style="color:#00B8A9;width:20px;"></i> Propiedad:</strong> ${job.clientName}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-phone" style="color:#00B8A9;width:20px;"></i> Teléfono:</strong> ${job.clientPhone || 'No registrado'}</p>
-          <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-location-dot" style="color:#00B8A9;width:20px;"></i> Dirección:</strong> ${escapeLocationHtml(jobLocation(job))}</p>
-          <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-lock" style="color:#00B8A9;width:20px;"></i> Código Caja Fuerte:</strong> ${job.safeDepositBoxCodes || 'No registrado'}</p>
+          
+          <!-- DIRECCIÓN SIN DUPLICADOS -->
+          <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-location-dot" style="color:#00B8A9;width:20px;"></i> Dirección:</strong> ${direccionLimpia}</p>
+          
+          ${edificioHtml}
+          ${deptoHtml}
+          ${empleadoHtml}
+          ${managerHtml}
+          ${qbHtml}
+          ${cajaHtml}
+          
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-sack-dollar" style="color:#00B8A9;width:20px;"></i> Pago:</strong> $${Number(job.pay || 0).toFixed(2)}</p>
+          
           ${planoHtml}
+          
           <div style="margin-top:16px;">
             <h4 style="margin:0 0 8px;font-size:14px;color:#111C44;border-bottom:2px solid #F4F7FE;padding-bottom:5px;">
               <i class="fa-regular fa-comments" style="color:#00B8A9;"></i> Instrucciones
@@ -438,7 +479,7 @@ export class CalendarioEmployeeComponent
             plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
             initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
             locale: esLocale,
-            firstDay: 0, // <-- Agrega esta línea para que inicie en Domingo
+            firstDay: 0,
             height: 'auto',
             headerToolbar: {
                 left: 'prev,next today',

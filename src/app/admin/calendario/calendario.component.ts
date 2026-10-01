@@ -13,7 +13,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 
@@ -26,13 +26,14 @@ import esLocale from '@fullcalendar/core/locales/es';
 
 import { JobsService } from '../../core/services/jobs.service';
 import { UsersService } from '../../core/services/users.service';
+import { CalendarStateService } from '../../core/services/calendar-state.service';
 import { Job } from '../../core/models/job.model';
 import { User } from '../../core/models/user.model';
 
 @Component({
     selector: 'app-admin-calendario',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, RouterLink],
     templateUrl: './calendario.component.html',
     styleUrl: './calendario.component.css'
 })
@@ -41,6 +42,8 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     private readonly usersService = inject(UsersService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly router = inject(Router);
+    private readonly calendarState = inject(CalendarStateService);
+    private readonly calendarKey = 'admin';
     readonly error = signal('');
 
     private readonly calendarEl =
@@ -56,8 +59,14 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     private dataReady = false;
 
     private colorByEmployeeId: Record<number, string> = {};
+    private hierarchyByEmployeeId: Record<number, number> = {};
+
 
     ngOnInit(): void {
+        const saved = this.calendarState.get(this.calendarKey);
+
+        this.filterEmployeeId = saved?.employeeId ?? '';
+
         this.loadData();
     }
 
@@ -67,6 +76,20 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     ngOnDestroy(): void {
+        if (this.calendar) {
+            const date = this.calendar.getDate();
+
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+
+            this.calendarState.set(this.calendarKey, {
+                date: `${year}-${month}-${day}`,
+                view: this.calendar.view.type,
+                employeeId: this.filterEmployeeId
+            });
+        }
+
         this.calendar?.destroy();
         Swal.close();
     }
@@ -95,6 +118,22 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
                         colors[u.userId] = u.color || '#CCCCCC';
                     });
                     this.colorByEmployeeId = colors;
+
+                    const hierarchies: Record<number, number> = {};
+
+                    users.forEach((u: User) => {
+                        const level = u.hierarchyLevel;
+
+                        if (
+                            typeof level === 'number' &&
+                            Number.isInteger(level) &&
+                            level >= 1
+                        ) {
+                            hierarchies[u.userId] = level;
+                        }
+                    });
+
+                    this.hierarchyByEmployeeId = hierarchies;
 
                     const empleados = users
                         .filter((u: User) => {
@@ -137,7 +176,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
 
     private tryRender(): void {
         if (this.viewReady && this.dataReady) {
-            this.renderCalendar(this.allJobs);
+            this.onFilterChange();
         }
     }
 
@@ -192,6 +231,15 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
             );
         }
         return desc;
+    }
+
+    private employeeHierarchy(employeeId?: number | null): number {
+        if (employeeId == null) {
+            return Number.MAX_SAFE_INTEGER;
+        }
+
+        return this.hierarchyByEmployeeId[employeeId]
+            ?? Number.MAX_SAFE_INTEGER;
     }
 
     private employeeColor(employeeId?: number | null): string {
@@ -304,7 +352,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
                 backgroundColor: bgColor,
                 borderColor: bgColor,
                 textColor,
-                order: this.colorPriority(bgColor),
+                order: this.employeeHierarchy(job.employeeId),
                 extendedProps: {
                     address: job.address || '',
                     buildingNumber: job.buildingNumber || '',
@@ -520,7 +568,10 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
         }).then((result) => {
             if (result.isConfirmed) {
                 void this.router.navigate(['/admin/trabajos'], {
-                    queryParams: { abrir: jobId }
+                    queryParams: {
+                        abrir: jobId,
+                        origen: 'calendario'
+                    }
                 });
             } else if (result.isDenied) {
                 void this.router.navigate(['/admin/evidencias'], {
@@ -541,11 +592,15 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
 
         this.calendar = new Calendar(this.calendarEl().nativeElement, {
             plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
-            initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
+            initialView: this.calendarState.get(this.calendarKey)?.view
+                ?? (window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth'),
+
+            initialDate: this.calendarState.get(this.calendarKey)?.date,
             locale: esLocale,
             firstDay: 0,
             height: 'auto',
-            eventOrder: 'order',
+            eventOrder: 'order,title,id',
+            eventOrderStrict: true,
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',

@@ -64,11 +64,18 @@ export function buildWarehouseReport(jobs: readonly Job[], users: readonly User[
     return {
       jobId: job.jobId,
       clientName: job.clientName || 'Cliente sin nombre',
+      address: job.address?.trim() || '',
+      buildingNumber: job.buildingNumber?.trim() || '',
+      apartment: job.apartment?.trim() || '',
       employeeName: employeeName(users, job.employeeId),
       managerName: job.nameManager || 'Sin manager asignado',
       status: job.status as 'PENDING' | 'IN_PROGRESS',
-      description: (job.description || '').split('[MATERIALES PRE-ASIGNADOS]:')[0].trim(),
-      materials: [...merged.values()].sort((a, b) => a.materialId - b.materialId)
+      description: (job.description || '')
+        .split('[MATERIALES PRE-ASIGNADOS]:')[0]
+        .trim(),
+      materials: [...merged.values()].sort(
+        (a, b) => a.materialId - b.materialId
+      )
     };
   });
   // Siempre devuelve la selección actual, incluso si está vacía.
