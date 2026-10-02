@@ -39,6 +39,9 @@ export interface PayrollJob {
   jobId: number;
   date: string;
   clientName: string;
+  description: string;
+  buildingNumber: string;
+  apartment: string;
   pay: number;
 }
 export interface PayrollEmployee {

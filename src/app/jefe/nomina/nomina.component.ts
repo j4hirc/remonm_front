@@ -33,6 +33,9 @@ export class NominaJefeComponent implements OnInit {
   readonly filename = signal('');
   readonly generatedAt = signal('');
   readonly pdfSnapshot = signal<PayrollReport>({ start: '', end: '', employees: [], total: 0 });
+  readonly empty = computed(() => this.report().employees.length === 0);
+  readonly busy = computed(() => this.loading() || this.exporting());
+  
 
   readonly report = computed<PayrollReport>(() => {
     const data = this.data();
@@ -51,8 +54,7 @@ export class NominaJefeComponent implements OnInit {
     };
   });
 
-  readonly empty = computed(() => this.report().employees.length === 0);
-  readonly busy = computed(() => this.loading() || this.exporting());
+  
 
   constructor() {
     this.destroyRef.onDestroy(() => {

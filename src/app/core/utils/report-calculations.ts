@@ -143,17 +143,43 @@ export function buildPayrollReport(jobs: readonly Job[], users: readonly User[],
       ?? statusLabels[job.status]
       ?? 'Sin estado';
     group.jobs.push({
-      jobId: job.jobId, date: formatDay(day),
-      dateSource: inPeriod.length ? 'Último avance del período' : 'Fecha programada · sin avances fechados',
+      jobId: job.jobId,
+      date: formatDay(day),
+      dateSource: inPeriod.length
+        ? 'Último avance del período'
+        : 'Fecha programada · sin avances fechados',
+
       statusLabel,
-      clientName: job.clientName || 'Cliente sin nombre', pay,
+      clientName: job.clientName || 'Cliente sin nombre',
+
+      description: (job.description || '')
+        .split('[MATERIALES PRE-ASIGNADOS]:')[0]
+        .trim(),
+
+      buildingNumber: job.buildingNumber?.trim() || '',
+      apartment: job.apartment?.trim() || '',
+
+      pay,
+
       advances: inPeriod.map(({ update, day }) => ({
-        id: update.jobUpdateId, date: formatDay(day), comment: update.comment || 'Sin comentario',
-        price: update.price != null && Number.isFinite(Number(update.price)) ? Math.round(Math.max(0, Number(update.price)) * 100) / 100 : null,
+        id: update.jobUpdateId,
+        date: formatDay(day),
+        comment: update.comment || 'Sin comentario',
+
+        price:
+          update.price != null &&
+            Number.isFinite(Number(update.price))
+            ? Math.round(Math.max(0, Number(update.price)) * 100) / 100
+            : null,
+
         status: update.status || null,
+
         files: (update.evidences || []).map((e, index) => ({
-          id: e.evidenceId, url: e.imageUri,
-          label: /\.pdf(?:[?#]|$)/i.test(e.imageUri) ? 'Reporte PDF' : `Evidencia ${index + 1}`
+          id: e.evidenceId,
+          url: e.imageUri,
+          label: /\.pdf(?:[?#]|$)/i.test(e.imageUri)
+            ? 'Reporte PDF'
+            : `Evidencia ${index + 1}`
         }))
       }))
     });
