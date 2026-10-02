@@ -81,25 +81,27 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     seleccionarClienteManual(cliente: Cliente): void {
-        if (this.isSaving()) return;
+    if (this.isSaving()) return;
 
-        this.form.patchValue({
-            clientName: cliente.clientName,
-            clientPhone: cliente.clientPhone ?? '',
-            address: cliente.address,
-            latitude: cliente.latitude,
-            longitude: cliente.longitude
-        });
-        this.form.markAsDirty();
+    this.form.patchValue({
+        clientName: cliente.clientName,
+        clientPhone: cliente.clientPhone ?? '',
+        address: cliente.address,
+        latitude: cliente.latitude,
+        longitude: cliente.longitude
+    });
+    this.lastSearchedAddress = cliente.address.trim();   // ← añadir
+    this.addressStatus.set(null);                        // ← añadir
+    this.form.markAsDirty();
 
-        if (Number.isFinite(cliente.latitude) && Number.isFinite(cliente.longitude)) {
-            this.marker?.setLatLng([cliente.latitude, cliente.longitude]);
-            this.map?.setView([cliente.latitude, cliente.longitude], 16);
-        }
-
-        this.clientSearchModal.set('');
-        this.showClientList.set(false);
+    if (Number.isFinite(cliente.latitude) && Number.isFinite(cliente.longitude)) {
+        this.marker?.setLatLng([cliente.latitude, cliente.longitude]);
+        this.map?.setView([cliente.latitude, cliente.longitude], 16);
     }
+
+    this.clientSearchModal.set('');
+    this.showClientList.set(false);
+}
 
     hideClientList(): void {
         setTimeout(() => {
@@ -168,6 +170,10 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
 
     private map: any = null;
     private marker: any = null;
+    readonly addressStatus = signal<{ kind: 'info' | 'warn'; text: string } | null>(null);
+readonly addressSearching = signal(false);
+private lastSearchedAddress = '';
+private searchToken = 0;
 
     readonly form = this.formBuilder.nonNullable.group({
         clientName: ['', Validators.required],
@@ -244,10 +250,12 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     onEditorDidOpen(): void {
-        void this.loadClientes();
-        this.initMapFromForm();
-        this.injectDeleteButtonInSwal();
-    }
+    this.addressStatus.set(null);                                           // ← añadir
+    this.lastSearchedAddress = this.form.controls.address.value?.trim() ?? ''; // ← añadir
+    void this.loadClientes();
+    this.initMapFromForm();
+    this.injectDeleteButtonInSwal();
+}
 
     onEditorWillClose(): void {
         this.destroyMap();
@@ -1319,150 +1327,224 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     private reverseGeocode(lat: number, lng: number): void {
-        fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=es&addressdetails=1`
-        )
-            .then((r) => r.json())
-            .then((data) => {
-                if (!data?.address) return;
-                const a = data.address;
-                const calle = [a.house_number || '', a.road || a.pedestrian || '']
-                    .filter(Boolean)
-                    .join(' ');
-                const partes = [
-                    calle,
-                    a.city || a.town || a.village || a.municipality || '',
-                    a.state || a.province || '',
-                    a.country || ''
-                ].filter(Boolean);
-                this.form.controls.address.setValue(partes.join(', '));
-            })
-            .catch(() => undefined);
-    }
+    fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=es&addressdetails=1`
+    )
+        .then((r) => r.json())
+        .then((data) => {
+            if (!data?.address) return;
+            const a = data.address;
+            const calle = [a.house_number || '', a.road || a.pedestrian || '']
+                .filter(Boolean)
+                .join(' ');
+            const partes = [
+                calle,
+                a.city || a.town || a.village || a.municipality || '',
+                a.state || ''
+            ].filter(Boolean);
+            const texto = partes.join(', ');
+            this.form.controls.address.setValue(texto);
+            this.lastSearchedAddress = texto;   // importante
+        })
+        .catch(() => undefined);
+}
 
     // ======================================================
     // BÚSQUEDA DE DIRECCIONES
     // ======================================================
 
-    searchAddressOnMap(): void {
-        const textoOriginal = this.form.controls.address.value?.trim();
-        if (!textoOriginal) return;
+/** Normaliza fracciones y abreviaturas para mejorar resultados */
+private normalizeAddress(address: string): string {
+    return address
+        .replace(/\b(\d+)\s+1\/2\b/gi, '$1th')
+        .replace(/\b(\d+)\s+½\b/gi, '$1th')
+        .replace(/\b(\d+)\s+1\/4\b/gi, '$1th')
+        .replace(/\b(\d+)\s+3\/4\b/gi, '$1th')
+        .replace(/\bSt\b\.?/gi, 'Street')
+        .replace(/\bAve\b\.?/gi, 'Avenue')
+        .replace(/\bBlvd\b\.?/gi, 'Boulevard')
+        .replace(/\bRd\b\.?/gi, 'Road')
+        .replace(/\bDr\b\.?/gi, 'Drive')
+        .replace(/\bLn\b\.?/gi, 'Lane')
+        .replace(/\bCt\b\.?/gi, 'Court')
+        .replace(/\bW\b(?=\s)/gi, 'West')
+        .replace(/\bE\b(?=\s)/gi, 'East')
+        .replace(/\bN\b(?=\s)/gi, 'North')
+        .replace(/\bS\b(?=\s)/gi, 'South')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
-        // 1. Coordenadas pegadas (lat, lng)
-        const regexCoords = /^[-+]?\d+(\.\d+)?\s*,\s*[-+]?\d+(\.\d+)?$/;
-        if (regexCoords.test(textoOriginal)) {
-            const [latStr, lngStr] = textoOriginal.split(',');
-            const latV = parseFloat(latStr.trim());
-            const lngV = parseFloat(lngStr.trim());
-            if (!isNaN(latV) && !isNaN(lngV)) {
-                this.setMapPosition(latV, lngV, false);
-            }
-            return;
+async searchAddressOnMap(force = false): Promise<void> {
+    const original = this.form.controls.address.value?.trim();
+    if (!original) {
+        this.addressStatus.set(null);
+        return;
+    }
+    if (!force && original === this.lastSearchedAddress) return;
+    this.lastSearchedAddress = original;
+
+    // Coordenadas pegadas "lat, lng"
+    if (/^[-+]?\d+(\.\d+)?\s*,\s*[-+]?\d+(\.\d+)?$/.test(original)) {
+        const [latStr, lngStr] = original.split(',');
+        const latV = parseFloat(latStr);
+        const lngV = parseFloat(lngStr);
+        if (!isNaN(latV) && !isNaN(lngV)) {
+            this.addressStatus.set(null);
+            this.setMapPosition(latV, lngV, true);
         }
+        return;
+    }
 
-        // 2. Normalizar y buscar
-        const texto = this.normalizeAddress(textoOriginal);
+    const token = ++this.searchToken;
+    this.addressSearching.set(true);
+    this.addressStatus.set(null);
 
-        fetch(
-            `https://nominatim.openstreetmap.org/search?` +
-            `format=json&q=${encodeURIComponent(texto)}` +
-            `&addressdetails=1&limit=5&accept-language=es,en`
-        )
-            .then((r) => r.json())
-            .then((results: any[]) => {
-                if (results?.length > 0) {
-                    const best = results[0];
-                    this.setMapPosition(parseFloat(best.lat), parseFloat(best.lon), false);
-                } else {
-                    void Swal.fire({
-                        icon: 'warning',
-                        title: 'No encontrado',
-                        text: 'No se encontró esa dirección. Intenta ser más específico o mueve el marcador en el mapa.',
-                        confirmButtonColor: '#12CFF4',
-                        timer: 3200,
-                        timerProgressBar: true
-                    });
-                }
-            })
-            .catch((err) => {
-                console.error('Error geocoding:', err);
-                void Swal.fire({
-                    icon: 'error',
-                    title: 'Error de búsqueda',
-                    text: 'No se pudo buscar la dirección. Intenta de nuevo.',
-                    confirmButtonColor: '#12CFF4'
-                });
+    try {
+        const found = await this.geocodeAddress(original);
+        if (token !== this.searchToken || this.destroyRef.destroyed) return;
+
+        if (!found) {
+            this.addressStatus.set({
+                kind: 'warn',
+                text: 'No se encontró la dirección. Mueve el marcador en el mapa o pega las coordenadas (lat, lng).'
             });
-    }
-
-    /** Normaliza fracciones y abreviaturas para mejorar resultados de Nominatim */
-    private normalizeAddress(address: string): string {
-        return address
-            .replace(/\b(\d+)\s+1\/2\b/gi, '$1th')
-            .replace(/\b(\d+)\s+½\b/gi, '$1th')
-            .replace(/\b(\d+)\s+1\/4\b/gi, '$1th')
-            .replace(/\b(\d+)\s+3\/4\b/gi, '$1th')
-            .replace(/\bSt\b\.?/gi, 'Street')
-            .replace(/\bAve\b\.?/gi, 'Avenue')
-            .replace(/\bBlvd\b\.?/gi, 'Boulevard')
-            .replace(/\bRd\b\.?/gi, 'Road')
-            .replace(/\bDr\b\.?/gi, 'Drive')
-            .replace(/\bLn\b\.?/gi, 'Lane')
-            .replace(/\bCt\b\.?/gi, 'Court')
-            .replace(/\bW\b(?=\s)/gi, 'West')
-            .replace(/\bE\b(?=\s)/gi, 'East')
-            .replace(/\bN\b(?=\s)/gi, 'North')
-            .replace(/\bS\b(?=\s)/gi, 'South')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
-    /**
-     * Coloca el marcador y actualiza lat/lng.
-     * @param updateAddress Si true, hace reverse geocode y reescribe el input.
-     */
-    private setMapPosition(lat: number, lng: number, updateAddress = true): void {
-        this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
-        this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
-
-        if (this.map && this.marker) {
-            this.marker.setLatLng([lat, lng]);
-            this.map.setView([lat, lng], 17);
-            setTimeout(() => {
-                this.map?.invalidateSize(true);
-            }, 100);
-        }
-
-        if (updateAddress) {
-            this.reverseGeocode(lat, lng);
-        }
-    }
-
-    onAddressKeydown(e: KeyboardEvent): void {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
-            this.searchAddressOnMap();
-        }
-    }
-
-    myLocation(): void {
-        if (!navigator.geolocation) {
-            void Swal.fire('No soportado', 'Tu navegador no soporta geolocalización.', 'warning');
             return;
         }
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                this.setMapPosition(lat, lng, true);
-            },
-            () => {
-                void Swal.fire('Error', 'No se pudo obtener tu ubicación.', 'error');
-            },
-            { enableHighAccuracy: true }
+
+        this.setMapPosition(found.lat, found.lon, false);
+
+        this.addressStatus.set(
+            found.approximate
+                ? { kind: 'info', text: 'Ubicación aproximada (ciudad/zona). Mueve el marcador al punto exacto.' }
+                : null
         );
+    } finally {
+        if (token === this.searchToken) this.addressSearching.set(false);
     }
+}
+
+private async geocodeAddress(
+    original: string
+): Promise<{ lat: number; lon: number; approximate: boolean } | null> {
+    const candidates = this.buildAddressCandidates(original);
+
+    for (const c of candidates) {
+        const [a, b] = await Promise.all([
+            this.geocodeNominatim(c.q),
+            this.geocodePhoton(c.q)
+        ]);
+        const hit = a ?? b;
+        if (hit) return { ...hit, approximate: c.approximate };
+
+        await new Promise((r) => setTimeout(r, 300));
+    }
+    return null;
+}
+
+private buildAddressCandidates(original: string): { q: string; approximate: boolean }[] {
+    const list: { q: string; approximate: boolean }[] = [];
+    const seen = new Set<string>();
+    const add = (q: string, approximate = false) => {
+        const clean = q.replace(/\s+/g, ' ').replace(/^,\s*/, '').trim();
+        const key = clean.toLowerCase();
+        if (clean && !seen.has(key)) {
+            seen.add(key);
+            list.push({ q: clean, approximate });
+        }
+    };
+
+    const parts = original.split(',').map((p) => p.trim()).filter(Boolean);
+    const street = parts[0] ?? original;
+    const rest = parts.slice(1).join(', ');
+
+    add(original);
+
+    const moved = street.replace(
+        /^(\d+[A-Za-z]?)\s+(.+?)\s+(N|S|E|W|NE|NW|SE|SW)$/i,
+        '$1 $3 $2'
+    );
+    if (moved !== street) add([moved, rest].filter(Boolean).join(', '));
+
+    add(this.normalizeAddress(original));
+    if (moved !== street) {
+        add(this.normalizeAddress([moved, rest].filter(Boolean).join(', ')));
+    }
+
+    const noNumber = street.replace(/^\d+[A-Za-z]?\s+/, '');
+    if (noNumber !== street) add([noNumber, rest].filter(Boolean).join(', '));
+
+    if (rest) add(rest, true);
+
+    return list;
+}
+
+private async geocodeNominatim(q: string): Promise<{ lat: number; lon: number } | null> {
+    try {
+        const url =
+            `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1` +
+            `&accept-language=es,en&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) return null;
+        const data: any[] = await res.json();
+        if (!data?.length) return null;
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+    } catch {
+        return null;
+    }
+}
+
+private async geocodePhoton(q: string): Promise<{ lat: number; lon: number } | null> {
+    try {
+        const url = `https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(q)}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const coords = data?.features?.[0]?.geometry?.coordinates;
+        if (!coords) return null;
+        const [lon, lat] = coords;
+        return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+    } catch {
+        return null;
+    }
+}
+
+private setMapPosition(lat: number, lng: number, updateAddress = false): void {
+    this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
+    this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
+
+    if (this.map && this.marker) {
+        this.marker.setLatLng([lat, lng]);
+        this.map.setView([lat, lng], 17);
+        setTimeout(() => this.map?.invalidateSize(true), 100);
+    }
+
+    if (updateAddress) this.reverseGeocode(lat, lng);
+}
+
+onAddressKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        void this.searchAddressOnMap(true);
+    }
+}
+
+myLocation(): void {
+    if (!navigator.geolocation) {
+        this.addressStatus.set({ kind: 'warn', text: 'Tu navegador no soporta geolocalización.' });
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            this.addressStatus.set(null);
+            this.setMapPosition(pos.coords.latitude, pos.coords.longitude, true);
+        },
+        () => this.addressStatus.set({ kind: 'warn', text: 'No se pudo obtener tu ubicación.' }),
+        { enableHighAccuracy: true }
+    );
+}
 
     // ---------- UI helpers ----------
 

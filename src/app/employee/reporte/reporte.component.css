@@ -1,6 +1,10 @@
 :host {
     display: block;
     font-family: 'Poppins', sans-serif;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
 .state {
@@ -11,16 +15,17 @@
 }
 
 .reporte-box {
+    width: 100%;
     max-width: 720px;
     margin: 0 auto;
     padding: 28px;
     border-radius: 20px;
     background: #ffffff;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
 }
 
 /* ---------- Header ---------- */
-
 .reporte-header {
     margin-bottom: 22px;
     padding-bottom: 16px;
@@ -41,7 +46,6 @@
 }
 
 /* ---------- Campos generales ---------- */
-
 .field {
     display: block;
     margin-bottom: 16px;
@@ -120,118 +124,82 @@ h3 {
     font-size: 0.8rem;
 }
 
-/* ---------- Materiales de la orden (tarjetas) ---------- */
-
-.nec-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    max-height: 320px;
-    overflow-y: auto;
-    padding: 16px;
-    border: 1px solid #ffe0b2;
-    border-radius: 14px;
-    background: #fff8ee;
+/* ---------- Tabla Materiales Original (Escritorio) ---------- */
+.material-comparison {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-.nec-row {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 14px 16px 14px 20px;
-    background: #ffffff;
-    border-radius: 12px;
-    border-left: 5px solid #f4a300;
-    box-shadow: 0 1px 4px rgba(15, 76, 129, 0.06);
+.comparison-table {
+    width: 100%;
+    min-width: 650px;
+    border-collapse: collapse;
+    font-size: 13px;
 }
 
-.nec-name {
-    font-weight: 700;
-    color: #2b3674;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+.comparison-table th,
+.comparison-table td {
+    padding: 10px;
+    border: 1px solid #dce3e8;
+    text-align: right;
+}
+
+.comparison-table thead th {
+    background: #0f2d4a;
+    color: #fff;
+}
+
+.comparison-table th:first-child {
+    min-width: 150px;
+    text-align: left;
     overflow-wrap: anywhere;
 }
 
-.nec-fields {
-    display: grid;
-    grid-template-columns: 70px 1fr 1fr auto;
-    gap: 10px;
-    align-items: center;
-}
-
-.nec-fields input {
-    width: 100%;
+.comparison-table input {
+    width: 80px;
+    min-height: 44px;
+    font-size: 16px;
     box-sizing: border-box;
-    text-align: center;
+}
+
+.comparison-table small {
+    display: block;
+    font-weight: normal;
+}
+
+.material-changed {
+    background: #fff4da;
+}
+
+.change-badge {
+    display: block;
+    font-size: 11px;
+    color: #805200;
+}
+
+.change-notice {
+    padding: 12px;
+    background: #fff4da;
+    color: #694700;
     border-radius: 8px;
-    padding: 8px 6px;
-    font-weight: 700;
-    font-size: 0.9rem;
-    font-family: inherit;
 }
 
-/* Cantidad: editable, acento naranja */
-.nec-fields > input:nth-child(1) {
-    border: 1.5px solid #f4a300;
-    background: #fff;
-    color: #2b3674;
+.comparison-totals {
+    margin: 16px 0;
+    padding: 12px;
+    background: #eef6fa;
+    border-radius: 8px;
 }
 
-.nec-fields > input:nth-child(1):focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(244, 163, 0, 0.18);
-}
-
-/* Unidad: solo lectura */
-.nec-fields > input:nth-child(2) {
-    border: 1.5px solid #e6e9f5;
-    background: #eef1f8;
-    color: #8a90a8;
-    font-weight: 600;
-    font-size: 0.85rem;
-    cursor: default;
-}
-
-/* Precio unitario: solo lectura, verde */
-.nec-fields > input:nth-child(3) {
-    border: 1.5px solid #c8e6c9;
-    background: #e8f5e9;
-    color: #198754;
-    cursor: default;
-}
-
-.btn-del {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border: none;
-    border-radius: 10px;
-    background: #fbe9e7;
-    color: #d32f2f;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.btn-del:hover {
-    background: #f6cfc9;
-    transform: scale(1.05);
-}
-
-.total {
-    margin: 10px 0 0;
-    text-align: right;
-    font-weight: 700;
-    font-size: 1rem;
-    color: #d32f2f;
+.comparison-totals p {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 /* ---------- Fotos ---------- */
-
 input[type='file'] {
     width: 100%;
     padding: 10px 14px;
@@ -287,7 +255,6 @@ input[type='file'] {
 }
 
 /* ---------- Firma ---------- */
-
 .sig-pad {
     display: block;
     width: 100%;
@@ -313,7 +280,6 @@ input[type='file'] {
 }
 
 /* ---------- Acciones ---------- */
-
 .actions {
     display: flex;
     gap: 12px;
@@ -364,38 +330,131 @@ input[type='file'] {
 }
 
 /* ---------- Responsive ---------- */
-
 @media (max-width: 600px) {
     .reporte-box {
         padding: 18px;
         border-radius: 14px;
     }
 
-    .nec-fields {
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto auto;
-    }
-
-    .btn-del {
-        grid-column: span 2;
-        width: 100%;
-        height: 36px;
-    }
-
     .actions {
         flex-direction: column;
     }
 }
-/* A real table stays aligned; narrow screens scroll within the report. */
-.material-comparison { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.comparison-table { width: 100%; min-width: 650px; border-collapse: collapse; font-size: 13px; }
-.comparison-table th, .comparison-table td { padding: 10px; border: 1px solid #dce3e8; text-align: right; }
-.comparison-table thead th { background: #0f2d4a; color: #fff; }
-.comparison-table th:first-child { min-width: 150px; text-align: left; overflow-wrap: anywhere; }
-.comparison-table input { width: 80px; min-height: 44px; font-size: 16px; box-sizing: border-box; }
-.comparison-table small { display: block; font-weight: normal; }
-.material-changed { background: #fff4da; }
-.change-badge { display: block; font-size: 11px; color: #805200; }
-.change-notice { padding: 12px; background: #fff4da; color: #694700; border-radius: 8px; }
-.comparison-totals { margin: 16px 0; padding: 12px; background: #eef6fa; border-radius: 8px; }
-.comparison-totals p { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Responsive para la Tabla (Transformación a Cards) ---------- */
+@media (max-width: 768px) {
+    .material-comparison {
+        overflow-x: visible;
+    }
+
+    .comparison-table,
+    .comparison-table thead,
+    .comparison-table tbody,
+    .comparison-table th,
+    .comparison-table td,
+    .comparison-table tr {
+        display: block;
+        width: 100%;
+        min-width: 0;          /* <-- quita el min-width heredado */
+        box-sizing: border-box;
+    }
+
+    /* Ocultamos las cabeceras originales */
+    .comparison-table thead {
+        display: none;
+    }
+
+    /* Tarjeta de material */
+    .comparison-table tr {
+        margin-bottom: 16px;
+        border: 1px solid #dce3e8;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(15, 45, 74, 0.06);
+    }
+
+    .comparison-table tr.material-changed {
+        background: #fff4da;
+        border-color: #f0d9a0;
+    }
+
+    /* Cabecera azul de la tarjeta */
+    .comparison-table th[scope="row"] {
+        min-width: 0;
+        padding: 12px 16px;
+        background: #0f2d4a;
+        color: #fff;
+        text-align: left;
+        font-size: 14px;
+        border: none;
+        overflow-wrap: anywhere;
+    }
+
+    .comparison-table th[scope="row"] .change-badge {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(255, 224, 178, 0.2);
+        color: #ffe0b2;
+    }
+
+    /* Filas de datos: etiqueta a la izquierda, valor a la derecha */
+    .comparison-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        border: none;
+        border-bottom: 1px solid #f1f4f9;
+        text-align: right;
+        font-size: 14px;
+        font-weight: 600;
+        color: #0b0b0d;
+    }
+
+    .comparison-table td:last-child {
+        border-bottom: none;
+    }
+
+    .comparison-table td::before {
+        content: attr(data-label);
+        flex: 0 0 auto;
+        margin-right: 8px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    /* Input de cantidad */
+    .comparison-table input {
+        width: 110px;
+        min-height: 40px;
+        padding: 0 10px;
+        text-align: center;
+        font-size: 16px; /* evita el zoom automático en iOS */
+        border: 1.5px solid #e0e5f2;
+        border-radius: 8px;
+        background: #f9fafc;
+    }
+
+    .comparison-table input:focus {
+        outline: none;
+        border-color: #12cff4;
+        box-shadow: 0 0 0 3px rgba(18, 207, 244, 0.15);
+    }
+
+    /* Fila "Sin materiales" */
+    .comparison-table td[colspan] {
+        justify-content: center;
+        text-align: center;
+    }
+    .comparison-table td[colspan]::before {
+        content: none;
+    }
+}

@@ -401,6 +401,14 @@
             <input id="jobAddress" class="input-field" type="text" formControlName="address"
                 placeholder="Dirección exacta" [readOnly]="isSaving()" (blur)="searchAddressOnMap()"
                 (keydown)="onAddressKeydown($event)" />
+
+            @if (addressSearching()) {
+            <small class="hint-text">Buscando dirección...</small>
+            } @else if (addressStatus(); as st) {
+            <small role="status" [style.color]="st.kind === 'warn' ? '#b45309' : '#0f4c81'">
+                {{ st.text }}
+            </small>
+            }
         </div>
 
         <div class="form-grid">

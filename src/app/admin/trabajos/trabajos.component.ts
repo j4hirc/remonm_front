@@ -94,6 +94,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             latitude: cliente.latitude,
             longitude: cliente.longitude
         });
+        this.lastSearchedAddress = cliente.address.trim();
+        this.addressStatus.set(null);
         this.form.markAsDirty();
 
         if (Number.isFinite(cliente.latitude) && Number.isFinite(cliente.longitude)) {
@@ -171,6 +173,11 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     private map: any = null;
     private marker: any = null;
 
+    readonly addressStatus = signal<{ kind: 'info' | 'warn'; text: string } | null>(null);
+    readonly addressSearching = signal(false);
+    private lastSearchedAddress = '';
+    private searchToken = 0;
+
     readonly form = this.formBuilder.nonNullable.group({
         clientName: ['', Validators.required],
         clientPhone: [''],
@@ -222,6 +229,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     onEditorDidOpen(): void {
+        this.addressStatus.set(null);
+        this.lastSearchedAddress = this.form.controls.address.value?.trim() ?? '';
         void this.loadClientes();
         this.initMapFromForm();
         this.injectDeleteButtonInSwal();
@@ -634,148 +643,148 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     async openEdit(jobId: number, duplicate = false): Promise<void> {
-    if (this.isLoading() || this.editorOpen()) return;
+        if (this.isLoading() || this.editorOpen()) return;
 
-    void Swal.fire({
-        title: 'Cargando datos...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
-
-    try {
-        const data = await firstValueFrom(
-            this.jobsService.getById(jobId).pipe(
-                takeUntilDestroyed(this.destroyRef)
-            )
-        );
-
-        Swal.close();
-
-        this.isDuplicating.set(duplicate);
-        this.editingId.set(duplicate ? null : jobId);
-        this.clientSearchModal.set('');
-        this.necessaryMaterials.set([]);
-        this.selectedMaterialIds.set(new Set());
-        this.blueprintFiles.set([]);
-
-        this.existingBlueprintUrls.set(
-            duplicate ? [] : data.blueprintUrls || []
-        );
-
-        let descripcion = data.description || '';
-
-        if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
-            descripcion = descripcion
-                .split('[MATERIALES PRE-ASIGNADOS]:')[0]
-                .trim();
-        }
-
-        this.form.reset({
-            clientName: data.clientName || '',
-            clientPhone: data.clientPhone || '',
-            address: data.address || '',
-            buildingNumber: data.buildingNumber ?? '',
-            apartment: data.apartment ?? '',
-            latitude: data.latitude,
-            longitude: data.longitude,
-            employeeId: String(data.employeeId || ''),
-            managerId: String(
-                data.managerId ?? this.managerFijoId
-            ),
-            description: descripcion,
-            priority: data.priority ?? 2,
-            jobDate: this.fechaParaInput(data.jobDate),
-            pay: data.pay || 0,
-            safeDepositBoxCodes: data.safeDepositBoxCodes || '',
-            quickbooksInvoice: duplicate
-                ? ''
-                : data.quickbooksInvoice || '',
-            status: duplicate
-                ? 'PENDING'
-                : data.status || 'PENDING'
+        void Swal.fire({
+            title: 'Cargando datos...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
         });
 
-        const mats = data.materials || [];
-        const set = new Set<number>();
-
-        mats.forEach((m) => {
-            const id = m.materialId;
-            set.add(id);
-
-            const info = this.materials().find(
-                (x) => x.materialId === id
+        try {
+            const data = await firstValueFrom(
+                this.jobsService.getById(jobId).pipe(
+                    takeUntilDestroyed(this.destroyRef)
+                )
             );
 
-            this.addNecessary(
-                info || {
-                    materialId: id,
-                    name: m.name || 'Material',
-                    count: 0,
-                    price: m.price || 0,
-                    categoryName: '',
-                    unit: m.unit || ''
-                },
-                m.quantity ?? 1
+            Swal.close();
+
+            this.isDuplicating.set(duplicate);
+            this.editingId.set(duplicate ? null : jobId);
+            this.clientSearchModal.set('');
+            this.necessaryMaterials.set([]);
+            this.selectedMaterialIds.set(new Set());
+            this.blueprintFiles.set([]);
+
+            this.existingBlueprintUrls.set(
+                duplicate ? [] : data.blueprintUrls || []
             );
-        });
 
-        this.selectedMaterialIds.set(set);
+            let descripcion = data.description || '';
 
-        const editorCmp = this.editor();
+            if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
+                descripcion = descripcion
+                    .split('[MATERIALES PRE-ASIGNADOS]:')[0]
+                    .trim();
+            }
 
-        editorCmp.swalOptions = {
-            ...this.editorOptions,
-            confirmButtonText: duplicate
-                ? 'Guardar duplicado'
-                : 'Guardar cambios',
-            showDenyButton: true,
-            denyButtonText: 'Guardar y enviar correo',
-            denyButtonColor: '#1565c0'
-        };
-
-        this.editorOptions = editorCmp.swalOptions;
-        this.editorOpen.set(true);
-
-        const result = await editorCmp.fire();
-
-        this.editorOpen.set(false);
-
-        if (result.isDismissed) {
-            this.destroyMap();
-            await this.volverAlCalendario();
-            return;
-        }
-
-        if (
-            (result.isConfirmed || result.isDenied)
-            && !this.destroyRef.destroyed
-        ) {
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: this.isDuplicating()
-                    ? 'Copia creada correctamente. El trabajo original no fue modificado.'
-                    : 'Trabajo actualizado.',
-                confirmButtonColor: '#12CFF4'
+            this.form.reset({
+                clientName: data.clientName || '',
+                clientPhone: data.clientPhone || '',
+                address: data.address || '',
+                buildingNumber: data.buildingNumber ?? '',
+                apartment: data.apartment ?? '',
+                latitude: data.latitude,
+                longitude: data.longitude,
+                employeeId: String(data.employeeId || ''),
+                managerId: String(
+                    data.managerId ?? this.managerFijoId
+                ),
+                description: descripcion,
+                priority: data.priority ?? 2,
+                jobDate: this.fechaParaInput(data.jobDate),
+                pay: data.pay || 0,
+                safeDepositBoxCodes: data.safeDepositBoxCodes || '',
+                quickbooksInvoice: duplicate
+                    ? ''
+                    : data.quickbooksInvoice || '',
+                status: duplicate
+                    ? 'PENDING'
+                    : data.status || 'PENDING'
             });
 
-            await this.volverAlCalendario();
-        }
-    } catch (error: unknown) {
-        Swal.close();
+            const mats = data.materials || [];
+            const set = new Set<number>();
 
-        await Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: this.getErrorMessage(error),
-            confirmButtonColor: '#12CFF4'
-        });
-    } finally {
-        this.editorOpen.set(false);
-        this.isDuplicating.set(false);
-        this.destroyMap();
+            mats.forEach((m) => {
+                const id = m.materialId;
+                set.add(id);
+
+                const info = this.materials().find(
+                    (x) => x.materialId === id
+                );
+
+                this.addNecessary(
+                    info || {
+                        materialId: id,
+                        name: m.name || 'Material',
+                        count: 0,
+                        price: m.price || 0,
+                        categoryName: '',
+                        unit: m.unit || ''
+                    },
+                    m.quantity ?? 1
+                );
+            });
+
+            this.selectedMaterialIds.set(set);
+
+            const editorCmp = this.editor();
+
+            editorCmp.swalOptions = {
+                ...this.editorOptions,
+                confirmButtonText: duplicate
+                    ? 'Guardar duplicado'
+                    : 'Guardar cambios',
+                showDenyButton: true,
+                denyButtonText: 'Guardar y enviar correo',
+                denyButtonColor: '#1565c0'
+            };
+
+            this.editorOptions = editorCmp.swalOptions;
+            this.editorOpen.set(true);
+
+            const result = await editorCmp.fire();
+
+            this.editorOpen.set(false);
+
+            if (result.isDismissed) {
+                this.destroyMap();
+                await this.volverAlCalendario();
+                return;
+            }
+
+            if (
+                (result.isConfirmed || result.isDenied)
+                && !this.destroyRef.destroyed
+            ) {
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito!',
+                    text: this.isDuplicating()
+                        ? 'Copia creada correctamente. El trabajo original no fue modificado.'
+                        : 'Trabajo actualizado.',
+                    confirmButtonColor: '#12CFF4'
+                });
+
+                await this.volverAlCalendario();
+            }
+        } catch (error: unknown) {
+            Swal.close();
+
+            await Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: this.getErrorMessage(error),
+                confirmButtonColor: '#12CFF4'
+            });
+        } finally {
+            this.editorOpen.set(false);
+            this.isDuplicating.set(false);
+            this.destroyMap();
+        }
     }
-}
 
     submitEditor(): void {
         if (!this.isSaving()) Swal.clickConfirm();
@@ -1280,67 +1289,14 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                     a.city || a.town || a.village || a.municipality || '',
                     a.state || ''
                 ].filter(Boolean);
-                this.form.controls.address.setValue(partes.join(', '));
+                const texto = partes.join(', ');
+                this.form.controls.address.setValue(texto);
+                this.lastSearchedAddress = texto;
             })
             .catch(() => undefined);
     }
 
-    searchAddressOnMap(): void {
-        const textoOriginal = this.form.controls.address.value?.trim();
-        if (!textoOriginal) return;
 
-        // 1. Coordenadas pegadas (lat, lng)
-        const regexCoords = /^[-+]?\d+(\.\d+)?\s*,\s*[-+]?\d+(\.\d+)?$/;
-        if (regexCoords.test(textoOriginal)) {
-            const [latStr, lngStr] = textoOriginal.split(',');
-            const latV = parseFloat(latStr.trim());
-            const lngV = parseFloat(lngStr.trim());
-            if (!isNaN(latV) && !isNaN(lngV)) {
-                this.setMapPosition(latV, lngV);
-            }
-            return;
-        }
-
-        // 2. Normalizar dirección
-        const texto = this.normalizeAddress(textoOriginal);
-
-        fetch(
-            `https://nominatim.openstreetmap.org/search?` +
-            `format=json&q=${encodeURIComponent(texto)}` +
-            `&addressdetails=1&limit=5&accept-language=es,en`,
-            {
-                headers: {
-                    'Accept-Language': 'es,en',
-                    'User-Agent': 'TrabajosApp/1.0 (contacto@tuempresa.com)'
-                }
-            }
-        )
-            .then(r => r.json())
-            .then((results: any[]) => {
-                if (results?.length > 0) {
-                    const best = results[0];
-                    this.setMapPosition(parseFloat(best.lat), parseFloat(best.lon));
-                } else {
-                    void Swal.fire({
-                        icon: 'warning',
-                        title: 'No encontrado',
-                        text: 'No se encontró esa dirección. Intenta ser más específico o mueve el marcador en el mapa.',
-                        confirmButtonColor: '#12CFF4',
-                        timer: 3200,
-                        timerProgressBar: true
-                    });
-                }
-            })
-            .catch(err => {
-                console.error('Error geocoding:', err);
-                void Swal.fire({
-                    icon: 'error',
-                    title: 'Error de búsqueda',
-                    text: 'No se pudo buscar la dirección. Intenta de nuevo.',
-                    confirmButtonColor: '#12CFF4'
-                });
-            });
-    }
 
     /** Normaliza fracciones y abreviaturas para mejorar resultados */
     private normalizeAddress(address: string): string {
@@ -1364,52 +1320,144 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             .trim();
     }
 
-    private geocodeWithNominatim(query: string): Promise<{ lat: number; lon: number } | null> {
-        const url = `https://nominatim.openstreetmap.org/search?` +
-            `format=json&q=${encodeURIComponent(query)}` +
-            `&countrycodes=us&addressdetails=1&limit=3&accept-language=en`;
 
-        return fetch(url, {
-            headers: {
-                'Accept-Language': 'en',
-                'User-Agent': 'TrabajosApp/1.0 (tu-email@empresa.com)'
+    async searchAddressOnMap(force = false): Promise<void> {
+        const original = this.form.controls.address.value?.trim();
+        if (!original) {
+            this.addressStatus.set(null);
+            return;
+        }
+        if (!force && original === this.lastSearchedAddress) return;
+        this.lastSearchedAddress = original;
+
+        // Coordenadas pegadas "lat, lng"
+        if (/^[-+]?\d+(\.\d+)?\s*,\s*[-+]?\d+(\.\d+)?$/.test(original)) {
+            const [latStr, lngStr] = original.split(',');
+            const latV = parseFloat(latStr);
+            const lngV = parseFloat(lngStr);
+            if (!isNaN(latV) && !isNaN(lngV)) {
+                this.addressStatus.set(null);
+                this.setMapPosition(latV, lngV, true);
             }
-        })
-            .then(r => r.json())
-            .then((results: any[]) => {
-                if (results?.length > 0) {
-                    return {
-                        lat: parseFloat(results[0].lat),
-                        lon: parseFloat(results[0].lon)
-                    };
-                }
-                return null;
-            })
-            .catch(() => null);
+            return;
+        }
+
+        const token = ++this.searchToken;
+        this.addressSearching.set(true);
+        this.addressStatus.set(null);
+
+        try {
+            const found = await this.geocodeAddress(original);
+            if (token !== this.searchToken || this.destroyRef.destroyed) return;
+
+            if (!found) {
+                this.addressStatus.set({
+                    kind: 'warn',
+                    text: 'No se encontró la dirección. Mueve el marcador en el mapa o pega las coordenadas (lat, lng).'
+                });
+                return;
+            }
+
+            this.setMapPosition(found.lat, found.lon, false);
+
+            this.addressStatus.set(
+                found.approximate
+                    ? { kind: 'info', text: 'Ubicación aproximada (ciudad/zona). Mueve el marcador al punto exacto.' }
+                    : null
+            );
+        } finally {
+            if (token === this.searchToken) this.addressSearching.set(false);
+        }
     }
 
-    /** Fallback gratuito y muy bueno para direcciones de EE.UU. */
-    private geocodeWithCensus(address: string): Promise<{ lat: number; lon: number } | null> {
-        const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?` +
-            `address=${encodeURIComponent(address)}&benchmark=Public_AR_Current&format=json`;
+    private async geocodeAddress(
+        original: string
+    ): Promise<{ lat: number; lon: number; approximate: boolean } | null> {
+        const candidates = this.buildAddressCandidates(original);
 
-        return fetch(url)
-            .then(r => r.json())
-            .then((data: any) => {
-                const matches = data?.result?.addressMatches;
-                if (matches?.length > 0) {
-                    const coords = matches[0].coordinates;
-                    return {
-                        lat: coords.y,
-                        lon: coords.x
-                    };
-                }
-                return null;
-            })
-            .catch(() => null);
+        for (const c of candidates) {
+            const [a, b] = await Promise.all([
+                this.geocodeNominatim(c.q),
+                this.geocodePhoton(c.q)
+            ]);
+            const hit = a ?? b;
+            if (hit) return { ...hit, approximate: c.approximate };
+
+            await new Promise((r) => setTimeout(r, 300));
+        }
+        return null;
     }
 
-    private setMapPosition(lat: number, lng: number): void {
+    private buildAddressCandidates(original: string): { q: string; approximate: boolean }[] {
+        const list: { q: string; approximate: boolean }[] = [];
+        const seen = new Set<string>();
+        const add = (q: string, approximate = false) => {
+            const clean = q.replace(/\s+/g, ' ').replace(/^,\s*/, '').trim();
+            const key = clean.toLowerCase();
+            if (clean && !seen.has(key)) {
+                seen.add(key);
+                list.push({ q: clean, approximate });
+            }
+        };
+
+        const parts = original.split(',').map((p) => p.trim()).filter(Boolean);
+        const street = parts[0] ?? original;
+        const rest = parts.slice(1).join(', ');
+
+        add(original);
+
+        const moved = street.replace(
+            /^(\d+[A-Za-z]?)\s+(.+?)\s+(N|S|E|W|NE|NW|SE|SW)$/i,
+            '$1 $3 $2'
+        );
+        if (moved !== street) add([moved, rest].filter(Boolean).join(', '));
+
+        add(this.normalizeAddress(original));
+        if (moved !== street) {
+            add(this.normalizeAddress([moved, rest].filter(Boolean).join(', ')));
+        }
+
+        const noNumber = street.replace(/^\d+[A-Za-z]?\s+/, '');
+        if (noNumber !== street) add([noNumber, rest].filter(Boolean).join(', '));
+
+        if (rest) add(rest, true);
+
+        return list;
+    }
+
+    private async geocodeNominatim(q: string): Promise<{ lat: number; lon: number } | null> {
+        try {
+            const url =
+                `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1` +
+                `&accept-language=es,en&q=${encodeURIComponent(q)}`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+            if (!res.ok) return null;
+            const data: any[] = await res.json();
+            if (!data?.length) return null;
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+        } catch {
+            return null;
+        }
+    }
+
+    private async geocodePhoton(q: string): Promise<{ lat: number; lon: number } | null> {
+        try {
+            const url = `https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(q)}`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+            if (!res.ok) return null;
+            const data = await res.json();
+            const coords = data?.features?.[0]?.geometry?.coordinates;
+            if (!coords) return null;
+            const [lon, lat] = coords;
+            return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+        } catch {
+            return null;
+        }
+    }
+
+    private setMapPosition(lat: number, lng: number, updateAddress = false): void {
         this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
         this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
 
@@ -1419,37 +1467,27 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             setTimeout(() => this.map?.invalidateSize(true), 100);
         }
 
-        this.reverseGeocode(lat, lng);
+        if (updateAddress) this.reverseGeocode(lat, lng);
     }
 
     onAddressKeydown(e: KeyboardEvent): void {
         if (e.key === 'Enter') {
             e.preventDefault();
-            this.searchAddressOnMap();
+            void this.searchAddressOnMap(true);
         }
     }
 
     myLocation(): void {
         if (!navigator.geolocation) {
-            void Swal.fire('No soportado', 'Tu navegador no soporta geolocalización.', 'warning');
+            this.addressStatus.set({ kind: 'warn', text: 'Tu navegador no soporta geolocalización.' });
             return;
         }
         navigator.geolocation.getCurrentPosition(
             (pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
-                this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
-                if (this.map && this.marker) {
-                    this.map.setView([lat, lng], 16);
-                    this.marker.setLatLng([lat, lng]);
-                    this.map.invalidateSize(true);
-                }
-                this.reverseGeocode(lat, lng);
+                this.addressStatus.set(null);
+                this.setMapPosition(pos.coords.latitude, pos.coords.longitude, true);
             },
-            () => {
-                void Swal.fire('Error', 'No se pudo obtener tu ubicación.', 'error');
-            },
+            () => this.addressStatus.set({ kind: 'warn', text: 'No se pudo obtener tu ubicación.' }),
             { enableHighAccuracy: true }
         );
     }
