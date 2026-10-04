@@ -727,20 +727,28 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 );
 
                 this.addNecessary(
-                    info || {
+                    {
                         materialId: id,
-                        name: m.name || 'Material',
-                        count: 0,
-                        price: m.price || 0,
-                        categoryName: '',
-                        unit: m.unit || ''
+                        name: m.name || info?.name || 'Material',
+                        count: info?.count ?? 0,
+
+                        // Al editar, priorizar el precio recibido del trabajo.
+                        price: duplicate
+                            ? (info?.price ?? m.price ?? 0)
+                            : (m.price ?? info?.price ?? 0),
+
+                        categoryName: info?.categoryName ?? m.categoryName ?? '',
+                        unit: m.unit ?? info?.unit ?? ''
                     },
                     m.quantity ?? 1,
-                    duplicate
+                    false
                 );
             });
 
             this.selectedMaterialIds.set(set);
+
+            // Con todos los materiales cargados, sincronizar el pago.
+            this.recalcPay();
 
             const editorCmp = this.editor();
 
@@ -882,6 +890,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         }
 
         this.isSaving.set(true);
+        // Asegurar que se guarde exactamente el total de los materiales.
+        this.recalcPay();
+
         const raw = this.form.getRawValue();
 
         let descripcionBase = raw.description.trim();
