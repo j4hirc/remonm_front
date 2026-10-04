@@ -508,10 +508,19 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         this.selectedMaterialIds.set(set);
     }
 
-    private addNecessary(mat: Material, qty: number): void {
-        if (this.necessaryMaterials().some((x) => x.materialId === mat.materialId)) {
+    private addNecessary(
+        mat: Material,
+        qty: number,
+        recalculatePay = true
+    ): void {
+        if (
+            this.necessaryMaterials().some(
+                (x) => x.materialId === mat.materialId
+            )
+        ) {
             return;
         }
+
         this.necessaryMaterials.update((rows) => [
             ...rows,
             {
@@ -519,11 +528,13 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 name: mat.name,
                 quantity: qty,
                 unit: mat.unit || '',
-                // El precio SIEMPRE viene del inventario, nunca lo escribe el usuario.
                 price: mat.price || 0
             }
         ]);
-        this.recalcPay();
+
+        if (recalculatePay) {
+            this.recalcPay();
+        }
     }
 
     removeNecessary(materialId: number): void {
@@ -724,7 +735,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                         categoryName: '',
                         unit: m.unit || ''
                     },
-                    m.quantity ?? 1
+                    m.quantity ?? 1,
+                    duplicate
                 );
             });
 
