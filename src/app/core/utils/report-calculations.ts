@@ -117,17 +117,13 @@ export function buildPayrollReport(jobs: readonly Job[], users: readonly User[],
       group = { employeeId: job.employeeId, name: employeeName(users, job.employeeId), jobs: [], total: 0 };
       groups.set(job.employeeId, group);
     }
-    // Cada avance tiene precio y estado independientes.
-    // Se SUMAN los precios de todos los avances del período (en proceso o completado).
-    // Sin precios en avances: fallback al pay actual del trabajo.
-    const pricedInPeriod = inPeriod.filter(item => item.update.price != null && Number.isFinite(Number(item.update.price)));
-    let payRaw: number;
-    if (pricedInPeriod.length > 0) {
-      payRaw = pricedInPeriod.reduce((sum, item) => sum + Number(item.update.price), 0);
-    } else {
-      payRaw = numberOr(job.pay, 0);
-    }
-    const pay = Math.round(Math.max(0, payRaw) * 100) / 100;
+
+
+    // Usar el pago actual del trabajo una sola vez.
+    // Los avances se conservan para las fechas y el historial.
+    const pay = Math.round(
+      Math.max(0, numberOr(job.pay, 0)) * 100
+    ) / 100;
     const lastUpdate = inPeriod[inPeriod.length - 1];
     const statusForLabel = (lastUpdate?.update.status || job.status || '').toUpperCase();
     const statusLabels: Record<string, string> = {
