@@ -1,7 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { NAVIGATION_CACHE } from '../interceptors/navigation-cache.interceptor';
 import { environment } from '../../../environments/environment';
 import { User, UserRequest } from '../models/user.model';
 
@@ -13,8 +14,13 @@ export class UsersService {
 
   private readonly apiUrl = `${environment.apiUrl}/user`;
 
-  getAll(): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}/all-users`);
+  getAll(useNavigationCache = false): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/all-users`, {
+      context: new HttpContext().set(
+        NAVIGATION_CACHE,
+        useNavigationCache
+      )
+    });
   }
 
   getById(id: number): Observable<User> {

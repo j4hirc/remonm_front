@@ -1,6 +1,9 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import {
+  NAVIGATION_CACHE
+} from '../interceptors/navigation-cache.interceptor';
 
 import { environment } from '../../../environments/environment';
 import {
@@ -16,8 +19,13 @@ export class MaterialsService {
 
   private readonly apiUrl = `${environment.apiUrl}/materials`;
 
-  getAll(): Observable<Material[]> {
-    return this.http.get<Material[]>(`${this.apiUrl}/all`);
+  getAll(useNavigationCache = false): Observable<Material[]> {
+    return this.http.get<Material[]>(`${this.apiUrl}/all`, {
+      context: new HttpContext().set(
+        NAVIGATION_CACHE,
+        useNavigationCache
+      )
+    });
   }
 
   getById(id: number): Observable<Material> {

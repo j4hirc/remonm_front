@@ -95,84 +95,84 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     loadData(): void {
-        this.error.set('');
-        this.loading.set(true);
+    this.error.set('');
+    this.loading.set(true);
 
-        void Swal.fire({
-            title: 'Armando cronograma...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+    void Swal.fire({
+        title: 'Armando cronograma...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
 
-        forkJoin({
-            jobs: this.jobsService.getAll(),
-            users: this.usersService.getAll()
-        })
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: ({ jobs, users }) => {
-                    this.allJobs = jobs;
+    forkJoin({
+        jobs: this.jobsService.getAll(true),
+        users: this.usersService.getAll(true)
+    })
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+            next: ({ jobs, users }) => {
+                this.allJobs = jobs;
 
-                    const colors: Record<number, string> = {};
-                    users.forEach((u: User) => {
-                        colors[u.userId] = u.color || '#CCCCCC';
-                    });
-                    this.colorByEmployeeId = colors;
+                const colors: Record<number, string> = {};
+                users.forEach((u: User) => {
+                    colors[u.userId] = u.color || '#CCCCCC';
+                });
+                this.colorByEmployeeId = colors;
 
-                    const hierarchies: Record<number, number> = {};
+                const hierarchies: Record<number, number> = {};
 
-                    users.forEach((u: User) => {
-                        const level = u.hierarchyLevel;
+                users.forEach((u: User) => {
+                    const level = u.hierarchyLevel;
 
-                        if (
-                            typeof level === 'number' &&
-                            Number.isInteger(level) &&
-                            level >= 1
-                        ) {
-                            hierarchies[u.userId] = level;
+                    if (
+                        typeof level === 'number' &&
+                        Number.isInteger(level) &&
+                        level >= 1
+                    ) {
+                        hierarchies[u.userId] = level;
+                    }
+                });
+
+                this.hierarchyByEmployeeId = hierarchies;
+
+                const empleados = users
+                    .filter((u: User) => {
+                        if (Array.isArray(u.roles)) {
+                            return u.roles.some(
+                                (r) =>
+                                    r?.name === 'ROLE_EMPLOYEE' ||
+                                    (r as unknown) === 'ROLE_EMPLOYEE'
+                            );
                         }
-                    });
+                        return false;
+                    })
+                    .map((u) => ({
+                        id: u.userId,
+                        name:
+                            u.name ||
+                            `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() ||
+                            'Sin nombre'
+                    }))
+                    .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
-                    this.hierarchyByEmployeeId = hierarchies;
-
-                    const empleados = users
-                        .filter((u: User) => {
-                            if (Array.isArray(u.roles)) {
-                                return u.roles.some(
-                                    (r) =>
-                                        r?.name === 'ROLE_EMPLOYEE' ||
-                                        (r as unknown) === 'ROLE_EMPLOYEE'
-                                );
-                            }
-                            return false;
-                        })
-                        .map((u) => ({
-                            id: u.userId,
-                            name:
-                                u.name ||
-                                `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() ||
-                                'Sin nombre'
-                        }))
-                        .sort((a, b) => a.name.localeCompare(b.name, 'es'));
-
-                    this.employees.set(empleados);
-                    this.loading.set(false);
-                    this.dataReady = true;
-                    Swal.close();
-                    this.tryRender();
-                },
-                error: () => {
-                    this.loading.set(false);
-                    this.error.set('No se pudieron cargar los datos del calendario.');
-                    Swal.close();
-                    void Swal.fire(
-                        'Error',
-                        'No se pudieron cargar los datos del calendario.',
-                        'error'
-                    );
-                }
-            });
-    }
+                this.employees.set(empleados);
+                this.loading.set(false);
+                this.dataReady = true;
+                Swal.close();
+                this.tryRender();
+            },
+            error: () => {
+                this.loading.set(false);
+                this.error.set('No se pudieron cargar los datos del calendario.');
+                Swal.close();
+                void Swal.fire(
+                    'Error',
+                    'No se pudieron cargar los datos del calendario.',
+                    'error'
+                );
+            }
+        });
+}
 
     private tryRender(): void {
         if (this.viewReady && this.dataReady) {
@@ -582,47 +582,49 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     };
 
     private renderCalendar(jobs: Job[]): void {
-        const events = this.crearEventos(jobs);
+    const events = this.crearEventos(jobs);
 
-        if (this.calendar) {
-            this.calendar.removeAllEvents();
-            this.calendar.addEventSource(events);
-            return;
-        }
-
-        this.calendar = new Calendar(this.calendarEl().nativeElement, {
-            plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
-            initialView: this.calendarState.get(this.calendarKey)?.view
-                ?? (window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth'),
-
-            initialDate: this.calendarState.get(this.calendarKey)?.date,
-            locale: esLocale,
-            firstDay: 0,
-            height: 'auto',
-            eventOrder: 'order,title,id',
-            eventOrderStrict: true,
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,listWeek'
-            },
-            buttonText: {
-                today: 'Hoy',
-                month: 'Mes',
-                week: 'Semana',
-                list: 'Agenda'
-            },
-            events,
-            eventContent: this.eventContent,
-            eventClick: this.onEventClick,
-            eventDidMount: (info) => {
-                const tip = (info.event.extendedProps as { tooltip?: string }).tooltip;
-                if (tip) {
-                    info.el.setAttribute('title', tip);
-                }
-            }
+    if (this.calendar) {
+        this.calendar.batchRendering(() => {
+            this.calendar!.removeAllEventSources();
+            this.calendar!.addEventSource(events);
         });
-
-        this.calendar.render();
+        return;
     }
+
+    this.calendar = new Calendar(this.calendarEl().nativeElement, {
+        plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
+        initialView: this.calendarState.get(this.calendarKey)?.view
+            ?? (window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth'),
+
+        initialDate: this.calendarState.get(this.calendarKey)?.date,
+        locale: esLocale,
+        firstDay: 0,
+        height: 'auto',
+        eventOrder: 'order,title,id',
+        eventOrderStrict: true,
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+        },
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            list: 'Agenda'
+        },
+        events,
+        eventContent: this.eventContent,
+        eventClick: this.onEventClick,
+        eventDidMount: (info) => {
+            const tip = (info.event.extendedProps as { tooltip?: string }).tooltip;
+            if (tip) {
+                info.el.setAttribute('title', tip);
+            }
+        }
+    });
+
+    this.calendar.render();
+}
 }

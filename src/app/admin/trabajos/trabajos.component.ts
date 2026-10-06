@@ -263,6 +263,20 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         });
     }
 
+    private async finalizarGuardado(): Promise<void> {
+        // Toast rápido, sin esperar clic del usuario
+        void Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Trabajo guardado',
+            showConfirmButton: false,
+            timer: 1600
+        });
+
+        await this.volverAlCalendario();
+    }
+
     private async bootstrap(): Promise<void> {
         this.isLoading.set(true);
 
@@ -275,10 +289,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         try {
             await Promise.all([
                 this.loadUsers(),
-                this.loadMaterials()
+                this.loadMaterials(),
+                this.loadJobs()
             ]);
-
-            await this.loadJobs();
 
             if (this.destroyRef.destroyed || this.loadError()) {
                 return;
@@ -633,14 +646,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 (result.isConfirmed || result.isDenied)
                 && !this.destroyRef.destroyed
             ) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: 'Trabajo asignado correctamente.',
-                    confirmButtonColor: '#12CFF4'
-                });
-
-                await this.volverAlCalendario();
+                await this.finalizarGuardado();
             }
         } finally {
             this.editorOpen.set(false);
@@ -779,16 +785,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 (result.isConfirmed || result.isDenied)
                 && !this.destroyRef.destroyed
             ) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: '¡Éxito!',
-                    text: this.isDuplicating()
-                        ? 'Copia creada correctamente. El trabajo original no fue modificado.'
-                        : 'Trabajo actualizado.',
-                    confirmButtonColor: '#12CFF4'
-                });
-
-                await this.volverAlCalendario();
+                await this.finalizarGuardado();
             }
         } catch (error: unknown) {
             Swal.close();

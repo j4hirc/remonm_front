@@ -14,7 +14,7 @@
   <table>
     <thead>
       <tr>
-        <th>Fecha (MM/DD/YYYY)</th>
+        <th>Fechas (MM/DD/YYYY)</th>
         <th>Cliente / Trabajo</th>
         <th class="money">Monto</th>
       </tr>
@@ -22,7 +22,22 @@
     <tbody>
       @for (job of employee.jobs; track job.jobId) {
       <tr>
-        <td>{{ job.date }}</td>
+        <td>
+          <div>
+            <strong>Inicio:</strong>
+            {{ job.startDate }}
+          </div>
+
+          <div>
+            <strong>Fin reportado:</strong>
+            {{ job.endDate }}
+          </div>
+
+          <div>
+            <strong>Registro del período:</strong>
+            {{ job.date }}
+          </div>
+        </td>
         <td class="payroll-detail-cell">
           <div class="payroll-client">
             <strong>Cliente:</strong> {{ job.clientName }}

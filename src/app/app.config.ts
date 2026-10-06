@@ -2,7 +2,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners, isDevMode } from
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideSweetAlert2 } from '@sweetalert2/ngx-sweetalert2';
-
+import { navigationCacheInterceptor } from './core/interceptors/navigation-cache.interceptor';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -10,7 +10,12 @@ import { provideServiceWorker } from '@angular/service-worker';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(
+      withInterceptors([
+        authInterceptor,
+        navigationCacheInterceptor
+      ])
+    ),
     provideRouter(routes),
     provideSweetAlert2({
       fireOnInit: false,

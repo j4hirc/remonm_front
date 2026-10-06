@@ -38,6 +38,8 @@ export interface PayrollJob {
   dateSource: string;
   jobId: number;
   date: string;
+  startDate: string;
+  endDate: string;
   clientName: string;
   description: string;
   buildingNumber: string;

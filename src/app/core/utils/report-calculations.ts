@@ -138,9 +138,34 @@ export function buildPayrollReport(jobs: readonly Job[], users: readonly User[],
       statusLabels[statusForLabel]
       ?? statusLabels[job.status]
       ?? 'Sin estado';
+    // Fechas informativas: no cambian la selección de la quincena.
+    const startDay = parseJobDay(job.jobDate);
+
+    const completedUpdates = datedUpdates.filter(
+      item => (item.update.status || '').trim().toUpperCase() === 'COMPLETED'
+    );
+
+    const lastCompletedUpdate =
+      completedUpdates[completedUpdates.length - 1];
+
+    const isCompleted =
+      (job.status || '').trim().toUpperCase() === 'COMPLETED';
+
+    const startDate =
+      startDay !== null
+        ? formatDay(startDay)
+        : 'Sin fecha registrada';
+
+    const endDate = isCompleted
+      ? lastCompletedUpdate
+        ? formatDay(lastCompletedUpdate.day)
+        : 'Sin fecha registrada'
+      : 'Pendiente';
     group.jobs.push({
       jobId: job.jobId,
       date: formatDay(day),
+      startDate,
+      endDate,
       dateSource: inPeriod.length
         ? 'Último avance del período'
         : 'Fecha programada · sin avances fechados',

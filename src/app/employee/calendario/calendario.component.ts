@@ -71,45 +71,45 @@ export class CalendarioEmployeeComponent
     }
 
     private loadData(): void {
-        this.loading.set(true);
+    this.loading.set(true);
 
-        void Swal.fire({
-            title: 'Cargando tus trabajos...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-        });
+    void Swal.fire({
+        title: 'Cargando tus trabajos...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
 
-        forkJoin({
-            jobs: this.jobsService.getAll(),
-            users: this.usersService.getAll()
-        }).subscribe({
-            next: ({ jobs, users }) => {
-                const email = (this.authService.email() || '').toLowerCase().trim();
-                const yo = users.find(
-                    (u: User) => (u.email || '').toLowerCase().trim() === email
-                );
+    forkJoin({
+        jobs: this.jobsService.getAll(true),
+        users: this.usersService.getAll(true)
+    }).subscribe({
+        next: ({ jobs, users }) => {
+            const email = (this.authService.email() || '').toLowerCase().trim();
+            const yo = users.find(
+                (u: User) => (u.email || '').toLowerCase().trim() === email
+            );
 
-                this.myEmployeeId = yo?.userId ?? null;
-                this.myJobs = this.myEmployeeId
-                    ? jobs.filter((j) => j.employeeId === this.myEmployeeId)
-                    : [];
+            this.myEmployeeId = yo?.userId ?? null;
+            this.myJobs = this.myEmployeeId
+                ? jobs.filter((j) => j.employeeId === this.myEmployeeId)
+                : [];
 
-                this.loading.set(false);
-                this.dataReady = true;
-                Swal.close();
-                this.tryRender();
-            },
-            error: () => {
-                this.loading.set(false);
-                Swal.close();
-                void Swal.fire(
-                    'Error',
-                    'No se pudieron cargar tus trabajos.',
-                    'error'
-                );
-            }
-        });
-    }
+            this.loading.set(false);
+            this.dataReady = true;
+            Swal.close();
+            this.tryRender();
+        },
+        error: () => {
+            this.loading.set(false);
+            Swal.close();
+            void Swal.fire(
+                'Error',
+                'No se pudieron cargar tus trabajos.',
+                'error'
+            );
+        }
+    });
+}
 
     private tryRender(): void {
         if (this.viewReady && this.dataReady) {
@@ -467,36 +467,38 @@ export class CalendarioEmployeeComponent
     }
 
     private renderCalendar(jobs: Job[]): void {
-        const events = this.crearEventos(jobs);
+    const events = this.crearEventos(jobs);
 
-        if (this.calendar) {
-            this.calendar.removeAllEvents();
-            this.calendar.addEventSource(events);
-            return;
-        }
-
-        this.calendar = new Calendar(this.calendarEl().nativeElement, {
-            plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
-            initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
-            locale: esLocale,
-            firstDay: 0,
-            height: 'auto',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,listWeek'
-            },
-            buttonText: {
-                today: 'Hoy',
-                month: 'Mes',
-                week: 'Semana',
-                list: 'Agenda'
-            },
-            events,
-            eventContent: this.eventContent,
-            eventClick: this.onEventClick
+    if (this.calendar) {
+        this.calendar.batchRendering(() => {
+            this.calendar!.removeAllEventSources();
+            this.calendar!.addEventSource(events);
         });
-
-        this.calendar.render();
+        return;
     }
+
+    this.calendar = new Calendar(this.calendarEl().nativeElement, {
+        plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
+        initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
+        locale: esLocale,
+        firstDay: 0,
+        height: 'auto',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+        },
+        buttonText: {
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            list: 'Agenda'
+        },
+        events,
+        eventContent: this.eventContent,
+        eventClick: this.onEventClick
+    });
+
+    this.calendar.render();
+}
 }
