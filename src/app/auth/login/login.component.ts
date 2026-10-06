@@ -291,7 +291,10 @@ export class LoginComponent {
         text = 'No se pudo conectar con el servidor.';
       } else if (error.status === 401 || error.status === 403) {
         title = 'Acceso denegado';
-        text = 'Correo o contraseña incorrectos, o acceso no autorizado.';
+
+        text = error.error?.code === 'USER_INACTIVE'
+          ? 'Tu usuario está inactivo. Contacta con administración.'
+          : 'Correo o contraseña incorrectos, o acceso no autorizado.';
       } else if (error.status >= 500) {
         title = 'Error del servidor';
         text = 'El servidor no pudo procesar la solicitud. Intenta más tarde.';
