@@ -1,96 +1,140 @@
 <p class="intro">
-  Trabajos en proceso y completados de la quincena.
+  Trabajos completados o en progreso, según su fecha asignada.
 </p>
 
 <div class="toolbar">
-  <button type="button" [disabled]="busy()" (click)="load()">Actualizar</button>
-  <button type="button" [disabled]="busy()" (click)="changePeriod(-1)"><i class="fa-solid fa-chevron-left"
-      aria-hidden="true"></i> Anterior</button>
-  <div class="date-label"><small>Quincena del</small><strong>{{ report().start }} al {{ report().end }}</strong></div>
-  <button class="pdf-button" type="button" [disabled]="busy() || empty()" (click)="exportPdf()"><i
-      class="fa-solid fa-file-pdf" aria-hidden="true"></i> {{ exporting() ? 'Generando...' : 'PDF' }}</button>
-  <button type="button" [disabled]="busy()" (click)="changePeriod(1)">Siguiente <i class="fa-solid fa-chevron-right"
-      aria-hidden="true"></i></button>
+  <button
+    type="button"
+    [disabled]="busy()"
+    (click)="load()">
+    Actualizar
+  </button>
+
+  <button
+    type="button"
+    [disabled]="busy()"
+    (click)="changePeriod(-1)">
+    <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+    Anterior
+  </button>
+
+  <div class="date-label">
+    <small>Quincena del</small>
+    <strong>{{ report().start }} al {{ report().end }}</strong>
+  </div>
+
+  <button
+    class="pdf-button"
+    type="button"
+    [disabled]="busy() || empty()"
+    (click)="exportPdf()">
+    <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+    {{ exporting() ? 'Generando...' : 'PDF' }}
+  </button>
+
+  <button
+    type="button"
+    [disabled]="busy()"
+    (click)="changePeriod(1)">
+    Siguiente
+    <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+  </button>
 </div>
 
 @if (downloadUrl(); as url) {
-<div class="download-actions">
-  <a [href]="url" [download]="filename()">Descargar PDF</a>
-  <a [href]="url" target="_blank" rel="noopener">Abrir PDF</a>
-</div>
+  <div class="download-actions">
+    <a [href]="url" [download]="filename()">
+      Descargar PDF
+    </a>
+
+    <a [href]="url" target="_blank" rel="noopener">
+      Abrir PDF
+    </a>
+  </div>
 }
 
 @if (error()) {
-<div class="empty">
-  <p>{{ error() }}</p><button type="button" [disabled]="busy()" (click)="load()">Reintentar carga</button>
-</div>
+  <div class="empty">
+    <p>{{ error() }}</p>
+
+    <button
+      type="button"
+      [disabled]="busy()"
+      (click)="load()">
+      Reintentar carga
+    </button>
+  </div>
 }
 
-@if (loading()) { <p class="empty" role="status">Obteniendo registros...</p> }
-@else if (!error()) {
-@if (empty()) { <p class="empty">No hay trabajos registrados para estas fechas.</p> }
-@else {
-<div class="report-container">
+@if (loading()) {
+  <p class="empty" role="status">
+    Obteniendo registros globales...
+  </p>
+} @else if (!error()) {
+  @if (empty()) {
+    <p class="empty">
+      No hay trabajos completados o en progreso
+      con fecha de inicio en esta quincena.
+    </p>
+  } @else {
+    <div class="report-container">
+      @for (employee of report().employees; track employee.employeeId) {
+        <div class="employee-table-wrapper">
+          <div class="employee-header">
+            Trabajos realizados por: {{ employee.name }}
+          </div>
 
-  @for (employee of report().employees; track employee.employeeId) {
-  <div class="employee-table-wrapper">
-    <!-- Encabezado oscuro basado en la imagen -->
-    <div class="employee-header">
-      Trabajos realizados por: {{ employee.name }}
+          <table class="employee-table">
+            <thead>
+              <tr>
+                <th>Fecha inicio (MM/DD/YYYY)</th>
+                <th>Fecha fin (MM/DD/YYYY)</th>
+                <th>Cliente</th>
+                <th class="col-amount">Monto</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (job of employee.jobs; track job.jobId) {
+                <tr>
+                  <td>{{ job.startDate }}</td>
+                  <td>{{ job.endDate }}</td>
+                  <td>{{ job.clientName }}</td>
+
+                  <td class="col-amount">
+                    {{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+
+            <tfoot>
+              <tr>
+                <td colspan="3" class="total-label">
+                  Pago Total Quincena
+                </td>
+
+                <td class="total-amount">
+                  {{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+
+      <div class="grand-total">
+        <span>Total del período</span>
+        <strong>
+          {{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}
+        </strong>
+      </div>
     </div>
-
-    <table class="employee-table">
-      <thead>
-        <tr>
-          <th>Fecha (MM/DD/YYYY)</th>
-          <th>Cliente / Trabajo</th>
-          <th class="col-amount">Monto</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (job of employee.jobs; track job.jobId) {
-        <tr>
-          <td>{{ job.date }}</td>
-          <td class="payroll-detail-cell">
-            <div class="payroll-client">
-              <strong>Cliente:</strong> {{ job.clientName }}
-            </div>
-
-            <div class="payroll-description">
-              <strong>Trabajo:</strong>
-              {{ job.description || 'Sin descripción' }}
-            </div>
-
-            <div class="payroll-location">
-              <strong>Edificio:</strong>
-              {{ job.buildingNumber || 'No registrado' }}
-            </div>
-
-            <div class="payroll-location">
-              <strong>Departamento:</strong>
-              {{ job.apartment || 'No registrado' }}
-            </div>
-          </td>
-          <td class="col-amount">{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
-        </tr>
-        }
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="2" class="total-label">Pago Total Quincena</td>
-          <td class="total-amount">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
   }
+}
 
-  <div class="grand-total">
-    <span>Total de la empresa en este período</span>
-    <strong>{{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
-  </div>
+<div class="pdf-stage" aria-hidden="true" inert>
+  <app-nomina-pdf
+    [report]="pdfSnapshot()"
+    [generatedAt]="generatedAt()" />
 </div>
-}
-}
-<div class="pdf-stage" aria-hidden="true" inert><app-nomina-pdf [report]="pdfSnapshot()"
-    [generatedAt]="generatedAt()" /></div>

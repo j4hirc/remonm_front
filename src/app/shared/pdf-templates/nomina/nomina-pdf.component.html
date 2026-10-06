@@ -1,89 +1,124 @@
 @for (employee of sortedReport().employees; track employee.employeeId) {
-<section class="pdf-page">
-  <header>
-    <img src="img/logonegro.png" alt="RemoMN" />
-    <div>
-      <h1>Nómina Quincenal</h1>
-      <p class="subtitle">REMOMN — COPIA SUBCONTRATISTA</p>
+  <section class="pdf-page">
+    <header>
+      <img src="img/logonegro.png" alt="RemoMN" />
+
+      <div>
+        <h1>Nómina Quincenal</h1>
+        <p class="subtitle">REMOMN — COPIA SUBCONTRATISTA</p>
+      </div>
+
+      <div class="period">
+        <small>PERÍODO</small>
+        <p>
+          {{ sortedReport().start }} — {{ sortedReport().end }}
+        </p>
+      </div>
+    </header>
+
+    <div class="group-title">
+      Trabajos realizados por: {{ employee.name }}
     </div>
-    <div class="period"><small>PERÍODO</small>
-      <p>{{ sortedReport().start }} — {{ sortedReport().end }}</p>
-    </div>
-  </header>
-  <div class="group-title">Trabajos realizados por: {{ employee.name }}</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Fechas (MM/DD/YYYY)</th>
-        <th>Cliente / Trabajo</th>
-        <th class="money">Monto</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (job of employee.jobs; track job.jobId) {
-      <tr>
-        <td>
-          <div>
-            <strong>Inicio:</strong>
-            {{ job.startDate }}
-          </div>
 
-          <div>
-            <strong>Fin reportado:</strong>
-            {{ job.endDate }}
-          </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Fechas (MM/DD/YYYY)</th>
+          <th>Cliente / Trabajo</th>
+          <th class="money">Monto</th>
+        </tr>
+      </thead>
 
-          <div>
-            <strong>Registro del período:</strong>
-            {{ job.date }}
-          </div>
-        </td>
-        <td class="payroll-detail-cell">
-          <div class="payroll-client">
-            <strong>Cliente:</strong> {{ job.clientName }}
-          </div>
+      <tbody>
+        @for (job of employee.jobs; track job.jobId) {
+          <tr>
+            <td>
+              <div>
+                <strong>Inicio:</strong>
+                {{ job.startDate }}
+              </div>
 
-          <div class="payroll-description">
-            <strong>Trabajo:</strong>
-            {{ job.description || 'Sin descripción' }}
-          </div>
+              <div>
+                <strong>Fin:</strong>
+                {{ job.endDate }}
+              </div>
+            </td>
 
-          <div class="payroll-location">
-            <strong>Edificio:</strong>
-            {{ job.buildingNumber || 'No registrado' }}
-          </div>
+            <td class="payroll-detail-cell">
+              <div class="payroll-client">
+                <strong>Cliente:</strong>
+                {{ job.clientName }}
+              </div>
 
-          <div class="payroll-location">
-            <strong>Departamento:</strong>
-            {{ job.apartment || 'No registrado' }}
-          </div>
-        </td>
-        <td class="money">{{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
-      </tr>
-      }
-    </tbody>
-    <tfoot>
-      <tr>
-        <td colspan="2" class="money">Pago Total Quincena</td>
-        <td class="money gold">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
-      </tr>
-    </tfoot>
-  </table>
-  <footer>Documento confidencial generado automáticamente por el sistema RemoMN · {{ generatedAt() }}</footer>
-</section>
+              <div class="payroll-description">
+                <strong>Trabajo:</strong>
+                {{ job.description || 'Sin descripción' }}
+              </div>
+
+              <div class="payroll-location">
+                <strong>Dirección:</strong>
+                {{ job.address || 'No registrada' }}
+              </div>
+
+              <div class="payroll-location">
+                <strong>Edificio:</strong>
+                {{ job.buildingNumber || 'No registrado' }}
+              </div>
+
+              <div class="payroll-location">
+                <strong>Departamento:</strong>
+                {{ job.apartment || 'No registrado' }}
+              </div>
+            </td>
+
+            <td class="money">
+              {{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}
+            </td>
+          </tr>
+        }
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <td colspan="2" class="money">
+            Pago Total Quincena
+          </td>
+
+          <td class="money gold">
+            {{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <footer>
+      Documento confidencial generado automáticamente
+      por el sistema RemoMN · {{ generatedAt() }}
+    </footer>
+  </section>
 }
+
 <section class="pdf-page">
   <header>
     <img src="img/logonegro.png" alt="RemoMN" />
+
     <div>
       <h1>Resumen de Nómina</h1>
       <p class="subtitle">REMOMN — COPIA ADMINISTRACIÓN</p>
     </div>
-    <div class="period"><small>PERÍODO</small>
-      <p>{{ sortedReport().start }} — {{ sortedReport().end }}</p>
+
+    <div class="period">
+      <small>PERÍODO</small>
+      <p>
+        {{ sortedReport().start }} — {{ sortedReport().end }}
+      </p>
     </div>
   </header>
-  <div class="group-title">Desglose de Pagos por Subcontratista</div>
+
+  <div class="group-title">
+    Desglose de Pagos por Subcontratista
+  </div>
+
   <table>
     <thead>
       <tr>
@@ -91,18 +126,27 @@
         <th class="money">Pago Total</th>
       </tr>
     </thead>
+
     <tbody>
       @for (employee of sortedReport().employees; track employee.employeeId) {
-      <tr>
-        <td>{{ employee.name }}</td>
-        <td class="money">{{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}</td>
-      </tr>
+        <tr>
+          <td>{{ employee.name }}</td>
+          <td class="money">
+            {{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}
+          </td>
+        </tr>
       }
     </tbody>
   </table>
+
   <div class="grand-total">
     <strong>Total Nómina Global Empresa</strong>
-    <strong>{{ sortedReport().total | currency:'USD':'symbol':'1.2-2':'en-US' }}</strong>
+    <strong>
+      {{ sortedReport().total | currency:'USD':'symbol':'1.2-2':'en-US' }}
+    </strong>
   </div>
-  <footer>Documento administrativo confidencial · {{ generatedAt() }}</footer>
+
+  <footer>
+    Documento administrativo confidencial · {{ generatedAt() }}
+  </footer>
 </section>

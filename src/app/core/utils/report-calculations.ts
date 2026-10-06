@@ -87,91 +87,124 @@ function updateDay(value: string | number[]): number | null {
   const match = /^(\d{4}-\d{2}-\d{2})(?:T|\s|$)/.exec(value);
   return match ? parseJobDay(match[1]) : null;
 }
-export function buildPayrollReport(jobs: readonly Job[], users: readonly User[], offset: number, today = new Date()): PayrollReport {
+export function buildPayrollReport(
+  jobs: readonly Job[],
+  users: readonly User[],
+  offset: number,
+  today = new Date()
+): PayrollReport {
+  // Conserva los períodos actuales de 14 días.
   const epoch = civilDay(2023, 12, 31);
-  const start = epoch + (Math.floor((todayDay(today) - epoch) / 14) + offset) * 14;
+  const start =
+    epoch +
+    (Math.floor((todayDay(today) - epoch) / 14) + offset) * 14;
   const end = start + 13;
+
   const groups = new Map<number, PayrollEmployee>();
   const seenJobs = new Set<number>();
+
   for (const job of jobs) {
+    const status = (job.status || '').trim().toUpperCase();
+
+    // Solo trabajos completados o en progreso.
     if (
-      !['IN_PROGRESS', 'REVIEW', 'COMPLETED'].includes(job.status)
-      || !job.employeeId
-      || seenJobs.has(job.jobId)
-    ) continue;
+      !['IN_PROGRESS', 'COMPLETED'].includes(status) ||
+      !job.employeeId ||
+      seenJobs.has(job.jobId)
+    ) {
+      continue;
+    }
+
+    // La fecha asignada determina la quincena.
+    const startDay = job.jobDate
+      ? parseJobDay(job.jobDate)
+      : null;
+
+    if (
+      startDay === null ||
+      startDay < start ||
+      startDay > end
+    ) {
+      continue;
+    }
+
     seenJobs.add(job.jobId);
+
     const seenUpdates = new Set<number>();
-    const datedUpdates = (job.updateJob || []).filter(update => {
-      if (seenUpdates.has(update.jobUpdateId)) return false;
-      seenUpdates.add(update.jobUpdateId);
-      return true;
-    }).map(update => ({ update, day: updateDay(update.date) }))
-      .filter((item): item is { update: NonNullable<Job['updateJob']>[number]; day: number } => item.day !== null)
-      .sort((a, b) => a.day - b.day || a.update.jobUpdateId - b.update.jobUpdateId);
-    const inPeriod = datedUpdates.filter(item => item.day >= start && item.day <= end);
-    const fallbackDay = parseJobDay(job.jobDate);
-    const day = inPeriod.length ? inPeriod[inPeriod.length - 1].day : datedUpdates.length ? null : fallbackDay;
-    if (day === null || day < start || day > end) continue;
+
+    const datedUpdates = (job.updateJob || [])
+      .filter(update => {
+        if (seenUpdates.has(update.jobUpdateId)) {
+          return false;
+        }
+
+        seenUpdates.add(update.jobUpdateId);
+        return true;
+      })
+      .map(update => ({
+        update,
+        day: update.date ? updateDay(update.date) : null
+      }))
+      .filter(
+        (
+          item
+        ): item is {
+          update: NonNullable<Job['updateJob']>[number];
+          day: number;
+        } => item.day !== null
+      )
+      .sort(
+        (a, b) =>
+          a.day - b.day ||
+          a.update.jobUpdateId - b.update.jobUpdateId
+      );
+
+    // Último reporte del trabajo, aunque sea de otra quincena.
+    const lastUpdate = datedUpdates[datedUpdates.length - 1];
+
+    const startDate = formatDay(startDay);
+    const endDate = lastUpdate
+      ? formatDay(lastUpdate.day)
+      : 'Sin fecha registrada';
+
     let group = groups.get(job.employeeId);
+
     if (!group) {
-      group = { employeeId: job.employeeId, name: employeeName(users, job.employeeId), jobs: [], total: 0 };
+      const hasUser = users.some(
+        user => user.userId === job.employeeId
+      );
+
+      group = {
+        employeeId: job.employeeId,
+        name: hasUser
+          ? employeeName(users, job.employeeId)
+          : job.nameEmployee?.trim() || `ID: ${job.employeeId}`,
+        jobs: [],
+        total: 0
+      };
+
       groups.set(job.employeeId, group);
     }
 
+    // Se cuenta una sola vez el pago actual del trabajo.
+    const pay =
+      Math.round(Math.max(0, numberOr(job.pay, 0)) * 100) / 100;
 
-    // Usar el pago actual del trabajo una sola vez.
-    // Los avances se conservan para las fechas y el historial.
-    const pay = Math.round(
-      Math.max(0, numberOr(job.pay, 0)) * 100
-    ) / 100;
-    const lastUpdate = inPeriod[inPeriod.length - 1];
-    const statusForLabel = (lastUpdate?.update.status || job.status || '').toUpperCase();
-    const statusLabels: Record<string, string> = {
-      PENDING: 'Pendiente',
-      IN_PROGRESS: 'En proceso',
-      REVIEW: 'Revisión',
-      COMPLETED: 'Completado',
-      CANCELLED: 'Cancelado'
-    };
-
-    const statusLabel =
-      statusLabels[statusForLabel]
-      ?? statusLabels[job.status]
-      ?? 'Sin estado';
-    // Fechas informativas: no cambian la selección de la quincena.
-    const startDay = parseJobDay(job.jobDate);
-
-    const completedUpdates = datedUpdates.filter(
-      item => (item.update.status || '').trim().toUpperCase() === 'COMPLETED'
-    );
-
-    const lastCompletedUpdate =
-      completedUpdates[completedUpdates.length - 1];
-
-    const isCompleted =
-      (job.status || '').trim().toUpperCase() === 'COMPLETED';
-
-    const startDate =
-      startDay !== null
-        ? formatDay(startDay)
-        : 'Sin fecha registrada';
-
-    const endDate = isCompleted
-      ? lastCompletedUpdate
-        ? formatDay(lastCompletedUpdate.day)
-        : 'Sin fecha registrada'
-      : 'Pendiente';
     group.jobs.push({
       jobId: job.jobId,
-      date: formatDay(day),
+
+      // Los componentes existentes usan "date" para ordenar.
+      date: startDate,
+      dateSource: 'Fecha asignada al trabajo',
+
       startDate,
       endDate,
-      dateSource: inPeriod.length
-        ? 'Último avance del período'
-        : 'Fecha programada · sin avances fechados',
 
-      statusLabel,
+      statusLabel:
+        status === 'COMPLETED' ? 'Completado' : 'En progreso',
+
       clientName: job.clientName || 'Cliente sin nombre',
+      address: job.address?.trim() || '',
 
       description: (job.description || '')
         .split('[MATERIALES PRE-ASIGNADOS]:')[0]
@@ -182,33 +215,49 @@ export function buildPayrollReport(jobs: readonly Job[], users: readonly User[],
 
       pay,
 
-      advances: inPeriod.map(({ update, day }) => ({
+      // Historial informativo: no suma pagos adicionales.
+      advances: datedUpdates.map(({ update, day }) => ({
         id: update.jobUpdateId,
         date: formatDay(day),
         comment: update.comment || 'Sin comentario',
 
         price:
           update.price != null &&
-            Number.isFinite(Number(update.price))
-            ? Math.round(Math.max(0, Number(update.price)) * 100) / 100
+          Number.isFinite(Number(update.price))
+            ? Math.round(
+                Math.max(0, Number(update.price)) * 100
+              ) / 100
             : null,
 
         status: update.status || null,
 
-        files: (update.evidences || []).map((e, index) => ({
-          id: e.evidenceId,
-          url: e.imageUri,
-          label: /\.pdf(?:[?#]|$)/i.test(e.imageUri)
+        files: (update.evidences || []).map((evidence, index) => ({
+          id: evidence.evidenceId,
+          url: evidence.imageUri,
+          label: /\.pdf(?:[?#]|$)/i.test(evidence.imageUri)
             ? 'Reporte PDF'
             : `Evidencia ${index + 1}`
         }))
       }))
     });
+
     group.total = Math.round((group.total + pay) * 100) / 100;
   }
-  const employees = [...groups.values()].sort((a, b) => a.employeeId - b.employeeId);
+
+  const employees = [...groups.values()].sort(
+    (a, b) => a.employeeId - b.employeeId
+  );
+
   return {
-    start: formatDay(start), end: formatDay(end), employees,
-    total: Math.round(employees.reduce((sum, employee) => sum + employee.total, 0) * 100) / 100
+    start: formatDay(start),
+    end: formatDay(end),
+    employees,
+    total:
+      Math.round(
+        employees.reduce(
+          (sum, employee) => sum + employee.total,
+          0
+        ) * 100
+      ) / 100
   };
 }

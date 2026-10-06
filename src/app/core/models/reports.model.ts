@@ -41,6 +41,7 @@ export interface PayrollJob {
   startDate: string;
   endDate: string;
   clientName: string;
+  address?: string;
   description: string;
   buildingNumber: string;
   apartment: string;
