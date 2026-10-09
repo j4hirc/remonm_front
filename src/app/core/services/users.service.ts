@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpContext } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, map } from 'rxjs';
 
 import { NAVIGATION_CACHE } from '../interceptors/navigation-cache.interceptor';
 import { environment } from '../../../environments/environment';
@@ -22,6 +22,25 @@ export class UsersService {
       )
     });
   }
+
+  getAllForManagement(): Observable<User[]> {
+  return forkJoin({
+    users: this.getAll(),
+    unemployed: this.http.get<User[]>(
+      `${this.apiUrl}/all-unemployed`
+    )
+  }).pipe(
+    map(({ users, unemployed }) => {
+      const uniqueUsers = new Map<number, User>();
+
+      for (const user of [...users, ...unemployed]) {
+        uniqueUsers.set(user.userId, user);
+      }
+
+      return [...uniqueUsers.values()];
+    })
+  );
+}
 
   getById(id: number): Observable<User> {
     return this.http.get<User>(`${this.apiUrl}/id-user/${id}`);

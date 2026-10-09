@@ -237,14 +237,15 @@
                 [disabled]="isSaving()" />
         </div>
         <div class="form-row">
-            <label for="user-hierarchyLevel">Jerarquía</label>
+            <label for="user-hierarchyLevel">Jerarquía (opcional)</label>
 
             <input id="user-hierarchyLevel" class="input-field" type="number" min="1" max="2147483647" step="1"
-                formControlName="hierarchyLevel" placeholder="Ej: 1, 2, 3, 4..." [readOnly]="isSaving()"
+                formControlName="hierarchyLevel" placeholder="Sin jerarquía" [readOnly]="isSaving()"
                 aria-describedby="hierarchy-help" />
 
             <small id="hierarchy-help">
-                Cada usuario debe tener un número de jerarquía diferente.
+                Puedes dejar este campo vacío. Si asignas un número,
+                no debe estar utilizado por otro usuario.
             </small>
 
             @if (
@@ -252,7 +253,7 @@
             form.controls.hierarchyLevel.invalid
             ) {
             <small class="hierarchy-error" role="alert">
-                Ingresa un número entero entre 1 y 2147483647.
+                Déjalo vacío o ingresa un número entero entre 1 y 2147483647.
             </small>
             }
         </div>

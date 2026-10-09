@@ -1,23 +1,12 @@
-import {
-    Component,
-    DestroyRef,
-    inject,
-    OnInit,
-    signal,
-    viewChild
-} from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-    FormBuilder,
-    ReactiveFormsModule,
-    Validators
-} from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { firstValueFrom } from 'rxjs';
 import {
     SwalComponent,
     SwalPortalDirective,
-    SwalPortalTargets
+    SwalPortalTargets,
 } from '@sweetalert2/ngx-sweetalert2';
 import Swal, { SweetAlertOptions } from 'sweetalert2';
 
@@ -28,7 +17,7 @@ const AVAILABLE_ROLES = [
     { value: 'ROLE_ADMIN', label: 'Administrador' },
     { value: 'ROLE_JEFE', label: 'Manager' },
     { value: 'ROLE_EMPLOYEE', label: 'Subcontratista' },
-    { value: 'ROLE_BODEGUERO', label: 'Bodega' }
+    { value: 'ROLE_BODEGUERO', label: 'Bodega' },
 ] as const;
 
 @Component({
@@ -36,7 +25,7 @@ const AVAILABLE_ROLES = [
     standalone: true,
     imports: [ReactiveFormsModule, SwalComponent, SwalPortalDirective],
     templateUrl: './usuarios.component.html',
-    styleUrl: './usuarios.component.css'
+    styleUrl: './usuarios.component.css',
 })
 export class UsuariosComponent implements OnInit {
     private readonly usersService = inject(UsersService);
@@ -71,16 +60,15 @@ export class UsuariosComponent implements OnInit {
         status: ['Active', Validators.required],
         title: ['', Validators.required],
         hierarchyLevel: this.formBuilder.control<number | null>(null, [
-            Validators.required,
             Validators.min(1),
             Validators.max(2147483647),
-            Validators.pattern(/^[1-9]\d*$/)
+            Validators.pattern(/^[1-9]\d*$/),
         ]),
         color: ['#12cff4', Validators.required],
         roleAdmin: [false],
         roleJefe: [false],
         roleEmployee: [false],
-        roleBodeguero: [false]
+        roleBodeguero: [false],
     });
 
     readonly editorOptions: SweetAlertOptions = {
@@ -94,7 +82,7 @@ export class UsuariosComponent implements OnInit {
         showLoaderOnConfirm: true,
         allowOutsideClick: () => !this.isSaving(),
         allowEscapeKey: () => !this.isSaving(),
-        preConfirm: () => this.persistUser()
+        preConfirm: () => this.persistUser(),
     };
 
     constructor() {
@@ -111,11 +99,17 @@ export class UsuariosComponent implements OnInit {
 
         // 1. Filtro por estado
         if (status === 'Active') {
-            list = list.filter(
-                (u) => u.status === 'Active' || !u.status
-            );
+            list = list.filter((user) => {
+                const userStatus = (user.status ?? '').trim().toLowerCase();
+
+                return userStatus === 'active' || userStatus === '';
+            });
         } else if (status === 'Unemployed') {
-            list = list.filter((u) => u.status === 'Unemployed');
+            list = list.filter((user) => {
+                const userStatus = (user.status ?? '').trim().toLowerCase();
+
+                return userStatus === 'inactive' || userStatus === 'unemployed';
+            });
         }
 
         // 2. Multibúsqueda
@@ -140,7 +134,6 @@ export class UsuariosComponent implements OnInit {
         return list;
     };
 
-
     ngOnInit(): void {
         void this.loadUsers();
     }
@@ -151,10 +144,7 @@ export class UsuariosComponent implements OnInit {
     }
 
     onStatusChange(event: Event): void {
-        const value = (event.target as HTMLSelectElement).value as
-            | 'Active'
-            | 'Unemployed'
-            | 'All';
+        const value = (event.target as HTMLSelectElement).value as 'Active' | 'Unemployed' | 'All';
         this.statusFilter.set(value);
     }
 
@@ -175,12 +165,12 @@ export class UsuariosComponent implements OnInit {
         void Swal.fire({
             title: 'Cargando usuarios...',
             allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+            didOpen: () => Swal.showLoading(),
         });
 
         try {
             const users = await firstValueFrom(
-                this.usersService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
+                this.usersService.getAllForManagement().pipe(takeUntilDestroyed(this.destroyRef)),
             );
             this.users.set(users);
 
@@ -197,7 +187,7 @@ export class UsuariosComponent implements OnInit {
                 icon: 'error',
                 title: 'No se pudieron cargar los usuarios',
                 text: this.getErrorMessage(error),
-                confirmButtonColor: '#12CFF4'
+                confirmButtonColor: '#12CFF4',
             });
         } finally {
             this.isLoading.set(false);
@@ -211,9 +201,7 @@ export class UsuariosComponent implements OnInit {
 
         this.editingId.set(user?.userId ?? null);
 
-        const roleNames = new Set(
-            (user?.roles ?? []).map((r) => r.name)
-        );
+        const roleNames = new Set((user?.roles ?? []).map((r) => r.name));
 
         this.form.reset({
             dni: user?.dni ?? '',
@@ -224,12 +212,8 @@ export class UsuariosComponent implements OnInit {
             email: user?.email ?? '',
             password: '',
             phone: user?.phone ?? '',
-            dateOfBirth: user?.dateOfBirth
-                ? String(user.dateOfBirth).slice(0, 10)
-                : '',
-            dateOfEntry: user?.dateOfEntry
-                ? String(user.dateOfEntry).slice(0, 10)
-                : '',
+            dateOfBirth: user?.dateOfBirth ? String(user.dateOfBirth).slice(0, 10) : '',
+            dateOfEntry: user?.dateOfEntry ? String(user.dateOfEntry).slice(0, 10) : '',
             status: user?.status ?? 'Active',
             title: user?.title ?? '',
             hierarchyLevel: user?.hierarchyLevel ?? null,
@@ -237,7 +221,7 @@ export class UsuariosComponent implements OnInit {
             roleAdmin: roleNames.has('ROLE_ADMIN'),
             roleJefe: roleNames.has('ROLE_JEFE'),
             roleEmployee: roleNames.has('ROLE_EMPLOYEE'),
-            roleBodeguero: roleNames.has('ROLE_BODEGUERO')
+            roleBodeguero: roleNames.has('ROLE_BODEGUERO'),
         });
 
         this.editorOpen.set(true);
@@ -254,7 +238,7 @@ export class UsuariosComponent implements OnInit {
                     icon: 'success',
                     title: '¡Éxito!',
                     text: user ? 'Usuario actualizado.' : 'Usuario creado.',
-                    confirmButtonColor: '#12CFF4'
+                    confirmButtonColor: '#12CFF4',
                 });
             }
         } finally {
@@ -269,12 +253,7 @@ export class UsuariosComponent implements OnInit {
     }
 
     fullName(user: User): string {
-        return [
-            user.firstName,
-            user.middleName,
-            user.lastName,
-            user.secondSurname
-        ]
+        return [user.firstName, user.middleName, user.lastName, user.secondSurname]
             .filter(Boolean)
             .join(' ');
     }
@@ -302,16 +281,14 @@ export class UsuariosComponent implements OnInit {
         this.form.markAllAsTouched();
 
         const raw = this.form.getRawValue();
-        const hierarchyLevel = raw.hierarchyLevel;
+        const hierarchyLevel = raw.hierarchyLevel ?? null;
 
         if (
-            hierarchyLevel === null ||
-            !Number.isInteger(hierarchyLevel) ||
-            hierarchyLevel < 1 ||
-            hierarchyLevel > 2147483647
+            hierarchyLevel !== null &&
+            (!Number.isInteger(hierarchyLevel) || hierarchyLevel < 1 || hierarchyLevel > 2147483647)
         ) {
             Swal.showValidationMessage(
-                'Ingresa una jerarquía válida: un número entero mayor o igual a 1.'
+                'La jerarquía es opcional. Si la ingresas, debe ser un número entero entre 1 y 2147483647.',
             );
             return false;
         }
@@ -355,7 +332,7 @@ export class UsuariosComponent implements OnInit {
             title: raw.title.trim(),
             hierarchyLevel,
             roles,
-            color: raw.color
+            color: raw.color,
         };
 
         const userId = this.editingId();
@@ -365,14 +342,10 @@ export class UsuariosComponent implements OnInit {
                 : this.usersService.update(userId, request);
 
         try {
-            const saved = await firstValueFrom(
-                apiCall.pipe(takeUntilDestroyed(this.destroyRef))
-            );
+            const saved = await firstValueFrom(apiCall.pipe(takeUntilDestroyed(this.destroyRef)));
 
             this.users.update((list) =>
-                userId === null
-                    ? [...list, saved]
-                    : list.map((u) => (u.userId === userId ? saved : u))
+                userId === null ? [...list, saved] : list.map((u) => (u.userId === userId ? saved : u)),
             );
 
             return saved;

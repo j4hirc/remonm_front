@@ -72,7 +72,6 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
     status: ['Active', Validators.required],
     title: ['', Validators.required],
     hierarchyLevel: this.formBuilder.control<number | null>(null, [
-      Validators.required,
       Validators.min(1),
       Validators.max(2147483647),
       Validators.pattern(/^[1-9]\d*$/)
@@ -104,10 +103,18 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
     const text = this.searchText().trim().toLowerCase();
 
     if (status === 'Active') {
-      list = list.filter((u) => u.status === 'Active' || !u.status);
-    } else if (status === 'Unemployed') {
-      list = list.filter((u) => u.status === 'Unemployed');
-    }
+  list = list.filter((user) => {
+    const userStatus = (user.status ?? '').trim().toLowerCase();
+
+    return userStatus === 'active' || userStatus === '';
+  });
+} else if (status === 'Unemployed') {
+  list = list.filter((user) => {
+    const userStatus = (user.status ?? '').trim().toLowerCase();
+
+    return userStatus === 'inactive' || userStatus === 'unemployed';
+  });
+}
 
     if (text) {
       list = list.filter((u) => {
@@ -173,7 +180,9 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
 
     try {
       const users = await firstValueFrom(
-        this.usersService.getAll().pipe(takeUntilDestroyed(this.destroyRef))
+        this.usersService.getAllForManagement().pipe(
+          takeUntilDestroyed(this.destroyRef)
+        )
       );
       this.users.set(users);
 
@@ -286,19 +295,21 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
     this.form.markAllAsTouched();
 
     const raw = this.form.getRawValue();
-    const hierarchyLevel = raw.hierarchyLevel;
+    const hierarchyLevel = raw.hierarchyLevel ?? null;
 
-if (
-  hierarchyLevel === null ||
-  !Number.isInteger(hierarchyLevel) ||
-  hierarchyLevel < 1 ||
-  hierarchyLevel > 2147483647
-) {
-  Swal.showValidationMessage(
-    'Ingresa una jerarquía válida: un número entero mayor o igual a 1.'
-  );
-  return false;
-}
+    if (
+      hierarchyLevel !== null &&
+      (
+        !Number.isInteger(hierarchyLevel) ||
+        hierarchyLevel < 1 ||
+        hierarchyLevel > 2147483647
+      )
+    ) {
+      Swal.showValidationMessage(
+        'La jerarquía es opcional. Si la ingresas, debe ser un número entero entre 1 y 2147483647.'
+      );
+      return false;
+    }
     const roles: string[] = [];
     if (raw.roleAdmin) roles.push('ROLE_ADMIN');
     if (raw.roleJefe) roles.push('ROLE_JEFE');
