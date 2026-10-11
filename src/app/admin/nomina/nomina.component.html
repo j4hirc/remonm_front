@@ -3,17 +3,11 @@
 </p>
 
 <div class="toolbar">
-  <button
-    type="button"
-    [disabled]="busy()"
-    (click)="load()">
+  <button type="button" [disabled]="busy()" (click)="load()">
     Actualizar
   </button>
 
-  <button
-    type="button"
-    [disabled]="busy()"
-    (click)="changePeriod(-1)">
+  <button type="button" [disabled]="busy()" (click)="changePeriod(-1)">
     <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
     Anterior
   </button>
@@ -23,118 +17,112 @@
     <strong>{{ report().start }} al {{ report().end }}</strong>
   </div>
 
-  <button
-    class="pdf-button"
-    type="button"
-    [disabled]="busy() || empty()"
-    (click)="exportPdf()">
+  <button class="pdf-button" type="button" [disabled]="busy() || empty()" (click)="exportPdf()">
     <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
     {{ exporting() ? 'Generando...' : 'PDF' }}
   </button>
 
-  <button
-    type="button"
-    [disabled]="busy()"
-    (click)="changePeriod(1)">
+  <button type="button" [disabled]="busy()" (click)="changePeriod(1)">
     Siguiente
     <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
   </button>
 </div>
 
 @if (downloadUrl(); as url) {
-  <div class="download-actions">
-    <a [href]="url" [download]="filename()">
-      Descargar PDF
-    </a>
+<div class="download-actions">
+  <a [href]="url" [download]="filename()">
+    Descargar PDF
+  </a>
 
-    <a [href]="url" target="_blank" rel="noopener">
-      Abrir PDF
-    </a>
-  </div>
+  <a [href]="url" target="_blank" rel="noopener">
+    Abrir PDF
+  </a>
+</div>
 }
 
 @if (error()) {
-  <div class="empty">
-    <p>{{ error() }}</p>
+<div class="empty">
+  <p>{{ error() }}</p>
 
-    <button
-      type="button"
-      [disabled]="busy()"
-      (click)="load()">
-      Reintentar carga
-    </button>
-  </div>
+  <button type="button" [disabled]="busy()" (click)="load()">
+    Reintentar carga
+  </button>
+</div>
 }
 
 @if (loading()) {
-  <p class="empty" role="status">
-    Obteniendo registros globales...
-  </p>
+<p class="empty" role="status">
+  Obteniendo registros globales...
+</p>
 } @else if (!error()) {
-  @if (empty()) {
-    <p class="empty">
-      No hay trabajos completados o en progreso
-      con fecha de inicio en esta quincena.
-    </p>
-  } @else {
-    <div class="report-container">
-      @for (employee of report().employees; track employee.employeeId) {
-        <div class="employee-table-wrapper">
-          <div class="employee-header">
-            Trabajos realizados por: {{ employee.name }}
-          </div>
+@if (empty()) {
+<p class="empty">
+  No hay trabajos completados o en progreso
+  con fecha de inicio en esta quincena.
+</p>
+} @else {
+<div class="report-container">
+  @for (employee of report().employees; track employee.employeeId) {
+  <div class="employee-table-wrapper">
+    <div class="employee-header">
+      <span class="payroll-heading-label">
+        Trabajos realizados por:
+      </span>
 
-          <table class="employee-table">
-            <thead>
-              <tr>
-                <th>Fecha inicio (MM/DD/YYYY)</th>
-                <th>Fecha fin (MM/DD/YYYY)</th>
-                <th>Cliente</th>
-                <th class="col-amount">Monto</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              @for (job of employee.jobs; track job.jobId) {
-                <tr>
-                  <td>{{ job.startDate }}</td>
-                  <td>{{ job.endDate }}</td>
-                  <td>{{ job.clientName }}</td>
-
-                  <td class="col-amount">
-                    {{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-
-            <tfoot>
-              <tr>
-                <td colspan="3" class="total-label">
-                  Pago Total Quincena
-                </td>
-
-                <td class="total-amount">
-                  {{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      }
-
-      <div class="grand-total">
-        <span>Total del período</span>
-        <strong>
-          {{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}
-        </strong>
-      </div>
+      <span class="payroll-worker-name">
+        {{ employee.name }}
+      </span>
     </div>
+
+    <table class="employee-table">
+      <thead>
+        <tr>
+          <th>Fecha inicio (MM/DD/YYYY)</th>
+          <th>Fecha fin (MM/DD/YYYY)</th>
+          <th>Cliente</th>
+          <th class="col-amount">Monto</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (job of employee.jobs; track job.jobId) {
+        <tr>
+          <td>{{ job.startDate }}</td>
+          <td>{{ job.endDate }}</td>
+          <td>{{ job.clientName }}</td>
+
+          <td class="col-amount">
+            {{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}
+          </td>
+        </tr>
+        }
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <td colspan="3" class="total-label">
+            Pago Total Quincena
+          </td>
+
+          <td class="total-amount">
+            {{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
   }
+
+  <div class="grand-total">
+    <span>Total del período</span>
+    <strong>
+      {{ report().total | currency:'USD':'symbol':'1.2-2':'en-US' }}
+    </strong>
+  </div>
+</div>
+}
 }
 
 <div class="pdf-stage" aria-hidden="true" inert>
-  <app-nomina-pdf
-    [report]="pdfSnapshot()"
-    [generatedAt]="generatedAt()" />
+  <app-nomina-pdf [report]="pdfSnapshot()" [generatedAt]="generatedAt()" />
 </div>

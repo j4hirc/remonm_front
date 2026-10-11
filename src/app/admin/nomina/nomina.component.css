@@ -126,3 +126,34 @@ td.payroll-detail-cell {
   color: #1e293b;
   font-weight: 700;
 }
+
+.report-container,
+.employee-table-wrapper {
+  min-width: 0;
+}
+
+.employee-header {
+  height: auto;
+  max-height: none;
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.payroll-heading-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.payroll-worker-name {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

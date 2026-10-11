@@ -77,6 +77,11 @@ export interface Job {
 
   /** ← Aquí va: lista de avances / evidencias del trabajo */
   updateJob?: JobUpdate[];
+  
+  // AÑADIDO: Campos de estado y rastreo de asignación
+  assignmentId?: number | null;
+  assignmentStatus?: string | null;
+  assignmentExpiresAt?: string | null;
 }
 
 export interface JobRequest {
@@ -105,4 +110,7 @@ export interface JobRequest {
     estimatedPrice?: number;
   }>;
   priority?: number;
+  
+  // AÑADIDO: Validación de versión de asignación en actualización
+  expectedAssignmentId?: number | null;
 }

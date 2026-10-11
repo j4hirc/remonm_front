@@ -186,3 +186,43 @@ td.payroll-detail-cell {
   color: #1e293b;
   font-weight: 700;
 }
+
+.group-title {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.45;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.payroll-heading-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.payroll-worker-name {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.payroll-summary {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.payroll-worker-name-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.45;
+  vertical-align: top;
+}

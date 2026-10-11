@@ -1,5 +1,7 @@
 import { Cliente } from '../../core/models/cliente.model';
+import { lineTotal } from '../../core/services/utils/report-material-comparison';
 import { ClientesService } from '../../core/services/clientes.service';
+import { AssignmentHistoryComponent } from '../../shared/assignments/assignment-history.component';
 import {
     Component,
     DestroyRef,
@@ -50,6 +52,7 @@ interface NecessaryMaterialRow {
     standalone: true,
     imports: [
         ReactiveFormsModule,
+        AssignmentHistoryComponent,
         SwalComponent,
         SwalPortalDirective,
         RouterLink,
@@ -59,6 +62,7 @@ interface NecessaryMaterialRow {
     styleUrl: './trabajos.component.css'
 })
 export class TrabajosJefeComponent implements OnInit, OnDestroy {
+    private expectedAssignmentId: number | null = null;
     private readonly clientesService = inject(ClientesService);
     readonly clientes = signal<Cliente[]>([]);
     readonly clientesLoading = signal(false);
@@ -403,7 +407,9 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             });
             this.colorByEmployeeId.set(colors);
 
-            const active = users.filter((u) => u.status !== 'Unemployed');
+            const active = users.filter(
+              (u) => (u.status ?? '').trim().toLowerCase() === 'active'
+            );
             this.employees.set(
                 active.filter((u) =>
                     u.roles?.some((r) => r.name === 'ROLE_EMPLOYEE')
@@ -621,11 +627,16 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     necessaryTotal(): number {
-        return this.necessaryMaterials().reduce(
-            (sum, r) => sum + r.quantity * r.price,
-            0
-        );
-    }
+    const totalCents = this.necessaryMaterials().reduce(
+        (sum, row) =>
+            sum + Math.round(
+                lineTotal(row.quantity, row.price) * 100
+            ),
+        0
+    );
+
+    return totalCents / 100;
+}
 
     private recalcPay(): void {
         this.form.controls.pay.setValue(
@@ -743,6 +754,9 @@ async openEdit(jobId: number, duplicate = false): Promise<void> {
 
         this.isDuplicating.set(duplicate);
         this.editingId.set(duplicate ? null : jobId);
+        this.expectedAssignmentId = duplicate
+          ? null
+          : (data.assignmentId ?? null);
         this.clientSearchModal.set('');
         this.showClientList.set(false);
         this.necessaryMaterials.set([]);
@@ -982,6 +996,9 @@ async openEdit(jobId: number, duplicate = false): Promise<void> {
             }));
 
             const request: JobRequest = {
+                expectedAssignmentId: this.editingId() === null
+              ? null
+              : this.expectedAssignmentId,
                 sendNotification,
                 clientName: raw.clientName.trim(),
                 clientPhone: raw.clientPhone.trim(),

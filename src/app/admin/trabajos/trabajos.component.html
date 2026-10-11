@@ -307,6 +307,19 @@
 
     <form *swalPortal="swalTargets.content" class="job-form" [formGroup]="form" (ngSubmit)="submitEditor()" novalidate>
 
+        @if (!isDuplicating()) {
+          @if (editingId(); as assignmentJobId) {
+            <app-assignment-history
+              [jobId]="assignmentJobId"
+            />
+          }
+        }
+
+        <p style="background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 6px; font-size: 13px; text-align: left; margin-bottom: 16px;">
+          <i class="fa-solid fa-circle-info"></i> Las nuevas asignaciones con plazo envían un correo
+          para aceptar o rechazar, incluso al elegir Guardar.
+        </p>
+
         @if (editingId() !== null && !isDuplicating()) {
         <div class="duplicate-toolbar">
             <div>

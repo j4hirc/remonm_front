@@ -1,101 +1,107 @@
 @for (employee of sortedReport().employees; track employee.employeeId) {
-  <section class="pdf-page">
-    <header>
-      <img src="img/logonegro.png" alt="RemoMN" />
+<section class="pdf-page">
+  <header>
+    <img src="img/logonegro.png" alt="RemoMN" />
 
-      <div>
-        <h1>Nómina Quincenal</h1>
-        <p class="subtitle">REMOMN — COPIA SUBCONTRATISTA</p>
-      </div>
-
-      <div class="period">
-        <small>PERÍODO</small>
-        <p>
-          {{ sortedReport().start }} — {{ sortedReport().end }}
-        </p>
-      </div>
-    </header>
-
-    <div class="group-title">
-      Trabajos realizados por: {{ employee.name }}
+    <div>
+      <h1>Nómina Quincenal</h1>
+      <p class="subtitle">REMOMN — COPIA SUBCONTRATISTA</p>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Fechas (MM/DD/YYYY)</th>
-          <th>Cliente / Trabajo</th>
-          <th class="money">Monto</th>
-        </tr>
-      </thead>
+    <div class="period">
+      <small>PERÍODO</small>
+      <p>
+        {{ sortedReport().start }} — {{ sortedReport().end }}
+      </p>
+    </div>
+  </header>
 
-      <tbody>
-        @for (job of employee.jobs; track job.jobId) {
-          <tr>
-            <td>
-              <div>
-                <strong>Inicio:</strong>
-                {{ job.startDate }}
-              </div>
+  <div class="group-title">
+    <span class="payroll-heading-label">
+      Trabajos realizados por:
+    </span>
 
-              <div>
-                <strong>Fin:</strong>
-                {{ job.endDate }}
-              </div>
-            </td>
+    <span class="payroll-worker-name">
+      {{ employee.name }}
+    </span>
+  </div>
 
-            <td class="payroll-detail-cell">
-              <div class="payroll-client">
-                <strong>Cliente:</strong>
-                {{ job.clientName }}
-              </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Fechas (MM/DD/YYYY)</th>
+        <th>Cliente / Trabajo</th>
+        <th class="money">Monto</th>
+      </tr>
+    </thead>
 
-              <div class="payroll-description">
-                <strong>Trabajo:</strong>
-                {{ job.description || 'Sin descripción' }}
-              </div>
+    <tbody>
+      @for (job of employee.jobs; track job.jobId) {
+      <tr>
+        <td>
+          <div>
+            <strong>Inicio:</strong>
+            {{ job.startDate }}
+          </div>
 
-              <div class="payroll-location">
-                <strong>Dirección:</strong>
-                {{ job.address || 'No registrada' }}
-              </div>
+          <div>
+            <strong>Fin:</strong>
+            {{ job.endDate }}
+          </div>
+        </td>
 
-              <div class="payroll-location">
-                <strong>Edificio:</strong>
-                {{ job.buildingNumber || 'No registrado' }}
-              </div>
+        <td class="payroll-detail-cell">
+          <div class="payroll-client">
+            <strong>Cliente:</strong>
+            {{ job.clientName }}
+          </div>
 
-              <div class="payroll-location">
-                <strong>Departamento:</strong>
-                {{ job.apartment || 'No registrado' }}
-              </div>
-            </td>
+          <div class="payroll-description">
+            <strong>Trabajo:</strong>
+            {{ job.description || 'Sin descripción' }}
+          </div>
 
-            <td class="money">
-              {{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}
-            </td>
-          </tr>
-        }
-      </tbody>
+          <div class="payroll-location">
+            <strong>Dirección:</strong>
+            {{ job.address || 'No registrada' }}
+          </div>
 
-      <tfoot>
-        <tr>
-          <td colspan="2" class="money">
-            Pago Total Quincena
-          </td>
+          <div class="payroll-location">
+            <strong>Edificio:</strong>
+            {{ job.buildingNumber || 'No registrado' }}
+          </div>
 
-          <td class="money gold">
-            {{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+          <div class="payroll-location">
+            <strong>Departamento:</strong>
+            {{ job.apartment || 'No registrado' }}
+          </div>
+        </td>
 
-    <footer>
-      Documento confidencial generado automáticamente
-      por el sistema RemoMN · {{ generatedAt() }}
-    </footer>
-  </section>
+        <td class="money">
+          {{ job.pay | currency:'USD':'symbol':'1.2-2':'en-US' }}
+        </td>
+      </tr>
+      }
+    </tbody>
+
+    <tfoot>
+      <tr>
+        <td colspan="2" class="money">
+          Pago Total Quincena
+        </td>
+
+        <td class="money gold">
+          {{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <footer>
+    Documento confidencial generado automáticamente
+    por el sistema RemoMN · {{ generatedAt() }}
+  </footer>
+</section>
 }
 
 <section class="pdf-page">
@@ -119,22 +125,36 @@
     Desglose de Pagos por Subcontratista
   </div>
 
-  <table>
+  <table class="payroll-summary">
+    <colgroup>
+      <col style="width: 72%" />
+      <col style="width: 28%" />
+    </colgroup>
+
     <thead>
       <tr>
-        <th>Nombre del Trabajador</th>
+        <th>Compañía / Nombre completo del trabajador</th>
         <th class="money">Pago Total</th>
       </tr>
     </thead>
 
     <tbody>
-      @for (employee of sortedReport().employees; track employee.employeeId) {
-        <tr>
-          <td>{{ employee.name }}</td>
-          <td class="money">
-            {{ employee.total | currency:'USD':'symbol':'1.2-2':'en-US' }}
-          </td>
-        </tr>
+      @for (
+      employee of sortedReport().employees;
+      track employee.employeeId
+      ) {
+      <tr>
+        <td class="payroll-worker-name-cell">
+          {{ employee.name }}
+        </td>
+
+        <td class="money">
+          {{
+          employee.total
+          | currency:'USD':'symbol':'1.2-2':'en-US'
+          }}
+        </td>
+      </tr>
       }
     </tbody>
   </table>

@@ -1,3 +1,7 @@
+<app-assignment-inbox
+    [previewInPlace]="true"
+    (previewRequested)="openAssignmentDetail($event)"
+    (changed)="reloadAssignments()" />
 <div class="calendario-wrapper">
   @if (loading()) {
     <p class="loading-msg">Cargando tus trabajos...</p>

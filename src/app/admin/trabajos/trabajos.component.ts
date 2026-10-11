@@ -1,4 +1,6 @@
 import { Cliente } from '../../core/models/cliente.model';
+import { AssignmentHistoryComponent } from '../../shared/assignments/assignment-history.component';
+import { lineTotal } from '../../core/services/utils/report-material-comparison';
 import { ClientesService } from '../../core/services/clientes.service';
 import {
     Component,
@@ -50,6 +52,7 @@ interface NecessaryMaterialRow {
     selector: 'app-trabajos',
     standalone: true,
     imports: [
+        AssignmentHistoryComponent,
         ReactiveFormsModule,
         SwalComponent,
         SwalPortalDirective,
@@ -60,6 +63,7 @@ interface NecessaryMaterialRow {
     styleUrl: './trabajos.component.css'
 })
 export class TrabajosComponent implements OnInit, OnDestroy {
+    private expectedAssignmentId: number | null = null;
     private readonly clientesService = inject(ClientesService);
     readonly clientes = signal<Cliente[]>([]);
     readonly clientesLoading = signal(false);
@@ -372,7 +376,10 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             });
             this.colorByEmployeeId.set(colors);
 
-            const active = users.filter((u) => u.status !== 'Unemployed');
+            const active = users.filter(
+              (u) => (u.status ?? '').trim().toLowerCase() === 'active'
+            );
+
             this.employees.set(
                 active.filter((u) =>
                     u.roles?.some((r) => r.name === 'ROLE_EMPLOYEE')
@@ -575,11 +582,16 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     necessaryTotal(): number {
-        return this.necessaryMaterials().reduce(
-            (sum, r) => sum + r.quantity * r.price,
-            0
-        );
-    }
+    const totalCents = this.necessaryMaterials().reduce(
+        (sum, row) =>
+            sum + Math.round(
+                lineTotal(row.quantity, row.price) * 100
+            ),
+        0
+    );
+
+    return totalCents / 100;
+}
 
     private recalcPay(): void {
         this.form.controls.pay.setValue(
@@ -679,6 +691,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
             this.isDuplicating.set(duplicate);
             this.editingId.set(duplicate ? null : jobId);
+            this.expectedAssignmentId = duplicate
+              ? null
+              : (data.assignmentId ?? null);
             this.clientSearchModal.set('');
             this.necessaryMaterials.set([]);
             this.selectedMaterialIds.set(new Set());
@@ -922,6 +937,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         }));
 
         const request: JobRequest = {
+            expectedAssignmentId: this.editingId() === null
+              ? null
+              : this.expectedAssignmentId,
             sendNotification,
             clientName: raw.clientName.trim(),
             clientPhone: raw.clientPhone.trim(),

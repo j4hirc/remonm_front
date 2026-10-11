@@ -136,8 +136,16 @@ export class ReporteEmployeeComponent
   }
 
   necessaryTotal(): number {
-    return this.necessary().reduce((s, r) => s + lineTotal(r.quantity, r.price), 0);
-  }
+    const totalCents = this.necessary().reduce(
+        (sum, row) =>
+            sum + Math.round(
+                lineTotal(row.quantity, row.price) * 100
+            ),
+        0
+    );
+
+    return totalCents / 100;
+}
 
   updateQty(materialId: number, qty: number): void {
     if (this.saving()) return;

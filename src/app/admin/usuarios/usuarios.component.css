@@ -391,3 +391,233 @@ button:disabled {
   color: #c62828;
   font-size: 0.8rem;
 }
+
+.company-value {
+  min-width: 0;
+  max-width: 22rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Lista de usuarios compacta */
+:host {
+    min-width: 0;
+}
+
+.users-container {
+    min-width: 0;
+    padding: 16px;
+    border-radius: 14px;
+}
+
+.users-container,
+.users-container * {
+    box-sizing: border-box;
+}
+
+.header-section {
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+}
+
+.header-section h2 {
+    font-size: 20px;
+}
+
+.filters-wrapper {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.search-box {
+    min-width: 0;
+    width: 230px;
+}
+
+.search-input,
+.status-select {
+    min-height: 36px;
+    font-size: 12px;
+    border-radius: 7px;
+}
+
+.status-select {
+    width: auto;
+    min-width: 155px;
+    padding: 8px 10px;
+}
+
+.btn-add {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 12px;
+    letter-spacing: 0;
+}
+
+/* Las columnas respetan el ancho disponible */
+.table-container {
+    width: 100%;
+    min-width: 0;
+}
+
+.users-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.users-table th,
+.users-table td {
+    padding: 9px 6px;
+    line-height: 1.3;
+    vertical-align: middle;
+}
+
+.users-table th {
+    font-size: 10px;
+    letter-spacing: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.users-table td {
+    font-size: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+/* Total: 100% */
+.users-table th:nth-child(1) { width: 4%; }  /* ID */
+.users-table th:nth-child(2) { width: 18%; } /* Nombre */
+.users-table th:nth-child(3) { width: 13%; } /* Compañía */
+.users-table th:nth-child(4) { width: 22%; } /* Email */
+.users-table th:nth-child(5) { width: 11%; } /* Teléfono */
+.users-table th:nth-child(6) { width: 13%; } /* Roles */
+.users-table th:nth-child(7) { width: 6%; }  /* Jerarquía */
+.users-table th:nth-child(8) { width: 7%; }  /* Estado */
+.users-table th:nth-child(9) { width: 6%; }  /* Acciones */
+
+.user-name-cell {
+    min-width: 0;
+    gap: 6px;
+}
+
+.user-name-cell > span:last-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.color-dot {
+    width: 9px;
+    height: 9px;
+}
+
+.users-table .company-value {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.status-badge {
+    max-width: 100%;
+    padding: 3px 5px;
+    font-size: 10px;
+    line-height: 1.2;
+}
+
+.users-table th:nth-child(7),
+.users-table td:nth-child(7),
+.users-table th:nth-child(8),
+.users-table td:nth-child(8),
+.users-table th:nth-child(9),
+.users-table td:nth-child(9) {
+    text-align: center;
+}
+
+.users-table .actions {
+    justify-content: center;
+    gap: 4px;
+}
+
+.users-table .btn-edit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 12px;
+}
+
+/* Filtros compactos en pantallas intermedias */
+@media (min-width: 769px) and (max-width: 1100px) {
+    .header-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters-wrapper {
+        flex-direction: row;
+        width: 100%;
+    }
+
+    .search-box {
+        flex: 1;
+        width: auto;
+    }
+
+    .status-select,
+    .btn-add {
+        width: auto;
+    }
+}
+
+/* Mantiene las tarjetas móviles, con menos espacio */
+@media (max-width: 768px) {
+    .users-container {
+        padding: 12px;
+    }
+
+    .search-box,
+    .status-select,
+    .btn-add {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .mobile-cards {
+        gap: 8px;
+    }
+
+    .user-card {
+        min-width: 0;
+        padding: 12px;
+        border-radius: 10px;
+    }
+
+    .card-header {
+        margin-bottom: 6px;
+        padding-bottom: 6px;
+        font-size: 13px;
+    }
+
+    .card-details {
+        margin-bottom: 8px;
+    }
+
+    .card-details li {
+        padding: 3px 0;
+        font-size: 12px;
+    }
+
+    .card-details strong {
+        min-width: 0;
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+}

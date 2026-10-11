@@ -12,6 +12,7 @@ export interface User {
   lastName: string;
   secondSurname?: string | null;
   title: string;
+  companyName?: string | null;
   hierarchyLevel?: number | null;
   email: string;
   phone: string;
@@ -35,6 +36,7 @@ export interface UserRequest {
   dateOfEntry: string;
   status: string;
   title: string;
+  companyName?: string | null;
   hierarchyLevel: number | null;
   roles: string[];
   color: string;

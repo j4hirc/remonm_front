@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AssignmentInboxComponent } from '../../shared/assignments/assignment-inbox.component';
 
 interface DashCard {
   title: string;
@@ -12,7 +13,7 @@ interface DashCard {
 @Component({
   selector: 'app-employee-dashboard',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, AssignmentInboxComponent],
   templateUrl: './employee-dashboard.component.html',
   styleUrl: './employee-dashboard.component.css'
 })

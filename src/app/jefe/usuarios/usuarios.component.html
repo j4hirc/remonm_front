@@ -54,6 +54,7 @@
         <tr>
           <th scope="col">ID</th>
           <th scope="col">Nombre</th>
+          <th scope="col">Compañía</th>
           <th scope="col">Email</th>
           <th scope="col">Teléfono</th>
           <th scope="col">Roles</th>
@@ -71,6 +72,9 @@
               <span class="color-dot" [style.background]="user.color" aria-hidden="true"></span>
               <span>{{ fullName(user) }}</span>
             </div>
+          </td>
+          <td class="company-value">
+            {{ user.companyName || 'Sin compañía' }}
           </td>
           <td>{{ user.email }}</td>
           <td>{{ user.phone }}</td>
@@ -118,6 +122,12 @@
         <li>
           <span>Roles</span>
           <strong>{{ rolesLabel(user) }}</strong>
+        </li>
+        <li>
+          <span>Compañía</span>
+          <strong class="company-value">
+            {{ user.companyName || 'Sin compañía' }}
+          </strong>
         </li>
         <li>
           <span>Jerarquía</span>
@@ -186,6 +196,24 @@
     </div>
 
     <div class="form-row">
+      <label for="user-companyName">
+        Compañía (opcional)
+      </label>
+
+      <input id="user-companyName" class="input-field" type="text" formControlName="companyName" maxlength="255"
+        placeholder="Ej: REMOMN" [readOnly]="isSaving()" />
+
+      @if (
+      form.controls.companyName.touched &&
+      form.controls.companyName.invalid
+      ) {
+      <small class="hierarchy-error" role="alert">
+        La compañía no puede superar los 255 caracteres.
+      </small>
+      }
+    </div>
+
+    <div class="form-row">
       <label for="user-email">Email</label>
       <input id="user-email" class="input-field" type="email" formControlName="email" [readOnly]="isSaving()" />
     </div>
@@ -235,7 +263,9 @@
         [disabled]="isSaving()" />
     </div>
     <div class="form-row">
-      <label for="user-hierarchyLevel">Jerarquía (opcional)</label>
+      <label for="user-hierarchyLevel">
+        Jerarquía (obligatoria para subcontratistas)
+      </label>
 
       <input id="user-hierarchyLevel" class="input-field" type="number" min="1" max="2147483647" step="1"
         formControlName="hierarchyLevel" placeholder="Sin jerarquía" [readOnly]="isSaving()"

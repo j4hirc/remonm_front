@@ -12,6 +12,9 @@ export class ReportDataService {
     return forkJoin({ jobs: this.jobs.getAll(), users: this.users.getAll(), materials: this.materials.getAll() });
   }
   payroll() {
-    return forkJoin({ jobs: this.jobs.getAll(), users: this.users.getAll() });
-  }
+  return forkJoin({
+    jobs: this.jobs.getAll(),
+    users: this.users.getAllForManagement()
+  });
+}
 }

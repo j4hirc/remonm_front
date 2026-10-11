@@ -87,6 +87,32 @@ function updateDay(value: string | number[]): number | null {
   const match = /^(\d{4}-\d{2}-\d{2})(?:T|\s|$)/.exec(value);
   return match ? parseJobDay(match[1]) : null;
 }
+function payrollEmployeeName(
+  user: User | undefined,
+  fallback: string
+): string {
+  if (!user) {
+    return fallback;
+  }
+
+  const fullName = [
+    user.firstName,
+    user.middleName,
+    user.lastName,
+    user.secondSurname
+  ]
+    .map(part => (part ?? '').trim())
+    .filter(Boolean)
+    .join(' ');
+
+  const name = fullName || user.name?.trim() || fallback;
+  const company = user.companyName?.trim();
+
+  return company
+    ? `${company} - ${name}`
+    : name;
+}
+
 export function buildPayrollReport(
   jobs: readonly Job[],
   users: readonly User[],
@@ -170,15 +196,16 @@ export function buildPayrollReport(
     let group = groups.get(job.employeeId);
 
     if (!group) {
-      const hasUser = users.some(
+      const user = users.find(
         user => user.userId === job.employeeId
       );
 
       group = {
         employeeId: job.employeeId,
-        name: hasUser
-          ? employeeName(users, job.employeeId)
-          : job.nameEmployee?.trim() || `ID: ${job.employeeId}`,
+        name: payrollEmployeeName(
+          user,
+          job.nameEmployee?.trim() || `ID: ${job.employeeId}`
+        ),
         jobs: [],
         total: 0
       };
@@ -223,10 +250,10 @@ export function buildPayrollReport(
 
         price:
           update.price != null &&
-          Number.isFinite(Number(update.price))
+            Number.isFinite(Number(update.price))
             ? Math.round(
-                Math.max(0, Number(update.price)) * 100
-              ) / 100
+              Math.max(0, Number(update.price)) * 100
+            ) / 100
             : null,
 
         status: update.status || null,

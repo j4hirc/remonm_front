@@ -71,6 +71,7 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
     dateOfEntry: ['', Validators.required],
     status: ['Active', Validators.required],
     title: ['', Validators.required],
+    companyName: ['', Validators.maxLength(255)],
     hierarchyLevel: this.formBuilder.control<number | null>(null, [
       Validators.min(1),
       Validators.max(2147483647),
@@ -230,6 +231,7 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
         : '',
       status: user?.status ?? 'Active',
       title: user?.title ?? '',
+      companyName: user?.companyName ?? '',
       hierarchyLevel: user?.hierarchyLevel ?? null,
       color: user?.color ?? '#12cff4',
       roleAdmin: roleNames.has('ROLE_ADMIN'),
@@ -297,6 +299,13 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
     const raw = this.form.getRawValue();
     const hierarchyLevel = raw.hierarchyLevel ?? null;
 
+    if (raw.roleEmployee && hierarchyLevel === null) {
+  Swal.showValidationMessage(
+    'Los subcontratistas deben tener una jerarquía.'
+  );
+  return false;
+}
+
     if (
       hierarchyLevel !== null &&
       (
@@ -347,6 +356,7 @@ export class UsuariosJefeComponent implements OnInit, OnDestroy {
       dateOfEntry: raw.dateOfEntry,
       status: raw.status,
       title: raw.title.trim(),
+      companyName: raw.companyName.trim() || null,
       hierarchyLevel,
       roles,
       color: raw.color
