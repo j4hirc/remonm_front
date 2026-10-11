@@ -57,7 +57,7 @@ import { Router } from '@angular/router';
           <p>
             Responder antes de:
             <strong>
-              {{ a.expiresAt | date:'dd/MM/yyyy HH:mm' }}
+              {{ a.expiresAt | date:'MM/dd/yyyy HH:mm' }}
             </strong>
             (hora local)
           </p>

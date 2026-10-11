@@ -1,5 +1,5 @@
 import { jobLocation, escapeLocationHtml } from '../../core/utils/job-location';
-
+import { formatDate as angularFormatDate } from '@angular/common';
 import {
   AfterViewInit,
   Component,
@@ -144,16 +144,26 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
     return new Date().toISOString().split('T')[0];
   }
 
-  private formatDate(fecha: string | number[] | null | undefined): string {
+private formatDate(
+    fecha: string | number[] | null | undefined
+): string {
     if (!fecha) return 'Sin fecha asignada';
+
     if (Array.isArray(fecha)) {
-      const [y, m, d] = fecha;
-      return `${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}-${y}`;
+        const [year, month, day] = fecha;
+
+        return `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}/${year}`;
     }
-    const parts = String(fecha).split('-');
-    if (parts.length === 3) return `${parts[1]}-${parts[2]}-${parts[0]}`;
-    return String(fecha);
-  }
+
+    const dateOnly = fecha.split('T')[0];
+    const parts = dateOnly.split('-');
+
+    if (parts.length !== 3) return fecha;
+
+    const [year, month, day] = parts;
+
+    return `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year}`;
+}
 
   private cleanDescription(desc?: string | null): string {
     if (!desc) return '';
@@ -323,16 +333,16 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
       mats.length === 0
         ? `<li style="list-style:none;color:#666;font-size:13px;">No hay materiales registrados en la orden.</li>`
         : mats
-            .map((m: any) => {
-              const qty = m.quantity && m.quantity > 0 ? m.quantity : '';
-              const unit = m.unit && m.unit !== 'N/A' ? m.unit : '';
-              const text = qty || unit ? `${qty} ${unit}`.trim() : 'Asignado';
-              return `<li style="list-style:none;margin-bottom:8px;font-size:13px;color:#2B3674;display:flex;gap:8px;align-items:center;">
+          .map((m: any) => {
+            const qty = m.quantity && m.quantity > 0 ? m.quantity : '';
+            const unit = m.unit && m.unit !== 'N/A' ? m.unit : '';
+            const text = qty || unit ? `${qty} ${unit}`.trim() : 'Asignado';
+            return `<li style="list-style:none;margin-bottom:8px;font-size:13px;color:#2B3674;display:flex;gap:8px;align-items:center;">
                 <i class="fa-solid fa-circle-check" style="color:#00B8A9;"></i>
                 <span>${m.name}: <strong style="color:#12CFF4;">${text}</strong></span>
               </li>`;
-            })
-            .join('');
+          })
+          .join('');
 
     const planos = job.blueprintUrls || [];
     const planoHtml =
@@ -388,22 +398,25 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
           </div>
           <div style="text-align:center;margin:12px 0 18px;">${prioridadHTML}</div>
           
-          ${
-            assignment
-              ? `
+          ${assignment
+          ? `
             <div style="margin:10px 0;padding:10px;background:#fff7e6;border:1px solid #ffe0a3;border-radius:8px;font-size:13px;">
               <strong>Esperando tu aceptación</strong><br>
               Responder antes de:
               ${escapeLocationHtml(
-                assignment.expiresAt
-                  ? new Date(assignment.expiresAt).toLocaleString('es-EC')
-                  : 'Sin fecha',
-              )}
+            assignment.expiresAt
+              ? angularFormatDate(
+                assignment.expiresAt,
+                'MM/dd/yyyy HH:mm',
+                'en-US'
+              )
+              : 'Sin fecha',
+          )}
               (hora de tu dispositivo).
             </div>
           `
-              : ''
-          }
+          : ''
+        }
           
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-regular fa-calendar" style="color:#00B8A9;width:20px;"></i> Fecha:</strong> ${p.fechaHermosa}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-house" style="color:#00B8A9;width:20px;"></i> Propiedad:</strong> ${job.clientName}</p>
