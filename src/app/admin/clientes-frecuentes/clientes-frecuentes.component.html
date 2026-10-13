@@ -232,9 +232,16 @@
           autocomplete="street-address"
           placeholder="Busca una dirección o selecciona un punto en el mapa"
           aria-required="true"
-          (blur)="searchAddressOnMap()"
+          (input)="onAddressInput()" (blur)="searchAddressOnMap()"
           (keydown)="onAddressKeydown($event)"
         />
+        @if (addressSearching()) {
+          <small role="status">Buscando dirección...</small>
+        } @else if (addressStatus(); as st) {
+          <small role="status" [style.color]="st.kind === 'warn' ? '#b45309' : '#0f4c81'">
+            {{ st.text }}
+          </small>
+        }
       </label>
 
       <div

@@ -408,7 +408,7 @@
         <div class="form-row">
             <label for="jobAddress">Dirección (Texto)</label>
             <input id="jobAddress" class="input-field" type="text" formControlName="address"
-                placeholder="Dirección exacta" [readOnly]="isSaving()" (blur)="searchAddressOnMap()"
+                placeholder="Dirección exacta" [readOnly]="isSaving()" (input)="onAddressInput()" (blur)="searchAddressOnMap()"
                 (keydown)="onAddressKeydown($event)" />
 
             @if (addressSearching()) {

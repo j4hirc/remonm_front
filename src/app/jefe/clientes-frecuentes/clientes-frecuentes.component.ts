@@ -1,3 +1,4 @@
+import { findAddress } from '../../core/utils/address-search';
 import {
   Component,
   DestroyRef,
@@ -40,7 +41,11 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
 
   private map: any = null;
   private marker: any = null;
-  private searchingAddress = false;
+  readonly addressStatus = signal<{ kind: 'info' | 'warn'; text: string } | null>(null);
+  readonly addressSearching = signal(false);
+  private lastSearchedAddress = '';
+  private confirmedAddress = '';
+  private searchToken = 0;
 
   readonly clientes = signal<Cliente[]>([]);
   readonly loading = signal(false);
@@ -267,6 +272,8 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
   }
 
   private destroyMap(): void {
+    this.searchToken++;
+    this.addressSearching.set(false);
     if (this.map) {
       this.map.remove();
       this.map = null;
@@ -281,152 +288,111 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
     }
   }
 
-  private reverseGeocode(lat: number, lng: number): void {
-    fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=es&addressdetails=1`
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data?.address) return;
-        const a = data.address;
-        const calle = [a.house_number || '', a.road || a.pedestrian || '']
-          .filter(Boolean)
-          .join(' ');
-        const partes = [
-          calle,
-          a.city || a.town || a.village || a.municipality || '',
-          a.state || a.province || '',
-          a.country || ''
-        ].filter(Boolean);
-        this.form.controls.address.setValue(partes.join(', '));
-      })
-      .catch(() => undefined);
+  onAddressInput(): void {
+    this.searchToken++;
+    this.lastSearchedAddress = '';
+    this.confirmedAddress = '';
+    this.addressSearching.set(false);
+    this.addressStatus.set(null);
   }
 
-  // ======================================================
-  // BÚSQUEDA DE DIRECCIONES (igual que Trabajos)
-  // ======================================================
-
-  searchAddressOnMap(): void {
-    const textoOriginal = this.form.controls.address.value?.trim();
-    if (!textoOriginal) return;
-
-    // 1. Coordenadas pegadas (lat, lng)
-    const regexCoords = /^[-+]?\d+(\.\d+)?\s*,\s*[-+]?\d+(\.\d+)?$/;
-    if (regexCoords.test(textoOriginal)) {
-      const [latStr, lngStr] = textoOriginal.split(',');
-      const latV = parseFloat(latStr.trim());
-      const lngV = parseFloat(lngStr.trim());
-      if (!isNaN(latV) && !isNaN(lngV)) {
-        this.setMapPosition(latV, lngV, false);
+  async searchAddressOnMap(force = false): Promise<void> {
+    const original = this.form.controls.address.value?.trim() ?? '';
+    if (!original || (!force && original === this.lastSearchedAddress)) return;
+    if (this.addressSearching() && original === this.lastSearchedAddress) return;
+    const token = ++this.searchToken;
+    this.lastSearchedAddress = original;
+    this.confirmedAddress = '';
+    this.addressStatus.set(null);
+    const coords = original.match(/^([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)$/);
+    if (coords) {
+      const lat = Number(coords[1]), lon = Number(coords[2]);
+      if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+        this.setMapPosition(lat, lon);
+        this.confirmedAddress = original;
+      } else {
+        this.addressStatus.set({ kind: 'warn', text: 'Coordenadas fuera de rango.' });
       }
       return;
     }
-
-    // 2. Normalizar y buscar
-    const texto = this.normalizeAddress(textoOriginal);
-
-    fetch(
-      `https://nominatim.openstreetmap.org/search?` +
-      `format=json&q=${encodeURIComponent(texto)}` +
-      `&addressdetails=1&limit=5&accept-language=es,en`
-    )
-      .then((r) => r.json())
-      .then((results: any[]) => {
-        if (results?.length > 0) {
-          const best = results[0];
-          this.setMapPosition(
-            parseFloat(best.lat),
-            parseFloat(best.lon),
-            false
-          );
-        } else {
-          void Swal.fire({
-            icon: 'warning',
-            title: 'No encontrado',
-            text: 'No se encontró esa dirección. Intenta ser más específico o mueve el marcador en el mapa.',
-            confirmButtonColor: '#e65100',
-            timer: 3200,
-            timerProgressBar: true
-          });
-        }
-      })
-      .catch((err) => {
-        console.error('Error geocoding:', err);
-        void Swal.fire({
-          icon: 'error',
-          title: 'Error de búsqueda',
-          text: 'No se pudo buscar la dirección. Intenta de nuevo.',
-          confirmButtonColor: '#e65100'
+    this.addressSearching.set(true);
+    try {
+      const found = await findAddress(original, () =>
+        token === this.searchToken && !this.destroyRef.destroyed
+      );
+      if (token !== this.searchToken || this.destroyRef.destroyed) return;
+      if (!found) {
+        this.lastSearchedAddress = '';
+        this.addressStatus.set({
+          kind: 'warn',
+          text: 'No se pudo verificar el número, la calle y la zona. El marcador no se actualizó. Selecciona el punto correcto en el mapa o pega sus coordenadas.'
         });
+        return;
+      }
+      this.setMapPosition(found.lat, found.lon);
+      this.confirmedAddress = original;
+      this.addressStatus.set({
+        kind: 'info',
+        text: 'Se encontró una coincidencia de dirección. Revisa el marcador antes de guardar.'
       });
+    } finally {
+      if (token === this.searchToken) this.addressSearching.set(false);
+    }
   }
 
-  private normalizeAddress(address: string): string {
-    return address
-      .replace(/\b(\d+)\s+1\/2\b/gi, '$1th')
-      .replace(/\b(\d+)\s+½\b/gi, '$1th')
-      .replace(/\b(\d+)\s+1\/4\b/gi, '$1th')
-      .replace(/\b(\d+)\s+3\/4\b/gi, '$1th')
-      .replace(/\bSt\b\.?/gi, 'Street')
-      .replace(/\bAve\b\.?/gi, 'Avenue')
-      .replace(/\bBlvd\b\.?/gi, 'Boulevard')
-      .replace(/\bRd\b\.?/gi, 'Road')
-      .replace(/\bDr\b\.?/gi, 'Drive')
-      .replace(/\bLn\b\.?/gi, 'Lane')
-      .replace(/\bCt\b\.?/gi, 'Court')
-      .replace(/\bW\b(?=\s)/gi, 'West')
-      .replace(/\bE\b(?=\s)/gi, 'East')
-      .replace(/\bN\b(?=\s)/gi, 'North')
-      .replace(/\bS\b(?=\s)/gi, 'South')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  private setMapPosition(
-    lat: number,
-    lng: number,
-    updateAddress = true
-  ): void {
+  private setMapPosition(lat: number, lng: number, manual = false): void {
     this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
     this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
-
-    if (this.map && this.marker) {
-      this.marker.setLatLng([lat, lng]);
-      this.map.setView([lat, lng], 17);
-      setTimeout(() => {
-        this.map?.invalidateSize(true);
-      }, 100);
-    }
-
-    if (updateAddress) {
-      this.reverseGeocode(lat, lng);
-    }
+    this.marker?.setLatLng([lat, lng]);
+    this.map?.setView([lat, lng], 17);
+    setTimeout(() => this.map?.invalidateSize(true), 100);
+    if (manual) this.reverseGeocode(lat, lng);
   }
 
-  onAddressKeydown(e: KeyboardEvent): void {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      e.stopPropagation();
-      this.searchAddressOnMap();
+  // Lo llaman los eventos click/dragend existentes del mapa.
+  // Conserva el texto escrito, sin sustituirlo por una dirección vecina.
+  private reverseGeocode(lat: number, lng: number): void {
+    this.searchToken++;
+    this.addressSearching.set(false);
+    const address = this.form.controls.address.value?.trim() ||
+      `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    this.form.controls.address.setValue(address);
+    this.lastSearchedAddress = address;
+    this.confirmedAddress = address;
+    this.addressStatus.set({ kind: 'info', text: 'Ubicación seleccionada manualmente.' });
+  }
+
+  private validateAddressLocation(): boolean {
+    const address = this.form.controls.address.value?.trim();
+    if (this.addressSearching() || !address || address !== this.confirmedAddress) {
+      Swal.showValidationMessage('Busca la dirección y verifica su ubicación, o selecciona el punto correcto en el mapa.');
+      return false;
+    }
+    return true;
+  }
+
+  onAddressKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+      void this.searchAddressOnMap(true);
     }
   }
 
   myLocation(): void {
     if (!navigator.geolocation) {
-      void Swal.fire(
-        'No soportado',
-        'Tu navegador no soporta geolocalización.',
-        'warning'
-      );
+      this.addressStatus.set({ kind: 'warn', text: 'Tu navegador no soporta geolocalización.' });
       return;
     }
+    const token = ++this.searchToken;
+    this.addressSearching.set(false);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      pos => {
+        if (token !== this.searchToken || this.destroyRef.destroyed) return;
         this.setMapPosition(pos.coords.latitude, pos.coords.longitude, true);
       },
       () => {
-        void Swal.fire('Error', 'No se pudo obtener tu ubicación.', 'error');
+        if (token === this.searchToken) this.addressStatus.set({ kind: 'warn', text: 'No se pudo obtener tu ubicación.' });
       },
       { enableHighAccuracy: true }
     );
@@ -471,6 +437,9 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
       longitude: cliente?.longitude ?? -79.005896
     });
 
+    this.lastSearchedAddress = cliente?.address.trim() ?? '';
+    this.confirmedAddress = this.lastSearchedAddress;
+    this.addressStatus.set(null);
     this.editorOpen.set(true);
     try {
       const result = await this.editor().fire();
@@ -491,6 +460,7 @@ export class ClientesFrecuentesJefeComponent implements OnInit, OnDestroy {
   }
 
   private async persistClient(): Promise<boolean> {
+    if (!this.validateAddressLocation()) return false;
     if (this.busy()) return false;
     this.form.markAllAsTouched();
     const raw = this.form.getRawValue();
