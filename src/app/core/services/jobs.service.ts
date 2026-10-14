@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpContext} from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
+
 
 import {
   NAVIGATION_CACHE
@@ -8,6 +9,7 @@ import {
 
 import { environment } from '../../../environments/environment';
 import { Job, JobRequest } from '../models/job.model';
+import { withCurrentMaterialPay } from './utils/job-current-pay';
 
 @Injectable({
   providedIn: 'root'
@@ -16,22 +18,24 @@ export class JobsService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/jobs`;
 
-  getAll(useNavigationCache = false): Observable<Job[]> {
+  getAll(_useNavigationCache = false): Observable<Job[]> {
   return this.http.get<Job[]>(`${this.apiUrl}/all`, {
     context: new HttpContext().set(
       NAVIGATION_CACHE,
-      useNavigationCache
+      false
     )
-  });
+  }).pipe(map(jobs => jobs.map(withCurrentMaterialPay)));
 }
 
   getById(id: number): Observable<Job> {
-    return this.http.get<Job>(`${this.apiUrl}/find-id/${id}`);
+    return this.http.get<Job>(`${this.apiUrl}/find-id/${id}`)
+      .pipe(map(withCurrentMaterialPay));
   }
 
   create(request: JobRequest, files: File[] = []): Observable<Job> {
     const formData = this.toFormData(request, files);
-    return this.http.post<Job>(`${this.apiUrl}/create-job`, formData);
+    return this.http.post<Job>(`${this.apiUrl}/create-job`, formData)
+      .pipe(map(withCurrentMaterialPay));
   }
 
   update(
@@ -40,7 +44,8 @@ export class JobsService {
     files: File[] = []
   ): Observable<Job> {
     const formData = this.toFormData(request, files);
-    return this.http.put<Job>(`${this.apiUrl}/update-job/${id}`, formData);
+    return this.http.put<Job>(`${this.apiUrl}/update-job/${id}`, formData)
+      .pipe(map(withCurrentMaterialPay));
   }
 
   delete(id: number): Observable<string> {
