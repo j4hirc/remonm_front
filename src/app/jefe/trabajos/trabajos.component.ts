@@ -800,7 +800,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 description: descripcion,
                 priority: data.priority ?? 2,
                 jobDate: this.fechaParaInput(data.jobDate),
-                pay: data.pay ?? 0,
+                pay: data.pay || 0,
                 safeDepositBoxCodes: data.safeDepositBoxCodes || '',
                 quickbooksInvoice: duplicate
                     ? ''
@@ -839,11 +839,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
 
             this.selectedMaterialIds.set(set);
 
-            // Al editar, conservar el pago recibido del backend.
-            // Recalcular aquí solamente para un duplicado.
-            if (duplicate) {
-                this.recalcPay();
-            }
+            this.recalcPay();
 
             const editorCmp = this.editor();
 
@@ -976,7 +972,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         if (!this.validateAddressLocation()) return false;
         this.isSaving.set(true);
         try {
-            // Guardar el pago correspondiente a los materiales actuales.
+            // Asegurar que se guarde exactamente el total de los materiales.
             this.recalcPay();
 
             const raw = this.form.getRawValue();

@@ -734,7 +734,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 description: descripcion,
                 priority: data.priority ?? 2,
                 jobDate: this.fechaParaInput(data.jobDate),
-                pay: data.pay ?? 0,
+                pay: data.pay || 0,
                 safeDepositBoxCodes: data.safeDepositBoxCodes || '',
                 quickbooksInvoice: duplicate
                     ? ''
@@ -776,11 +776,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
             this.selectedMaterialIds.set(set);
 
-            // Al editar, conservar el pago recibido del backend.
-            // Un duplicado es un trabajo nuevo y usa sus materiales.
-            if (duplicate) {
-                this.recalcPay();
-            }
+            // Con todos los materiales cargados, sincronizar el pago.
+            this.recalcPay();
 
             const editorCmp = this.editor();
 
@@ -915,7 +912,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
         this.isSaving.set(true);
 
-        // Guardar el pago correspondiente a los materiales actuales.
+        // Asegurar que se guarde exactamente el total de los materiales.
         this.recalcPay();
 
         const raw = this.form.getRawValue();
