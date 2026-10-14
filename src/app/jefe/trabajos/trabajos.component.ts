@@ -181,7 +181,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     readonly addressStatus = signal<{ kind: 'info' | 'warn'; text: string } | null>(null);
     readonly addressSearching = signal(false);
     private lastSearchedAddress = '';
-  private confirmedAddress = '';
+    private confirmedAddress = '';
     private searchToken = 0;
 
     readonly form = this.formBuilder.nonNullable.group({
@@ -285,26 +285,26 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     private async finalizarGuardado(): Promise<void> {
-    Swal.close();
+        Swal.close();
 
-    const desdeCalendario =
-        this.route.snapshot.queryParamMap.get('origen') === 'calendario';
+        const desdeCalendario =
+            this.route.snapshot.queryParamMap.get('origen') === 'calendario';
 
-    if (desdeCalendario) {
-        await this.volverAlCalendario();
-        return;
+        if (desdeCalendario) {
+            await this.volverAlCalendario();
+            return;
+        }
+
+        // Si no viene del calendario, solo muestra el toast
+        void Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Trabajo guardado',
+            showConfirmButton: false,
+            timer: 1600
+        });
     }
-
-    // Si no viene del calendario, solo muestra el toast
-    void Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: 'Trabajo guardado',
-        showConfirmButton: false,
-        timer: 1600
-    });
-}
 
 
     private async volverAlCalendario(): Promise<void> {
@@ -335,7 +335,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
                 this.loadUsers(),
                 this.loadMaterials(),
                 this.loadJobs()
-            ]); 
+            ]);
 
             if (this.destroyRef.destroyed || this.loadError()) {
                 return;
@@ -417,7 +417,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             this.colorByEmployeeId.set(colors);
 
             const active = users.filter(
-              (u) => (u.status ?? '').trim().toLowerCase() === 'active'
+                (u) => (u.status ?? '').trim().toLowerCase() === 'active'
             );
             this.employees.set(
                 active.filter((u) =>
@@ -636,16 +636,16 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     necessaryTotal(): number {
-    const totalCents = this.necessaryMaterials().reduce(
-        (sum, row) =>
-            sum + Math.round(
-                lineTotal(row.quantity, row.price) * 100
-            ),
-        0
-    );
+        const totalCents = this.necessaryMaterials().reduce(
+            (sum, row) =>
+                sum + Math.round(
+                    lineTotal(row.quantity, row.price) * 100
+                ),
+            0
+        );
 
-    return totalCents / 100;
-}
+        return totalCents / 100;
+    }
 
     private recalcPay(): void {
         this.form.controls.pay.setValue(
@@ -656,203 +656,50 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     // ---------- EDITOR ----------
 
     async openCreate(): Promise<void> {
-    if (this.isLoading() || this.editorOpen()) return;
+        if (this.isLoading() || this.editorOpen()) return;
 
-    this.editingId.set(null);
-    this.isDuplicating.set(false);
-    this.clientSearchModal.set('');
-    this.showClientList.set(false);
-    this.necessaryMaterials.set([]);
-    this.selectedMaterialIds.set(new Set());
-    this.blueprintFiles.set([]);
-    this.existingBlueprintUrls.set([]);
-    this.materialSearch.set('');
-    this.materialCategoryFilter.set('');
-
-    this.form.reset({
-        clientName: '',
-        clientPhone: '',
-        address: '',
-        buildingNumber: '',
-        apartment: '',
-        latitude: -2.900128,
-        longitude: -79.005896,
-        employeeId: '',
-        managerId: this.defaultManagerId(),
-        description: '',
-        priority: 2,
-        jobDate: '',
-        pay: 0,
-        safeDepositBoxCodes: '',
-        quickbooksInvoice: '',
-        status: 'PENDING'
-    });
-
-    const editorCmp = this.editor();
-
-    editorCmp.swalOptions = {
-        ...this.editorOptions,
-        confirmButtonText: 'Guardar trabajo',
-        showDenyButton: true,
-        denyButtonText: 'Guardar y enviar correo',
-        denyButtonColor: '#1565c0'
-    };
-
-    this.editorOptions = editorCmp.swalOptions;
-
-    this.editorOpen.set(true);
-
-    const result = await editorCmp.fire();
-
-    this.editorOpen.set(false);
-    this.destroyMap();
-
-    if (result.isDismissed) {
-        await this.volverAlCalendario();
-        return;
-    }
-
-    if (
-        (result.isConfirmed || result.isDenied)
-        && !this.destroyRef.destroyed
-    ) {
-        void Swal.fire({
-            title: 'Guardando trabajo...',
-            text: 'Por favor, espera.',
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
-            didOpen: () => Swal.showLoading()
-        });
-
-        try {
-            await this.persistJob(result.isDenied);
-            await this.finalizarGuardado();
-        } catch (error: unknown) {
-            await Swal.fire(
-                'Error',
-                this.getErrorMessage(error),
-                'error'
-            );
-        }
-    }
-}
-
-    /** Duplicar = abrir el editor con todo precargado, pero guardando como trabajo nuevo. */
-    openDuplicate(jobId: number): Promise<void> {
-        return this.openEdit(jobId, true);
-    }
-
-async openEdit(jobId: number, duplicate = false): Promise<void> {
-    if (this.isLoading() || this.editorOpen()) return;
-
-    void Swal.fire({
-        title: 'Cargando datos...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
-
-    try {
-        const data = await firstValueFrom(
-            this.jobsService.getById(jobId).pipe(
-                takeUntilDestroyed(this.destroyRef)
-            )
-        );
-
-        Swal.close();
-
-        this.isDuplicating.set(duplicate);
-        this.editingId.set(duplicate ? null : jobId);
-        this.expectedAssignmentId = duplicate
-          ? null
-          : (data.assignmentId ?? null);
+        this.editingId.set(null);
+        this.isDuplicating.set(false);
         this.clientSearchModal.set('');
         this.showClientList.set(false);
         this.necessaryMaterials.set([]);
         this.selectedMaterialIds.set(new Set());
         this.blueprintFiles.set([]);
-
-        this.existingBlueprintUrls.set(
-            duplicate ? [] : data.blueprintUrls || []
-        );
-
-        let descripcion = data.description || '';
-
-        if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
-            descripcion = descripcion
-                .split('[MATERIALES PRE-ASIGNADOS]:')[0]
-                .trim();
-        }
-
-        const managerId = data.managerId ?? this.managerFijoId;
-        this.ensureManagerInList(managerId);
+        this.existingBlueprintUrls.set([]);
+        this.materialSearch.set('');
+        this.materialCategoryFilter.set('');
 
         this.form.reset({
-            clientName: data.clientName || '',
-            clientPhone: data.clientPhone || '',
-            address: data.address || '',
-            buildingNumber: data.buildingNumber ?? '',
-            apartment: data.apartment ?? '',
-            latitude: data.latitude,
-            longitude: data.longitude,
-            employeeId: String(data.employeeId || ''),
-            managerId: String(managerId),
-            description: descripcion,
-            priority: data.priority ?? 2,
-            jobDate: this.fechaParaInput(data.jobDate),
-            pay: data.pay || 0,
-            safeDepositBoxCodes: data.safeDepositBoxCodes || '',
-            quickbooksInvoice: duplicate
-                ? ''
-                : data.quickbooksInvoice || '',
-            status: duplicate
-                ? 'PENDING'
-                : data.status || 'PENDING'
+            clientName: '',
+            clientPhone: '',
+            address: '',
+            buildingNumber: '',
+            apartment: '',
+            latitude: -2.900128,
+            longitude: -79.005896,
+            employeeId: '',
+            managerId: this.defaultManagerId(),
+            description: '',
+            priority: 2,
+            jobDate: '',
+            pay: 0,
+            safeDepositBoxCodes: '',
+            quickbooksInvoice: '',
+            status: 'PENDING'
         });
-
-        const mats = data.materials || [];
-        const set = new Set<number>();
-
-        mats.forEach((m) => {
-            const id = m.materialId;
-            set.add(id);
-
-            const info = this.materials().find(
-                (x) => x.materialId === id
-            );
-
-            this.addNecessary(
-                {
-                    materialId: id,
-                    name: m.name || info?.name || 'Material',
-                    count: info?.count ?? 0,
-                    price: duplicate
-                        ? (info?.price ?? m.price ?? 0)
-                        : (m.price ?? info?.price ?? 0),
-                    categoryName: info?.categoryName ?? m.categoryName ?? '',
-                    unit: m.unit ?? info?.unit ?? ''
-                },
-                m.quantity ?? 1,
-                false
-            );
-        });
-
-        this.selectedMaterialIds.set(set);
-        this.recalcPay();
 
         const editorCmp = this.editor();
 
         editorCmp.swalOptions = {
             ...this.editorOptions,
-            confirmButtonText: duplicate
-                ? 'Guardar duplicado'
-                : 'Guardar cambios',
+            confirmButtonText: 'Guardar trabajo',
             showDenyButton: true,
             denyButtonText: 'Guardar y enviar correo',
             denyButtonColor: '#1565c0'
         };
 
         this.editorOptions = editorCmp.swalOptions;
+
         this.editorOpen.set(true);
 
         const result = await editorCmp.fire();
@@ -870,9 +717,7 @@ async openEdit(jobId: number, duplicate = false): Promise<void> {
             && !this.destroyRef.destroyed
         ) {
             void Swal.fire({
-                title: this.isDuplicating()
-                    ? 'Creando copia...'
-                    : 'Actualizando trabajo...',
+                title: 'Guardando trabajo...',
                 text: 'Por favor, espera.',
                 allowOutsideClick: false,
                 allowEscapeKey: false,
@@ -891,24 +736,184 @@ async openEdit(jobId: number, duplicate = false): Promise<void> {
                 );
             }
         }
-    } catch (error: unknown) {
-        Swal.close();
+    }
 
-        await Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: this.getErrorMessage(error),
-            confirmButtonColor: '#12CFF4'
+    /** Duplicar = abrir el editor con todo precargado, pero guardando como trabajo nuevo. */
+    openDuplicate(jobId: number): Promise<void> {
+        return this.openEdit(jobId, true);
+    }
+
+    async openEdit(jobId: number, duplicate = false): Promise<void> {
+        if (this.isLoading() || this.editorOpen()) return;
+
+        void Swal.fire({
+            title: 'Cargando datos...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
         });
-    } finally {
-        this.isDuplicating.set(false);
 
-        if (this.editorOpen()) {
+        try {
+            const data = await firstValueFrom(
+                this.jobsService.getById(jobId).pipe(
+                    takeUntilDestroyed(this.destroyRef)
+                )
+            );
+
+            Swal.close();
+
+            this.isDuplicating.set(duplicate);
+            this.editingId.set(duplicate ? null : jobId);
+            this.expectedAssignmentId = duplicate
+                ? null
+                : (data.assignmentId ?? null);
+            this.clientSearchModal.set('');
+            this.showClientList.set(false);
+            this.necessaryMaterials.set([]);
+            this.selectedMaterialIds.set(new Set());
+            this.blueprintFiles.set([]);
+
+            this.existingBlueprintUrls.set(
+                duplicate ? [] : data.blueprintUrls || []
+            );
+
+            let descripcion = data.description || '';
+
+            if (descripcion.includes('[MATERIALES PRE-ASIGNADOS]:')) {
+                descripcion = descripcion
+                    .split('[MATERIALES PRE-ASIGNADOS]:')[0]
+                    .trim();
+            }
+
+            const managerId = data.managerId ?? this.managerFijoId;
+            this.ensureManagerInList(managerId);
+
+            this.form.reset({
+                clientName: data.clientName || '',
+                clientPhone: data.clientPhone || '',
+                address: data.address || '',
+                buildingNumber: data.buildingNumber ?? '',
+                apartment: data.apartment ?? '',
+                latitude: data.latitude,
+                longitude: data.longitude,
+                employeeId: String(data.employeeId || ''),
+                managerId: String(managerId),
+                description: descripcion,
+                priority: data.priority ?? 2,
+                jobDate: this.fechaParaInput(data.jobDate),
+                pay: data.pay ?? 0,
+                safeDepositBoxCodes: data.safeDepositBoxCodes || '',
+                quickbooksInvoice: duplicate
+                    ? ''
+                    : data.quickbooksInvoice || '',
+                status: duplicate
+                    ? 'PENDING'
+                    : data.status || 'PENDING'
+            });
+
+            const mats = data.materials || [];
+            const set = new Set<number>();
+
+            mats.forEach((m) => {
+                const id = m.materialId;
+                set.add(id);
+
+                const info = this.materials().find(
+                    (x) => x.materialId === id
+                );
+
+                this.addNecessary(
+                    {
+                        materialId: id,
+                        name: m.name || info?.name || 'Material',
+                        count: info?.count ?? 0,
+                        price: duplicate
+                            ? (info?.price ?? m.price ?? 0)
+                            : (m.price ?? info?.price ?? 0),
+                        categoryName: info?.categoryName ?? m.categoryName ?? '',
+                        unit: m.unit ?? info?.unit ?? ''
+                    },
+                    m.quantity ?? 1,
+                    false
+                );
+            });
+
+            this.selectedMaterialIds.set(set);
+
+            // Al editar, conservar el pago recibido del backend.
+            // Recalcular aquí solamente para un duplicado.
+            if (duplicate) {
+                this.recalcPay();
+            }
+
+            const editorCmp = this.editor();
+
+            editorCmp.swalOptions = {
+                ...this.editorOptions,
+                confirmButtonText: duplicate
+                    ? 'Guardar duplicado'
+                    : 'Guardar cambios',
+                showDenyButton: true,
+                denyButtonText: 'Guardar y enviar correo',
+                denyButtonColor: '#1565c0'
+            };
+
+            this.editorOptions = editorCmp.swalOptions;
+            this.editorOpen.set(true);
+
+            const result = await editorCmp.fire();
+
             this.editorOpen.set(false);
             this.destroyMap();
+
+            if (result.isDismissed) {
+                await this.volverAlCalendario();
+                return;
+            }
+
+            if (
+                (result.isConfirmed || result.isDenied)
+                && !this.destroyRef.destroyed
+            ) {
+                void Swal.fire({
+                    title: this.isDuplicating()
+                        ? 'Creando copia...'
+                        : 'Actualizando trabajo...',
+                    text: 'Por favor, espera.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                try {
+                    await this.persistJob(result.isDenied);
+                    await this.finalizarGuardado();
+                } catch (error: unknown) {
+                    await Swal.fire(
+                        'Error',
+                        this.getErrorMessage(error),
+                        'error'
+                    );
+                }
+            }
+        } catch (error: unknown) {
+            Swal.close();
+
+            await Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: this.getErrorMessage(error),
+                confirmButtonColor: '#12CFF4'
+            });
+        } finally {
+            this.isDuplicating.set(false);
+
+            if (this.editorOpen()) {
+                this.editorOpen.set(false);
+                this.destroyMap();
+            }
         }
     }
-}
 
     submitEditor(): void {
         if (!this.isSaving()) Swal.clickConfirm();
@@ -971,7 +976,7 @@ async openEdit(jobId: number, duplicate = false): Promise<void> {
         if (!this.validateAddressLocation()) return false;
         this.isSaving.set(true);
         try {
-            // Asegurar que se guarde exactamente el total de los materiales.
+            // Guardar el pago correspondiente a los materiales actuales.
             this.recalcPay();
 
             const raw = this.form.getRawValue();
@@ -1007,8 +1012,8 @@ async openEdit(jobId: number, duplicate = false): Promise<void> {
 
             const request: JobRequest = {
                 expectedAssignmentId: this.editingId() === null
-              ? null
-              : this.expectedAssignmentId,
+                    ? null
+                    : this.expectedAssignmentId,
                 sendNotification,
                 clientName: raw.clientName.trim(),
                 clientPhone: raw.clientPhone.trim(),
@@ -1389,115 +1394,115 @@ async openEdit(jobId: number, duplicate = false): Promise<void> {
         }
     }
 
-  onAddressInput(): void {
-    this.searchToken++;
-    this.lastSearchedAddress = '';
-    this.confirmedAddress = '';
-    this.addressSearching.set(false);
-    this.addressStatus.set(null);
-  }
-
-  async searchAddressOnMap(force = false): Promise<void> {
-    const original = this.form.controls.address.value?.trim() ?? '';
-    if (!original || (!force && original === this.lastSearchedAddress)) return;
-    if (this.addressSearching() && original === this.lastSearchedAddress) return;
-    const token = ++this.searchToken;
-    this.lastSearchedAddress = original;
-    this.confirmedAddress = '';
-    this.addressStatus.set(null);
-    const coords = original.match(/^([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)$/);
-    if (coords) {
-      const lat = Number(coords[1]), lon = Number(coords[2]);
-      if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
-        this.setMapPosition(lat, lon);
-        this.confirmedAddress = original;
-      } else {
-        this.addressStatus.set({ kind: 'warn', text: 'Coordenadas fuera de rango.' });
-      }
-      return;
-    }
-    this.addressSearching.set(true);
-    try {
-      const found = await findAddress(original, () =>
-        token === this.searchToken && !this.destroyRef.destroyed
-      );
-      if (token !== this.searchToken || this.destroyRef.destroyed) return;
-      if (!found) {
+    onAddressInput(): void {
+        this.searchToken++;
         this.lastSearchedAddress = '';
-        this.addressStatus.set({
-          kind: 'warn',
-          text: 'No se pudo verificar el número, la calle y la zona. El marcador no se actualizó. Selecciona el punto correcto en el mapa o pega sus coordenadas.'
-        });
-        return;
-      }
-      this.setMapPosition(found.lat, found.lon);
-      this.confirmedAddress = original;
-      this.addressStatus.set({
-        kind: 'info',
-        text: 'Se encontró una coincidencia de dirección. Revisa el marcador antes de guardar.'
-      });
-    } finally {
-      if (token === this.searchToken) this.addressSearching.set(false);
+        this.confirmedAddress = '';
+        this.addressSearching.set(false);
+        this.addressStatus.set(null);
     }
-  }
 
-  private setMapPosition(lat: number, lng: number, manual = false): void {
-    this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
-    this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
-    this.marker?.setLatLng([lat, lng]);
-    this.map?.setView([lat, lng], 17);
-    setTimeout(() => this.map?.invalidateSize(true), 100);
-    if (manual) this.reverseGeocode(lat, lng);
-  }
-
-  // Lo llaman los eventos click/dragend existentes del mapa.
-  // Conserva el texto escrito, sin sustituirlo por una dirección vecina.
-  private reverseGeocode(lat: number, lng: number): void {
-    this.searchToken++;
-    this.addressSearching.set(false);
-    const address = this.form.controls.address.value?.trim() ||
-      `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-    this.form.controls.address.setValue(address);
-    this.lastSearchedAddress = address;
-    this.confirmedAddress = address;
-    this.addressStatus.set({ kind: 'info', text: 'Ubicación seleccionada manualmente.' });
-  }
-
-  private validateAddressLocation(): boolean {
-    const address = this.form.controls.address.value?.trim();
-    if (this.addressSearching() || !address || address !== this.confirmedAddress) {
-      Swal.showValidationMessage('Busca la dirección y verifica su ubicación, o selecciona el punto correcto en el mapa.');
-      return false;
+    async searchAddressOnMap(force = false): Promise<void> {
+        const original = this.form.controls.address.value?.trim() ?? '';
+        if (!original || (!force && original === this.lastSearchedAddress)) return;
+        if (this.addressSearching() && original === this.lastSearchedAddress) return;
+        const token = ++this.searchToken;
+        this.lastSearchedAddress = original;
+        this.confirmedAddress = '';
+        this.addressStatus.set(null);
+        const coords = original.match(/^([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)$/);
+        if (coords) {
+            const lat = Number(coords[1]), lon = Number(coords[2]);
+            if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+                this.setMapPosition(lat, lon);
+                this.confirmedAddress = original;
+            } else {
+                this.addressStatus.set({ kind: 'warn', text: 'Coordenadas fuera de rango.' });
+            }
+            return;
+        }
+        this.addressSearching.set(true);
+        try {
+            const found = await findAddress(original, () =>
+                token === this.searchToken && !this.destroyRef.destroyed
+            );
+            if (token !== this.searchToken || this.destroyRef.destroyed) return;
+            if (!found) {
+                this.lastSearchedAddress = '';
+                this.addressStatus.set({
+                    kind: 'warn',
+                    text: 'No se pudo verificar el número, la calle y la zona. El marcador no se actualizó. Selecciona el punto correcto en el mapa o pega sus coordenadas.'
+                });
+                return;
+            }
+            this.setMapPosition(found.lat, found.lon);
+            this.confirmedAddress = original;
+            this.addressStatus.set({
+                kind: 'info',
+                text: 'Se encontró una coincidencia de dirección. Revisa el marcador antes de guardar.'
+            });
+        } finally {
+            if (token === this.searchToken) this.addressSearching.set(false);
+        }
     }
-    return true;
-  }
 
-  onAddressKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      event.stopPropagation();
-      void this.searchAddressOnMap(true);
+    private setMapPosition(lat: number, lng: number, manual = false): void {
+        this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
+        this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
+        this.marker?.setLatLng([lat, lng]);
+        this.map?.setView([lat, lng], 17);
+        setTimeout(() => this.map?.invalidateSize(true), 100);
+        if (manual) this.reverseGeocode(lat, lng);
     }
-  }
 
-  myLocation(): void {
-    if (!navigator.geolocation) {
-      this.addressStatus.set({ kind: 'warn', text: 'Tu navegador no soporta geolocalización.' });
-      return;
+    // Lo llaman los eventos click/dragend existentes del mapa.
+    // Conserva el texto escrito, sin sustituirlo por una dirección vecina.
+    private reverseGeocode(lat: number, lng: number): void {
+        this.searchToken++;
+        this.addressSearching.set(false);
+        const address = this.form.controls.address.value?.trim() ||
+            `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        this.form.controls.address.setValue(address);
+        this.lastSearchedAddress = address;
+        this.confirmedAddress = address;
+        this.addressStatus.set({ kind: 'info', text: 'Ubicación seleccionada manualmente.' });
     }
-    const token = ++this.searchToken;
-    this.addressSearching.set(false);
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        if (token !== this.searchToken || this.destroyRef.destroyed) return;
-        this.setMapPosition(pos.coords.latitude, pos.coords.longitude, true);
-      },
-      () => {
-        if (token === this.searchToken) this.addressStatus.set({ kind: 'warn', text: 'No se pudo obtener tu ubicación.' });
-      },
-      { enableHighAccuracy: true }
-    );
-  }
+
+    private validateAddressLocation(): boolean {
+        const address = this.form.controls.address.value?.trim();
+        if (this.addressSearching() || !address || address !== this.confirmedAddress) {
+            Swal.showValidationMessage('Busca la dirección y verifica su ubicación, o selecciona el punto correcto en el mapa.');
+            return false;
+        }
+        return true;
+    }
+
+    onAddressKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+            void this.searchAddressOnMap(true);
+        }
+    }
+
+    myLocation(): void {
+        if (!navigator.geolocation) {
+            this.addressStatus.set({ kind: 'warn', text: 'Tu navegador no soporta geolocalización.' });
+            return;
+        }
+        const token = ++this.searchToken;
+        this.addressSearching.set(false);
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                if (token !== this.searchToken || this.destroyRef.destroyed) return;
+                this.setMapPosition(pos.coords.latitude, pos.coords.longitude, true);
+            },
+            () => {
+                if (token === this.searchToken) this.addressStatus.set({ kind: 'warn', text: 'No se pudo obtener tu ubicación.' });
+            },
+            { enableHighAccuracy: true }
+        );
+    }
 
     cleanDescription(desc?: string | null): string {
         if (!desc) return 'Sin descripción';

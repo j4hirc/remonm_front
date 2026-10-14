@@ -99,7 +99,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     });
 
     forkJoin({
-        jobs: this.jobsService.getAll(true),
+        jobs: this.jobsService.getAll(false),
         users: this.usersService.getAll(true)
     }).subscribe({
         next: ({ jobs, users }) => {

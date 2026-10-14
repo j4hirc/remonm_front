@@ -105,7 +105,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     });
 
     forkJoin({
-        jobs: this.jobsService.getAll(true),
+        jobs: this.jobsService.getAll(false),
         users: this.usersService.getAll(true)
     })
         .pipe(takeUntilDestroyed(this.destroyRef))

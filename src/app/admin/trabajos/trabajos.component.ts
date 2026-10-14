@@ -184,7 +184,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     readonly addressStatus = signal<{ kind: 'info' | 'warn'; text: string } | null>(null);
     readonly addressSearching = signal(false);
     private lastSearchedAddress = '';
-  private confirmedAddress = '';
+    private confirmedAddress = '';
     private searchToken = 0;
 
     readonly form = this.formBuilder.nonNullable.group({
@@ -385,7 +385,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.colorByEmployeeId.set(colors);
 
             const active = users.filter(
-              (u) => (u.status ?? '').trim().toLowerCase() === 'active'
+                (u) => (u.status ?? '').trim().toLowerCase() === 'active'
             );
 
             this.employees.set(
@@ -590,16 +590,16 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     necessaryTotal(): number {
-    const totalCents = this.necessaryMaterials().reduce(
-        (sum, row) =>
-            sum + Math.round(
-                lineTotal(row.quantity, row.price) * 100
-            ),
-        0
-    );
+        const totalCents = this.necessaryMaterials().reduce(
+            (sum, row) =>
+                sum + Math.round(
+                    lineTotal(row.quantity, row.price) * 100
+                ),
+            0
+        );
 
-    return totalCents / 100;
-}
+        return totalCents / 100;
+    }
 
     private recalcPay(): void {
         this.form.controls.pay.setValue(
@@ -700,8 +700,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.isDuplicating.set(duplicate);
             this.editingId.set(duplicate ? null : jobId);
             this.expectedAssignmentId = duplicate
-              ? null
-              : (data.assignmentId ?? null);
+                ? null
+                : (data.assignmentId ?? null);
             this.clientSearchModal.set('');
             this.necessaryMaterials.set([]);
             this.selectedMaterialIds.set(new Set());
@@ -734,7 +734,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 description: descripcion,
                 priority: data.priority ?? 2,
                 jobDate: this.fechaParaInput(data.jobDate),
-                pay: data.pay || 0,
+                pay: data.pay ?? 0,
                 safeDepositBoxCodes: data.safeDepositBoxCodes || '',
                 quickbooksInvoice: duplicate
                     ? ''
@@ -776,8 +776,11 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
             this.selectedMaterialIds.set(set);
 
-            // Con todos los materiales cargados, sincronizar el pago.
-            this.recalcPay();
+            // Al editar, conservar el pago recibido del backend.
+            // Un duplicado es un trabajo nuevo y usa sus materiales.
+            if (duplicate) {
+                this.recalcPay();
+            }
 
             const editorCmp = this.editor();
 
@@ -911,7 +914,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         }
 
         this.isSaving.set(true);
-        // Asegurar que se guarde exactamente el total de los materiales.
+
+        // Guardar el pago correspondiente a los materiales actuales.
         this.recalcPay();
 
         const raw = this.form.getRawValue();
@@ -947,8 +951,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
 
         const request: JobRequest = {
             expectedAssignmentId: this.editingId() === null
-              ? null
-              : this.expectedAssignmentId,
+                ? null
+                : this.expectedAssignmentId,
             sendNotification,
             clientName: raw.clientName.trim(),
             clientPhone: raw.clientPhone.trim(),
@@ -1322,115 +1326,115 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         }
     }
 
-  onAddressInput(): void {
-    this.searchToken++;
-    this.lastSearchedAddress = '';
-    this.confirmedAddress = '';
-    this.addressSearching.set(false);
-    this.addressStatus.set(null);
-  }
-
-  async searchAddressOnMap(force = false): Promise<void> {
-    const original = this.form.controls.address.value?.trim() ?? '';
-    if (!original || (!force && original === this.lastSearchedAddress)) return;
-    if (this.addressSearching() && original === this.lastSearchedAddress) return;
-    const token = ++this.searchToken;
-    this.lastSearchedAddress = original;
-    this.confirmedAddress = '';
-    this.addressStatus.set(null);
-    const coords = original.match(/^([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)$/);
-    if (coords) {
-      const lat = Number(coords[1]), lon = Number(coords[2]);
-      if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
-        this.setMapPosition(lat, lon);
-        this.confirmedAddress = original;
-      } else {
-        this.addressStatus.set({ kind: 'warn', text: 'Coordenadas fuera de rango.' });
-      }
-      return;
-    }
-    this.addressSearching.set(true);
-    try {
-      const found = await findAddress(original, () =>
-        token === this.searchToken && !this.destroyRef.destroyed
-      );
-      if (token !== this.searchToken || this.destroyRef.destroyed) return;
-      if (!found) {
+    onAddressInput(): void {
+        this.searchToken++;
         this.lastSearchedAddress = '';
-        this.addressStatus.set({
-          kind: 'warn',
-          text: 'No se pudo verificar el número, la calle y la zona. El marcador no se actualizó. Selecciona el punto correcto en el mapa o pega sus coordenadas.'
-        });
-        return;
-      }
-      this.setMapPosition(found.lat, found.lon);
-      this.confirmedAddress = original;
-      this.addressStatus.set({
-        kind: 'info',
-        text: 'Se encontró una coincidencia de dirección. Revisa el marcador antes de guardar.'
-      });
-    } finally {
-      if (token === this.searchToken) this.addressSearching.set(false);
+        this.confirmedAddress = '';
+        this.addressSearching.set(false);
+        this.addressStatus.set(null);
     }
-  }
 
-  private setMapPosition(lat: number, lng: number, manual = false): void {
-    this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
-    this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
-    this.marker?.setLatLng([lat, lng]);
-    this.map?.setView([lat, lng], 17);
-    setTimeout(() => this.map?.invalidateSize(true), 100);
-    if (manual) this.reverseGeocode(lat, lng);
-  }
-
-  // Lo llaman los eventos click/dragend existentes del mapa.
-  // Conserva el texto escrito, sin sustituirlo por una dirección vecina.
-  private reverseGeocode(lat: number, lng: number): void {
-    this.searchToken++;
-    this.addressSearching.set(false);
-    const address = this.form.controls.address.value?.trim() ||
-      `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-    this.form.controls.address.setValue(address);
-    this.lastSearchedAddress = address;
-    this.confirmedAddress = address;
-    this.addressStatus.set({ kind: 'info', text: 'Ubicación seleccionada manualmente.' });
-  }
-
-  private validateAddressLocation(): boolean {
-    const address = this.form.controls.address.value?.trim();
-    if (this.addressSearching() || !address || address !== this.confirmedAddress) {
-      Swal.showValidationMessage('Busca la dirección y verifica su ubicación, o selecciona el punto correcto en el mapa.');
-      return false;
+    async searchAddressOnMap(force = false): Promise<void> {
+        const original = this.form.controls.address.value?.trim() ?? '';
+        if (!original || (!force && original === this.lastSearchedAddress)) return;
+        if (this.addressSearching() && original === this.lastSearchedAddress) return;
+        const token = ++this.searchToken;
+        this.lastSearchedAddress = original;
+        this.confirmedAddress = '';
+        this.addressStatus.set(null);
+        const coords = original.match(/^([-+]?\d+(?:\.\d+)?)\s*,\s*([-+]?\d+(?:\.\d+)?)$/);
+        if (coords) {
+            const lat = Number(coords[1]), lon = Number(coords[2]);
+            if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+                this.setMapPosition(lat, lon);
+                this.confirmedAddress = original;
+            } else {
+                this.addressStatus.set({ kind: 'warn', text: 'Coordenadas fuera de rango.' });
+            }
+            return;
+        }
+        this.addressSearching.set(true);
+        try {
+            const found = await findAddress(original, () =>
+                token === this.searchToken && !this.destroyRef.destroyed
+            );
+            if (token !== this.searchToken || this.destroyRef.destroyed) return;
+            if (!found) {
+                this.lastSearchedAddress = '';
+                this.addressStatus.set({
+                    kind: 'warn',
+                    text: 'No se pudo verificar el número, la calle y la zona. El marcador no se actualizó. Selecciona el punto correcto en el mapa o pega sus coordenadas.'
+                });
+                return;
+            }
+            this.setMapPosition(found.lat, found.lon);
+            this.confirmedAddress = original;
+            this.addressStatus.set({
+                kind: 'info',
+                text: 'Se encontró una coincidencia de dirección. Revisa el marcador antes de guardar.'
+            });
+        } finally {
+            if (token === this.searchToken) this.addressSearching.set(false);
+        }
     }
-    return true;
-  }
 
-  onAddressKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      event.stopPropagation();
-      void this.searchAddressOnMap(true);
+    private setMapPosition(lat: number, lng: number, manual = false): void {
+        this.form.controls.latitude.setValue(Number(lat.toFixed(6)));
+        this.form.controls.longitude.setValue(Number(lng.toFixed(6)));
+        this.marker?.setLatLng([lat, lng]);
+        this.map?.setView([lat, lng], 17);
+        setTimeout(() => this.map?.invalidateSize(true), 100);
+        if (manual) this.reverseGeocode(lat, lng);
     }
-  }
 
-  myLocation(): void {
-    if (!navigator.geolocation) {
-      this.addressStatus.set({ kind: 'warn', text: 'Tu navegador no soporta geolocalización.' });
-      return;
+    // Lo llaman los eventos click/dragend existentes del mapa.
+    // Conserva el texto escrito, sin sustituirlo por una dirección vecina.
+    private reverseGeocode(lat: number, lng: number): void {
+        this.searchToken++;
+        this.addressSearching.set(false);
+        const address = this.form.controls.address.value?.trim() ||
+            `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        this.form.controls.address.setValue(address);
+        this.lastSearchedAddress = address;
+        this.confirmedAddress = address;
+        this.addressStatus.set({ kind: 'info', text: 'Ubicación seleccionada manualmente.' });
     }
-    const token = ++this.searchToken;
-    this.addressSearching.set(false);
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        if (token !== this.searchToken || this.destroyRef.destroyed) return;
-        this.setMapPosition(pos.coords.latitude, pos.coords.longitude, true);
-      },
-      () => {
-        if (token === this.searchToken) this.addressStatus.set({ kind: 'warn', text: 'No se pudo obtener tu ubicación.' });
-      },
-      { enableHighAccuracy: true }
-    );
-  }
+
+    private validateAddressLocation(): boolean {
+        const address = this.form.controls.address.value?.trim();
+        if (this.addressSearching() || !address || address !== this.confirmedAddress) {
+            Swal.showValidationMessage('Busca la dirección y verifica su ubicación, o selecciona el punto correcto en el mapa.');
+            return false;
+        }
+        return true;
+    }
+
+    onAddressKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.stopPropagation();
+            void this.searchAddressOnMap(true);
+        }
+    }
+
+    myLocation(): void {
+        if (!navigator.geolocation) {
+            this.addressStatus.set({ kind: 'warn', text: 'Tu navegador no soporta geolocalización.' });
+            return;
+        }
+        const token = ++this.searchToken;
+        this.addressSearching.set(false);
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                if (token !== this.searchToken || this.destroyRef.destroyed) return;
+                this.setMapPosition(pos.coords.latitude, pos.coords.longitude, true);
+            },
+            () => {
+                if (token === this.searchToken) this.addressStatus.set({ kind: 'warn', text: 'No se pudo obtener tu ubicación.' });
+            },
+            { enableHighAccuracy: true }
+        );
+    }
 
     cleanDescription(desc?: string | null): string {
         if (!desc) return 'Sin descripción';
