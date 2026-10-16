@@ -15,8 +15,10 @@ export interface EvidenceReportData {
   initialTotal: number | null;
   originalAssignmentAvailable: boolean;
   date: Date;
-  materials: Array<{ name: string; quantity: number; unit: string; price: number;
-    initialQuantity: number | null; initialUnitPrice: number | null; changed: boolean }>;
+  materials: Array<{
+    name: string; quantity: number; unit: string; price: number;
+    initialQuantity: number | null; initialUnitPrice: number | null; changed: boolean
+  }>;
   photos: File[];
   signature: string;
   logoUrl: string;
@@ -92,8 +94,10 @@ export async function buildEvidenceReportPdf(data: EvidenceReportData): Promise<
       margin: { top: margin, right: margin, bottom: 18, left: margin },
       tableWidth: contentWidth,
       theme: 'grid',
-      styles: { font: 'helvetica', fontSize: 9, cellPadding: 3, overflow: 'linebreak',
-        textColor: navy, lineColor: '#DCE3E8', lineWidth: 0.2 },
+      styles: {
+        font: 'helvetica', fontSize: 9, cellPadding: 3, overflow: 'linebreak',
+        textColor: navy, lineColor: '#DCE3E8', lineWidth: 0.2
+      },
       headStyles: { fillColor: navy, textColor: '#FFFFFF' },
       rowPageBreak: 'avoid',
       ...options,
@@ -141,23 +145,31 @@ export async function buildEvidenceReportPdf(data: EvidenceReportData): Promise<
       ['Valor a Pagar', money(data.total)],
       ['Estado Reportado', data.status === 'REVIEW' ? 'REVISIÓN' : data.status === 'COMPLETED' ? 'COMPLETADO' : 'EN PROGRESO']
     ],
-    columnStyles: { 0: { cellWidth: 45, fillColor: navy, textColor: '#FFFFFF', fontStyle: 'bold' },
-      1: { cellWidth: contentWidth - 45 } }
+    columnStyles: {
+      0: { cellWidth: 45, fillColor: navy, textColor: '#FFFFFF', fontStyle: 'bold' },
+      1: { cellWidth: contentWidth - 45 }
+    }
   });
 
   heading('Comentarios del Avance');
-  table({ body: [[text(data.comment) || 'Sin comentarios.']],
-    bodyStyles: { fillColor: '#F8FAFC' } });
+  table({
+    body: [[text(data.comment) || 'Sin comentarios.']],
+    bodyStyles: { fillColor: '#F8FAFC' }
+  });
   if (data.status === 'COMPLETED') {
     ensureSpace(30);
-    table({ body: [['CERTIFICACIÓN DE GARANTÍA: El subcontratista certifica que el proyecto está terminado y los errores encontrados después de terminar el proyecto serán cobrados al subcontratista como garantías del trabajo.']],
-      bodyStyles: { fillColor: '#EDF9FB', fontStyle: 'bold' } });
+    table({
+      body: [['CERTIFICACIÓN DE GARANTÍA: El subcontratista certifica que el proyecto está terminado y los errores encontrados después de terminar el proyecto serán cobrados al subcontratista como garantías del trabajo.']],
+      bodyStyles: { fillColor: '#EDF9FB', fontStyle: 'bold' }
+    });
   }
 
   heading('Materiales: asignación inicial y reporte', 28);
   if (!data.originalAssignmentAvailable) {
-    table({ body: [['Inicial no disponible: este trabajo no tiene una asignación original registrada.']],
-      bodyStyles: { fillColor: '#FFF4DA' } });
+    table({
+      body: [['Inicial no disponible: este trabajo no tiene una asignación original registrada.']],
+      bodyStyles: { fillColor: '#FFF4DA' }
+    });
   }
   table({
     head: [['Material', 'Cant. inicial', 'Cant. reportada', 'Precio unit.', 'Total inicial', 'Total actualizado']],
@@ -168,8 +180,10 @@ export async function buildEvidenceReportPdf(data: EvidenceReportData): Promise<
       m.initialQuantity === null || m.initialUnitPrice === null ? 'N/D' : money(lineTotal(m.initialQuantity, m.initialUnitPrice)),
       money(lineTotal(m.quantity, m.price))
     ]) : [[{ content: 'No se reportaron materiales.', colSpan: 6 }]],
-    styles: { font: 'helvetica', fontSize: 8, cellPadding: 2, overflow: 'linebreak',
-      textColor: navy, lineColor: '#DCE3E8', lineWidth: 0.2 },
+    styles: {
+      font: 'helvetica', fontSize: 8, cellPadding: 2, overflow: 'linebreak',
+      textColor: navy, lineColor: '#DCE3E8', lineWidth: 0.2
+    },
     columnStyles: {
       0: { cellWidth: contentWidth - 120 },
       1: { cellWidth: 20, halign: 'center' },
@@ -187,12 +201,14 @@ export async function buildEvidenceReportPdf(data: EvidenceReportData): Promise<
   });
   ensureSpace(38);
   const initialLabel = data.initialTotal === null ? 'No disponible' : money(data.initialTotal);
-  table({ body: [
-    ['PRECIO INICIAL DEL TRABAJO', initialLabel],
-    ['PRECIO ACTUALIZADO', money(data.total)],
-    ['DIFERENCIA', data.initialTotal === null ? 'No disponible' : money(data.total - data.initialTotal)]
-  ], bodyStyles: { fillColor: navy, textColor: '#FFFFFF', fontStyle: 'bold' },
-    columnStyles: { 0: { cellWidth: contentWidth - 45 }, 1: { cellWidth: 45, halign: 'right' } } });
+  table({
+    body: [
+      ['PRECIO INICIAL DEL TRABAJO', initialLabel],
+      ['PRECIO ACTUALIZADO', money(data.total)],
+      ['DIFERENCIA', data.initialTotal === null ? 'No disponible' : money(data.total - data.initialTotal)]
+    ], bodyStyles: { fillColor: navy, textColor: '#FFFFFF', fontStyle: 'bold' },
+    columnStyles: { 0: { cellWidth: contentWidth - 45 }, 1: { cellWidth: 45, halign: 'right' } }
+  });
 
   heading('Evidencias Fotográficas', data.photos.length ? 65 : 10);
   if (!data.photos.length) {
@@ -201,7 +217,17 @@ export async function buildEvidenceReportPdf(data: EvidenceReportData): Promise<
   const cellWidth = (contentWidth - 6) / 2;
   for (let index = 0; index < data.photos.length; index++) {
     if (index % 2 === 0) ensureSpace(65);
-    const photo = await photoForPdf(data.photos[index]);
+    let photo: { data: string; ratio: number };
+
+    try {
+      photo = await photoForPdf(data.photos[index]);
+    } catch {
+      throw new Error(
+        `No se pudo procesar la foto ${index + 1} ` +
+        `(${data.photos[index].name}). ` +
+        'Prueba una copia JPG o PNG de menor tamaño.'
+      );
+    }
     const photoWidth = Math.min(cellWidth - 4, 55 * photo.ratio);
     const photoHeight = photoWidth / photo.ratio;
     const x = margin + (index % 2) * (cellWidth + 6);

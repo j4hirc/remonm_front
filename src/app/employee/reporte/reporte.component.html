@@ -56,8 +56,7 @@
     La cantidad inicial no se modifica. Ajusta la reportada; para quitar un material, déjalo en cero.
   </p>
 
-  <div class="material-comparison" tabindex="0" role="region"
-       aria-label="Comparación de materiales">
+  <div class="material-comparison" tabindex="0" role="region" aria-label="Comparación de materiales">
     <table class="comparison-table">
       <thead>
         <tr>
@@ -86,13 +85,9 @@
 
           <!-- ===== MISMO BINDING ORIGINAL – NO TOQUÉ NADA ===== -->
           <td data-label="Cant. reportada">
-            <input type="number"
-                   min="0"
-                   step="any"
-                   [ngModel]="row.quantity"
-                   (ngModelChange)="updateQty(row.materialId, $event)"
-                   [attr.aria-label]="'Cantidad reportada de ' + row.name"
-                   [disabled]="saving()" />
+            <input type="number" min="0" step="any" [ngModel]="row.quantity"
+              (ngModelChange)="updateQty(row.materialId, $event)"
+              [attr.aria-label]="'Cantidad reportada de ' + row.name" [disabled]="saving()" />
           </td>
 
           <td data-label="Unidad">
@@ -105,9 +100,9 @@
 
           <td data-label="Total inicial">
             {{
-              row.initialQuantity === null || row.initialUnitPrice === null
-                ? 'N/D'
-                : '$' + lineTotal(row.initialQuantity, row.initialUnitPrice).toFixed(2)
+            row.initialQuantity === null || row.initialUnitPrice === null
+            ? 'N/D'
+            : '$' + lineTotal(row.initialQuantity, row.initialUnitPrice).toFixed(2)
             }}
           </td>
 
@@ -129,8 +124,8 @@
       Precio inicial del trabajo:
       <strong>
         {{ j.originalAssignmentAvailable && j.initialPay != null
-             ? '$' + j.initialPay.toFixed(2)
-             : 'No disponible' }}
+        ? '$' + j.initialPay.toFixed(2)
+        : 'No disponible' }}
       </strong>
     </p>
     <p>
@@ -146,12 +141,17 @@
   </div>
 
   <h3>Fotos</h3>
-  <input type="file" accept="image/*" multiple (change)="onPhotos($event)" />
+
+  <input type="file" accept="image/*" multiple [disabled]="saving()" (change)="onPhotos($event)" />
+
   <div class="previews">
     @for (src of photoPreviews(); track $index) {
     <div class="prev">
       <img [src]="src" alt="" />
-      <button type="button" (click)="removePhoto($index)">✕</button>
+
+      <button type="button" [disabled]="saving()" (click)="removePhoto($index)">
+        ✕
+      </button>
     </div>
     }
   </div>

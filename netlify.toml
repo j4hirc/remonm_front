@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist/remonm_front/browser"
+
+[build.processing]
+  skip_processing = true
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, no-transform"
+
+[[headers]]
+  for = "/ngsw.json"
+  [headers.values]
+    Cache-Control = "no-cache, no-transform"
+
+[[headers]]
+  for = "/ngsw-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-transform"

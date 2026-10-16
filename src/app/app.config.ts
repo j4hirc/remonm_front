@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, isDevMode } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { provideSweetAlert2 } from '@sweetalert2/ngx-sweetalert2';
@@ -22,8 +22,9 @@ export const appConfig: ApplicationConfig = {
       dismissOnDestroy: true,
     }),
     provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode(),
-      registrationStrategy: 'registerWhenStable:30000',
-    }),
+  // Temporal: el HTML publicado no coincide con el hash de Angular.
+  enabled: false,
+  registrationStrategy: 'registerWhenStable:30000',
+}),
   ],
 };

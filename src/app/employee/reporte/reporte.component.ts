@@ -14,7 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import Swal from 'sweetalert2';
-
+import { HttpErrorResponse } from '@angular/common/http';
 import { JobsService } from '../../core/services/jobs.service';
 import { UsersService } from '../../core/services/users.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -137,15 +137,15 @@ export class ReporteEmployeeComponent
 
   necessaryTotal(): number {
     const totalCents = this.necessary().reduce(
-        (sum, row) =>
-            sum + Math.round(
-                lineTotal(row.quantity, row.price) * 100
-            ),
-        0
+      (sum, row) =>
+        sum + Math.round(
+          lineTotal(row.quantity, row.price) * 100
+        ),
+      0
     );
 
     return totalCents / 100;
-}
+  }
 
   updateQty(materialId: number, qty: number): void {
     if (this.saving()) return;
@@ -165,11 +165,22 @@ export class ReporteEmployeeComponent
   }
 
   onPhotos(event: Event): void {
+    if (this.saving()) return;
+
     const input = event.target as HTMLInputElement;
     const files = input.files ? Array.from(input.files) : [];
-    const next = [...this.photoFiles(), ...files];
-    this.photoFiles.set(next);
-    this.photoPreviews.set(next.map((f) => URL.createObjectURL(f)));
+
+    this.photoFiles.update(current => [
+      ...current,
+      ...files
+    ]);
+
+    // Crear vistas previas únicamente para los archivos nuevos.
+    this.photoPreviews.update(current => [
+      ...current,
+      ...files.map(file => URL.createObjectURL(file))
+    ]);
+
     input.value = '';
   }
 
@@ -337,6 +348,7 @@ export class ReporteEmployeeComponent
       didOpen: () => Swal.showLoading()
     });
 
+    let stage: 'pdf' | 'upload' = 'pdf';
     try {
       let comment = this.comment.trim();
       if (this.hasModifications) {
@@ -374,7 +386,12 @@ export class ReporteEmployeeComponent
       };
 
       const files = [...this.photoFiles(), pdfFile];
-      await firstValueFrom(this.updatesService.create(payload, files));
+
+      stage = 'upload';
+
+      await firstValueFrom(
+        this.updatesService.create(payload, files)
+      );
 
       await Swal.fire({
         icon: 'success',
@@ -426,11 +443,56 @@ export class ReporteEmployeeComponent
 
       void this.router.navigate(['/employee/calendario']);
     } catch (err: unknown) {
-      console.error(err);
+      this.saving.set(false);
+
+      console.error('Fallo de reporte', {
+        stage,
+        jobId: job.jobId,
+        error: err
+      });
+
+      let message =
+        stage === 'pdf'
+          ? 'No se pudo generar el PDF. Tus fotos y firma siguen en el formulario.'
+          : 'No se pudo confirmar el guardado. Revisa Mis Evidencias antes de volver a enviar.';
+
+      if (
+        stage === 'pdf' &&
+        err instanceof Error &&
+        !err.message.includes('http')
+      ) {
+        message += ` ${err.message}`;
+      }
+
+      if (err instanceof HttpErrorResponse) {
+        if (
+          err.error?.code === 'MISSING_REPORT_PART' ||
+          String(err.error?.message ?? '').includes(
+            "Required part 'data' is not present"
+          )
+        ) {
+          const part = err.error?.part || 'data';
+
+          message =
+            `El servidor no recibió una parte obligatoria del reporte: ${part}. ` +
+            'Conserva tus fotos y firma y comunica este error a soporte.';
+        } else if (err.status === 413) {
+          message =
+            'El envío supera el tamaño permitido. ' +
+            'Reduce el tamaño de las fotos y vuelve a intentar.';
+        } else if (err.status === 401 || err.status === 403) {
+          message =
+            'La sesión expiró o no tienes permiso para enviar este reporte.';
+        }
+      }
+
       await Swal.fire({
         icon: 'error',
-        title: 'Error',
-        text: 'No se pudo guardar el reporte. Revisa la conexión e inténtalo de nuevo.',
+        title:
+          stage === 'pdf'
+            ? 'No se pudo preparar el reporte'
+            : 'No se pudo guardar el reporte',
+        text: message,
         confirmButtonColor: '#00B8A9'
       });
     } finally {
