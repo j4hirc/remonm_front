@@ -73,9 +73,7 @@ export function buildWarehouseReport(jobs: readonly Job[], users: readonly User[
       description: (job.description || '')
         .split('[MATERIALES PRE-ASIGNADOS]:')[0]
         .trim(),
-      materials: [...merged.values()].sort(
-        (a, b) => a.materialId - b.materialId
-      )
+            materials: [...merged.values()]
     };
   });
   // Siempre devuelve la selección actual, incluso si está vacía.

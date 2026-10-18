@@ -26,7 +26,9 @@ export function buildReportMaterialRows(job: Job): ReportMaterialRow[] {
   const known = job.originalAssignmentAvailable === true;
   const initial = new Map((known ? job.originalMaterials ?? [] : []).map(row => [row.materialId, row]));
   const current = new Map((job.materials ?? []).map(row => [row.materialId, row]));
-  const ids = new Set([...initial.keys(), ...current.keys()]);
+    // Respetar el orden actual del trabajo.
+  // Los materiales retirados se agregan al final para la comparación histórica.
+  const ids = new Set([...current.keys(), ...initial.keys()]);
   return [...ids].map(materialId => {
     const before = initial.get(materialId);
     const now = current.get(materialId);
