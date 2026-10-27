@@ -130,29 +130,17 @@ export function buildPayrollReport(
   for (const job of jobs) {
     const status = (job.status || '').trim().toUpperCase();
 
-    // Solo trabajos completados o en progreso.
+    // El estado actual del trabajo determina si entra en nómina.
+    // Los reportes históricos pueden seguir en REVIEW, IN_PROGRESS o null.
     if (
-      !['IN_PROGRESS', 'COMPLETED'].includes(status) ||
+      status !== 'COMPLETED' ||
       !job.employeeId ||
       seenJobs.has(job.jobId)
     ) {
       continue;
     }
 
-    // La fecha asignada determina la quincena.
-    const startDay = job.jobDate
-      ? parseJobDay(job.jobDate)
-      : null;
-
-    if (
-      startDay === null ||
-      startDay < start ||
-      startDay > end
-    ) {
-      continue;
-    }
-
-    seenJobs.add(job.jobId);
+    const startDay = job.jobDate ? parseJobDay(job.jobDate) : null;
 
     const seenUpdates = new Set<number>();
 
@@ -183,13 +171,20 @@ export function buildPayrollReport(
           a.update.jobUpdateId - b.update.jobUpdateId
       );
 
-    // Último reporte del trabajo, aunque sea de otra quincena.
+    // Conserva la fecha Fin del reporte original, sin exigir que el estado
+    // histórico coincida con el estado actual del trabajo.
     const lastUpdate = datedUpdates[datedUpdates.length - 1];
+    const payrollDay = lastUpdate?.day ?? startDay;
 
-    const startDate = formatDay(startDay);
-    const endDate = lastUpdate
-      ? formatDay(lastUpdate.day)
-      : 'Sin fecha registrada';
+    // Compatibilidad para completados antiguos sin reportes: conservan su
+    // fecha asignada como referencia, sin presentarla como fecha de cierre.
+    if (payrollDay === null || payrollDay < start || payrollDay > end) {
+      continue;
+    }
+    seenJobs.add(job.jobId);
+
+    const startDate = startDay === null ? 'Sin fecha registrada' : formatDay(startDay);
+    const endDate = lastUpdate ? formatDay(lastUpdate.day) : 'Sin fecha registrada';
 
     let group = groups.get(job.employeeId);
 
@@ -219,14 +214,15 @@ export function buildPayrollReport(
       jobId: job.jobId,
 
       // Los componentes existentes usan "date" para ordenar.
-      date: startDate,
-      dateSource: 'Fecha asignada al trabajo',
+      date: formatDay(payrollDay),
+      dateSource: lastUpdate
+        ? 'Último reporte del trabajo completado'
+        : 'Sin reporte: período por fecha asignada; cierre no registrado',
 
       startDate,
       endDate,
 
-      statusLabel:
-        status === 'COMPLETED' ? 'Completado' : 'En progreso',
+      statusLabel: 'Completado',
 
       clientName: job.clientName || 'Cliente sin nombre',
       address: job.address?.trim() || '',

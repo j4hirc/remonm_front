@@ -1,5 +1,6 @@
 <p class="intro">
-  Trabajos completados o en progreso, según su fecha asignada.
+  Trabajos completados, según su último reporte. Sin reporte, se conserva
+  la fecha asignada como referencia; no acredita la fecha de cierre.
 </p>
 
 <div class="toolbar">
@@ -57,8 +58,7 @@
 } @else if (!error()) {
 @if (empty()) {
 <p class="empty">
-  No hay trabajos completados o en progreso
-  con fecha de inicio en esta quincena.
+  No hay trabajos completados correspondientes a esta quincena.
 </p>
 } @else {
 <div class="report-container">
@@ -88,7 +88,10 @@
         @for (job of employee.jobs; track job.jobId) {
         <tr>
           <td>{{ job.startDate }}</td>
-          <td>{{ job.endDate }}</td>
+          <td>
+            {{ job.endDate }}
+            <small style="display: block">{{ job.dateSource }}</small>
+          </td>
           <td>{{ job.clientName }}</td>
 
           <td class="col-amount">
