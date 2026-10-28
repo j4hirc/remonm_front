@@ -174,7 +174,9 @@ export function buildPayrollReport(
     // Conserva la fecha Fin del reporte original, sin exigir que el estado
     // histórico coincida con el estado actual del trabajo.
     const lastUpdate = datedUpdates[datedUpdates.length - 1];
-    const payrollDay = lastUpdate?.day ?? startDay;
+    const completedDay = job.completedDate ? parseJobDay(job.completedDate) : null;
+    // La fecha guardada manda. El respaldo mantiene visibles los históricos.
+    const payrollDay = completedDay ?? lastUpdate?.day ?? startDay;
 
     // Compatibilidad para completados antiguos sin reportes: conservan su
     // fecha asignada como referencia, sin presentarla como fecha de cierre.
@@ -184,7 +186,8 @@ export function buildPayrollReport(
     seenJobs.add(job.jobId);
 
     const startDate = startDay === null ? 'Sin fecha registrada' : formatDay(startDay);
-    const endDate = lastUpdate ? formatDay(lastUpdate.day) : 'Sin fecha registrada';
+    const endDay = completedDay ?? lastUpdate?.day;
+    const endDate = endDay != null ? formatDay(endDay) : 'Sin fecha registrada';
 
     let group = groups.get(job.employeeId);
 
@@ -215,9 +218,11 @@ export function buildPayrollReport(
 
       // Los componentes existentes usan "date" para ordenar.
       date: formatDay(payrollDay),
-      dateSource: lastUpdate
-        ? 'Último reporte del trabajo completado'
-        : 'Sin reporte: período por fecha asignada; cierre no registrado',
+      dateSource: completedDay !== null
+        ? 'Fecha de finalización guardada'
+        : lastUpdate
+          ? 'Sin cierre guardado: referencia del último reporte'
+          : 'Sin reporte: período por fecha asignada; cierre no registrado',
 
       startDate,
       endDate,

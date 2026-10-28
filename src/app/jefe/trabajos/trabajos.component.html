@@ -139,6 +139,9 @@
                                 <i class="fa-regular fa-calendar" aria-hidden="true"></i>
                                 {{ formatDate(job.jobDate) }}
                             </small>
+                            @if (job.status === 'COMPLETED') {
+                            <br /><small>Finalización: {{ job.completedDate ? formatDate(job.completedDate) : 'Sin fecha guardada' }}</small>
+                            }
                         </div>
                     </td>
                     <td>
@@ -235,6 +238,9 @@
                 <i class="fa-regular fa-calendar" aria-hidden="true"></i>
                 Fecha: {{ formatDate(job.jobDate) }}
             </p>
+            @if (job.status === 'COMPLETED') {
+            <p class="card-line">Finalización: {{ job.completedDate ? formatDate(job.completedDate) : 'Sin fecha guardada' }}</p>
+            }
 
             <div class="card-desc">
                 <strong>
@@ -595,6 +601,18 @@
                 <option value="CANCELLED">Cancelado</option>
             </select>
         </div>
+
+        @if (form.controls.status.value === 'COMPLETED') {
+        <div class="form-row">
+            <label for="completedDate">Fecha de finalización</label>
+            <input id="completedDate" type="date" class="input-field" formControlName="completedDate"
+                [readOnly]="isSaving()" />
+            <small>Al pasar a Completado, si la dejas vacía se guarda la fecha de hoy en Minnesota.
+                Si terminó otro día, indica la fecha real: determina su quincena de nómina.
+                En trabajos que ya estaban completados, dejarla vacía conserva la fecha guardada;
+                si no tenían fecha, debes indicarla para corregirlos.</small>
+        </div>
+        }
 
         <!-- Planos -->
         <h4 class="section-title">Documentos Adjuntos</h4>

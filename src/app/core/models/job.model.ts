@@ -59,6 +59,7 @@ export interface Job {
   status: JobStatus | string;
   pay: number;
   jobDate: string | number[];
+  completedDate?: string | number[] | null;
   employeeId: number;
   managerId: number;
   nameEmployee?: string | null;
@@ -99,6 +100,7 @@ export interface JobRequest {
   status: string;
   pay: number;
   jobDate: string;
+  completedDate?: string | null;
   employeeId: number;
   managerId: number;
   materials?: JobMaterialSelection[];

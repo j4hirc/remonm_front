@@ -200,6 +200,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         description: [''],
         priority: [2, Validators.required],
         jobDate: ['', Validators.required],
+        completedDate: [''],
         pay: [0, [Validators.required, Validators.min(0)]],
         safeDepositBoxCodes: [''],
         quickbooksInvoice: [''],
@@ -634,6 +635,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             description: '',
             priority: 2,
             jobDate: '',
+            completedDate: '',
             pay: 0,
             safeDepositBoxCodes: '',
             quickbooksInvoice: '',
@@ -734,6 +736,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 description: descripcion,
                 priority: data.priority ?? 2,
                 jobDate: this.fechaParaInput(data.jobDate),
+                completedDate: duplicate || !data.completedDate
+                    ? ''
+                    : this.fechaParaInput(data.completedDate),
                 pay: data.pay || 0,
                 safeDepositBoxCodes: data.safeDepositBoxCodes || '',
                 quickbooksInvoice: duplicate
@@ -964,6 +969,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             status: raw.status,
             pay: Number(raw.pay),
             jobDate: raw.jobDate,
+            completedDate: raw.status === 'COMPLETED'
+                ? raw.completedDate || null
+                : null,
             employeeId: Number(raw.employeeId),
             managerId: Number(raw.managerId),
             materials,
