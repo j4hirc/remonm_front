@@ -465,25 +465,60 @@ export class ReporteEmployeeComponent
       }
 
       if (err instanceof HttpErrorResponse) {
-        if (
-          err.error?.code === 'MISSING_REPORT_PART' ||
-          String(err.error?.message ?? '').includes(
-            "Required part 'data' is not present"
-          )
-        ) {
-          const part = err.error?.part || 'data';
+        const body = err.error;
+        const rawMessage = body && typeof body === 'object'
+          ? body.message
+          : undefined;
+        const serverMessage = typeof rawMessage === 'string'
+          ? rawMessage
+          : rawMessage && typeof rawMessage === 'object'
+            ? Object.values(rawMessage)
+                .filter((value): value is string => typeof value === 'string')
+                .join(' · ')
+            : '';
 
-          message =
-            `El servidor no recibió una parte obligatoria del reporte: ${part}. ` +
-            'Conserva tus fotos y firma y comunica este error a soporte.';
+        if (
+          body?.code === 'MISSING_REPORT_PART' ||
+          serverMessage.includes("Required part 'data' is not present")
+        ) {
+          message = 'El servidor no recibió una parte obligatoria del reporte. '
+            + 'Conserva tus fotos y firma y comunica este error a soporte.';
+        } else if (err.status === 0) {
+          message = 'El navegador no recibió una respuesta HTTP accesible. '
+            + 'Puede ser una interrupción de conexión, del servidor o un bloqueo de acceso. '
+            + 'No se puede confirmar si el reporte quedó guardado.';
         } else if (err.status === 413) {
-          message =
-            'El envío supera el tamaño permitido. ' +
-            'Reduce el tamaño de las fotos y vuelve a intentar.';
-        } else if (err.status === 401 || err.status === 403) {
-          message =
-            'La sesión expiró o no tienes permiso para enviar este reporte.';
+          message = 'El envío supera el tamaño permitido. Reduce el tamaño de las fotos.';
+        } else if ([400, 401, 403, 404, 409, 422].includes(err.status)) {
+          // Mensajes de validación del servidor, mostrados como texto, no HTML.
+          message = serverMessage.slice(0, 700) ||
+            (err.status === 401
+              ? 'La sesión expiró. Vuelve a iniciar sesión.'
+              : 'El servidor rechazó el reporte. Comunica este código a soporte.');
+        } else if (err.status === 502 || err.status === 503 || err.status === 504) {
+          message = 'El servidor o su intermediario no pudo completar la respuesta. '
+            + 'No se puede confirmar si el reporte quedó guardado.';
+        } else if (err.status >= 500) {
+          // No exponer SQL, rutas internas o respuestas completas de terceros.
+          if (/completed_date/i.test(serverMessage)) {
+            message = 'El servidor informó un error relacionado con completed_date. '
+              + 'Soporte debe comprobar la columna y la actualización de la base de datos.';
+          } else if (/supabase|error procesando el archivo|error al subir/i.test(serverMessage)) {
+            message = 'El servidor informó un error al subir una evidencia al almacenamiento.';
+          } else {
+            message = 'El servidor encontró un error interno al procesar el reporte.';
+          }
+        } else if (err.status >= 200 && err.status < 300) {
+          message = 'El servidor respondió, pero la aplicación no pudo interpretar la respuesta. '
+            + 'El reporte puede haberse guardado.';
+        } else {
+          message = 'El servidor devolvió una respuesta inesperada al enviar el reporte.';
         }
+
+        if (stage === 'upload') {
+          message += '\n\nRevisa Mis Evidencias antes de volver a enviar.';
+        }
+        message += `\n\nCódigo: HTTP ${err.status} · Trabajo: ${job.jobId}`;
       }
 
       await Swal.fire({
