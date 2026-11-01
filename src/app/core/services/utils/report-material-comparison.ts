@@ -26,7 +26,7 @@ export function buildReportMaterialRows(job: Job): ReportMaterialRow[] {
   const known = job.originalAssignmentAvailable === true;
   const initial = new Map((known ? job.originalMaterials ?? [] : []).map(row => [row.materialId, row]));
   const current = new Map((job.materials ?? []).map(row => [row.materialId, row]));
-    // Respetar el orden actual del trabajo.
+  // Respetar el orden actual del trabajo.
   // Los materiales retirados se agregan al final para la comparación histórica.
   const ids = new Set([...current.keys(), ...initial.keys()]);
   return [...ids].map(materialId => {
@@ -37,7 +37,9 @@ export function buildReportMaterialRows(job: Job): ReportMaterialRow[] {
       name: before?.name ?? now?.name ?? 'Material',
       quantity: now?.quantity ?? 0,
       unit: unit(now?.unit ?? before?.unit),
-      price: before?.unitPrice ?? now?.price ?? 0,
+      // El backend devuelve el precio vigente del catálogo.
+      // Una fila histórica retirada tiene cantidad cero.
+      price: now?.price ?? 0,
       initialQuantity: known ? before?.quantity ?? 0 : null,
       initialUnitPrice: known ? before?.unitPrice ?? now?.price ?? 0 : null,
       referenceQuantity: known ? before?.quantity ?? 0 : now?.quantity ?? 0,
