@@ -1,65 +1,76 @@
-import { jobLocation, escapeLocationHtml } from '../../utils/job-location';
-import { Job } from "../../models/job.model";
+import { Job, JobUpdate } from '../../models/job.model';
+import { escapeLocationHtml as escape, jobLocation } from '../../utils/job-location';
+import { formatDay, parseJobDay } from '../../utils/report-calculations';
+import { lineTotal } from './report-material-comparison';
 
-
-function formatDate(fecha: string | number[] | null | undefined): string {
-  if (!fecha) return 'Sin fecha';
-  if (Array.isArray(fecha)) {
-    const [y, m, d] = fecha;
-    return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}/${y}`;
-  }
-  const parts = String(fecha).split('-');
-  if (parts.length === 3) return `${parts[1]}/${parts[2]}/${parts[0]}`;
-  return String(fecha);
+function day(value?: string | number[] | null): number | null {
+  if (!value) return null;
+  return parseJobDay(typeof value === 'string' ? value.slice(0, 10) : value);
 }
 
-/** Devuelve un elemento DOM listo para html2pdf */
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
 export function buildInvoiceElement(job: Job): HTMLElement {
-  const fecha = formatDate(job.jobDate);
-  const invoice = job.quickbooksInvoice || 'Sin número';
-  const pay = Number(job.pay || 0).toFixed(2);
+  const updates = [...(job.updateJob ?? [])].sort((a, b) =>
+    (day(b.date) ?? -1) - (day(a.date) ?? -1) || b.jobUpdateId - a.jobUpdateId);
+  const report: JobUpdate | undefined = updates[0];
 
-  const el = document.createElement('div');
-  el.style.cssText =
-    'padding:40px;font-family:Poppins,Arial,sans-serif;color:#1e293b;background:white;width:700px;';
+  // 1. Preferir SIEMPRE los materiales actuales del trabajo (los que editas/agregas)
+  // 2. Solo si el trabajo no tiene materiales, usar el snapshot del reporte
+  const jobMaterials = (job.materials ?? [])
+    .map(m => ({
+      ...m,
+      quantity: m.quantity ?? 1,
+      unitPrice: (m as any).price ?? (m as any).unitPrice ?? (m as any).estimatedPrice ?? 0
+    }))
+    .filter(m => m.quantity > 0);
 
-  el.innerHTML = `
-    <div style="text-align:center;border-bottom:3px solid #0f4c81;padding-bottom:20px;margin-bottom:30px;">
-      <h1 style="margin:0;color:#0f4c81;font-size:28px;">RemoMN</h1>
-      <p style="margin:8px 0 0;color:#64748b;font-size:14px;">Documento de Factura / Invoice</p>
+  const snapshot = report?.materialSnapshotAvailable !== false
+    ? report?.reportedMaterials
+    : undefined;
+
+  const rows = jobMaterials.length > 0
+    ? jobMaterials
+    : (snapshot ?? []).filter((m: any) => (m.quantity ?? 0) > 0);
+
+  const completed = day(job.completedDate);
+  const reported = day(report?.date);
+  const date = completed ?? reported ?? day(job.jobDate);
+  const dateLabel = completed !== null ? 'Fecha de finalización' :
+    reported !== null ? 'Fecha del reporte' : 'Fecha programada';
+
+  // Título según de dónde salieron los datos
+  const title = jobMaterials.length > 0
+    ? 'Materiales registrados en el trabajo'
+    : 'Materiales utilizados';
+
+  const cell = 'padding:8px 5px;border-bottom:1px solid #d8e2e8;';
+  const amounts = rows.map(m => lineTotal(m.quantity, m.unitPrice));
+  const total = amounts.reduce((sum, amount) => sum + Math.round(amount * 100), 0) / 100;
+  const element = document.createElement('div');
+  element.style.cssText = 'font:14px Arial,sans-serif;color:#183346;background:white;overflow-wrap:anywhere;';
+  element.innerHTML = `
+    <div style="border-bottom:3px solid #15516b;padding-bottom:14px;">
+      <img src="img/logonegro.png" alt="Rojas Remodeling" style="max-width:140px;max-height:60px;">
+      <h1 style="margin:14px 0 4px;font-size:26px;">Nota de venta</h1>
+      <strong>RemoMN · Trabajo #${job.jobId}</strong>
     </div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:25px;">
-      <tr>
-        <td style="padding:8px 0;width:40%;color:#64748b;">Número de Invoice QuickBooks:</td>
-        <td style="padding:8px 0;font-weight:700;font-size:18px;color:#0f4c81;">${invoice}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 0;color:#64748b;">Fecha del Trabajo:</td>
-        <td style="padding:8px 0;font-weight:600;">${fecha}</td>
-      </tr>
-      <tr>
-        <td style="padding:8px 0;color:#64748b;">Estado:</td>
-        <td style="padding:8px 0;font-weight:600;">${job.status}</td>
-      </tr>
+    <p><strong>${dateLabel}</strong> · ${date === null ? 'Sin fecha registrada' : formatDay(date)}</p>
+    <p><strong>Cliente</strong> · ${escape(job.clientName || 'Sin registrar')}<br>
+      ${escape(jobLocation(job))}${job.clientPhone ? '<br>' + escape(job.clientPhone) : ''}</p>
+    ${job.quickbooksInvoice ? '<p>Referencia QuickBooks · ' + escape(job.quickbooksInvoice) + '</p>' : ''}
+    <h2 style="font-size:17px;margin-top:24px;">${title}</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead style="background:#183346;color:white;"><tr>
+        ${['Material', 'Cantidad', 'Unidad', 'Precio unit.', 'Importe'].map((label, i) =>
+          `<th style="${cell}text-align:${i === 0 ? 'left' : 'right'};">${label}</th>`).join('')}
+      </tr></thead>
+      <tbody>${rows.map((m, i) => `<tr style="text-align:right;">
+        <td style="${cell}text-align:left;">${escape(m.name || 'Material')}</td>
+        <td style="${cell}">${m.quantity}</td><td style="${cell}">${escape(m.unit || '—')}</td>
+        <td style="${cell}">${money.format(m.unitPrice)}</td><td style="${cell}">${money.format(amounts[i])}</td>
+      </tr>`).join('') || '<tr><td colspan="5" style="padding:12px 0;">Sin materiales registrados con cantidad mayor a cero.</td></tr>'}</tbody>
     </table>
-    <div style="background:#f8fafc;padding:20px;border-radius:10px;margin-bottom:25px;">
-      <h3 style="margin:0 0 15px;color:#0f4c81;font-size:16px;">Datos del Cliente</h3>
-      <p style="margin:6px 0;"><strong>Cliente:</strong> ${job.clientName}</p>
-      <p style="margin:6px 0;"><strong>Teléfono:</strong> ${job.clientPhone || 'No registrado'}</p>
-      <p style="margin:6px 0;"><strong>Dirección:</strong> ${escapeLocationHtml(jobLocation(job))}</p>
-    </div>
-    <div style="background:#f8fafc;padding:20px;border-radius:10px;margin-bottom:25px;">
-      <h3 style="margin:0 0 15px;color:#0f4c81;font-size:16px;">Asignación</h3>
-      <p style="margin:6px 0;"><strong>Subcontratista:</strong> ${job.nameEmployee || 'Sin asignar'}</p>
-      <p style="margin:6px 0;"><strong>Manager:</strong> ${job.nameManager || 'Sin asignar'}</p>
-      <p style="margin:6px 0;"><strong>Pago:</strong>
-        <span style="font-size:18px;font-weight:700;color:#198754;">$${pay}</span>
-      </p>
-    </div>
-    <div style="margin-top:40px;text-align:center;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:15px;">
-      Documento generado automáticamente · RemoMN
-    </div>
-  `;
-
-  return el;
+    <p style="text-align:right;font-size:18px;font-weight:bold;">Total de materiales (USD) · ${money.format(total)}</p>`;
+  return element;
 }

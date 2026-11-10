@@ -1607,35 +1607,48 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
     }
 
     async generatePdf(job: Job): Promise<void> {
-        if (!this.invoicePdf.canGenerate(job)) {
-            await Swal.fire({
-                icon: 'warning',
-                title: 'No disponible',
-                text: 'Solo se puede generar la factura si el trabajo está Completado y tiene número de QuickBooks.',
-                confirmButtonColor: '#0f4c81'
-            });
-            return;
-        }
+    if (Swal.isVisible()) {
+        Swal.close();
+    }
+
+    // Abre el loading y espera a que realmente esté pintado en pantalla
+    await new Promise<void>((resolve) => {
+        void Swal.fire({
+            title: 'Generando PDF...',
+            text: 'Por favor espera un momento',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+                // Dos frames: garantiza que el modal ya se dibujó
+                requestAnimationFrame(() =>
+                    requestAnimationFrame(() => resolve())
+                );
+            }
+        });
+    });
+
+    try {
+        await this.invoicePdf.download(job);
 
         await Swal.fire({
-            title: 'Generando PDF...',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
+            icon: 'success',
+            title: 'PDF generado',
+            text: 'El documento se descargó correctamente.',
+            confirmButtonColor: '#0f4c81',
+            timer: 2000,
+            timerProgressBar: true
         });
-
-        try {
-            await this.invoicePdf.download(job);
-            await Swal.fire({
-                icon: 'success',
-                title: 'PDF generado',
-                text: 'El documento se descargó correctamente.',
-                confirmButtonColor: '#0f4c81',
-                timer: 2000
-            });
-        } catch {
-            await Swal.fire('Error', 'No se pudo generar el PDF.', 'error');
-        }
+    } catch {
+        await Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo generar el PDF.',
+            confirmButtonColor: '#0f4c81'
+        });
     }
+}
 
     fullUserName(u: User): string {
         return u.name || `${u.firstName} ${u.lastName}`.trim();
