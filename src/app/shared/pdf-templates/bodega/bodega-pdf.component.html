@@ -14,7 +14,7 @@
           class="badge"
           [class.progress]="order.status === 'IN_PROGRESS'"
         >
-          {{ order.status === 'PENDING' ? 'Pendiente' : 'En Progreso' }}
+          {{ order.status === 'PENDING' ? 'Pendiente' : 'En Progreso (Pago)' }}
         </span>
 
         <strong class="gold">{{ order.employeeName }}</strong>

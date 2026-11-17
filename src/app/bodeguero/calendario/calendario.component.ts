@@ -255,7 +255,7 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
 
     private statusLabel(status: string): string {
         switch (status) {
-            case 'IN_PROGRESS': return 'En Progreso';
+            case 'IN_PROGRESS': return 'En Progreso (Pago)';
             case 'COMPLETED': return 'Completado';
             case 'CANCELLED': return 'Cancelado';
             default: return 'Pendiente';

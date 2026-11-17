@@ -143,7 +143,7 @@ export async function buildEvidenceReportPdf(data: EvidenceReportData): Promise<
       ['Edificio', text(data.buildingNumber)], ['Departamento', text(data.apartment)],
       ['Teléfono Contacto', data.clientPhone], ['Subcontratista', text(data.employeeName)],
       ['Valor a Pagar', money(data.total)],
-      ['Estado Reportado', data.status === 'REVIEW' ? 'REVISIÓN' : data.status === 'COMPLETED' ? 'COMPLETADO' : 'EN PROGRESO']
+      ['Estado Reportado', data.status === 'REVIEW' ? 'REVISIÓN' : data.status === 'COMPLETED' ? 'COMPLETADO' : 'En Progreso (Pago)']
     ],
     columnStyles: {
       0: { cellWidth: 45, fillColor: navy, textColor: '#FFFFFF', fontStyle: 'bold' },

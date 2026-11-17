@@ -298,7 +298,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     private statusLabel(status: string): string {
         switch (status) {
             case 'IN_PROGRESS':
-                return 'En Progreso';
+                return 'En Progreso (Pago)';
             case 'COMPLETED':
                 return 'Completado';
             case 'CANCELLED':

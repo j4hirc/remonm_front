@@ -289,7 +289,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     private statusLabel(status: string): string {
         switch (status) {
             case 'IN_PROGRESS':
-                return 'En Progreso';
+                return 'En Progreso (Pago)';
             case 'COMPLETED':
                 return 'Completado';
             case 'CANCELLED':

@@ -25,7 +25,7 @@
   @for (order of report().orders; track order.jobId) {
   <article class="order">
     <div class="order-header"><strong>{{ order.clientName }}</strong><span class="badge"
-        [class.progress]="order.status === 'IN_PROGRESS'">{{ order.status === 'PENDING' ? 'Pendiente' : 'En Progreso'
+        [class.progress]="order.status === 'IN_PROGRESS'">{{ order.status === 'PENDING' ? 'Pendiente' : 'En Progreso (Pago)'
         }}</span><strong class="gold">{{ order.employeeName }}</strong></div>
     <p class="manager"><i class="fa-solid fa-user-shield" aria-hidden="true"></i> Manager: {{ order.managerName }}</p>
     <div class="order-location">

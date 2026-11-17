@@ -302,12 +302,13 @@ private formatDate(
 
     this.currentJob = job;
 
-    const bloqueado = job.status === 'COMPLETED' || job.status === 'CANCELLED';
+    const bloqueado = ['REVIEW', 'COMPLETED', 'CANCELLED'].includes(job.status) ||
+        job.updateJob?.some(reporte => reporte.status === 'REVIEW');
 
     let estadoTxt = 'Pendiente';
     let badgeColor = '#F59E0B';
     if (job.status === 'IN_PROGRESS') {
-      estadoTxt = 'En Progreso';
+      estadoTxt = 'En Progreso (Pago)';
       badgeColor = '#00B8A9';
     } else if (job.status === 'REVIEW') {
       estadoTxt = 'Revisión';
@@ -356,7 +357,7 @@ private formatDate(
 
     const bloqueoHtml = bloqueado
       ? `<div style="margin-top:15px;padding:12px;background:rgba(16,185,129,0.1);border:1px solid #10B981;border-radius:8px;text-align:center;font-weight:700;">
-           <i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Proyecto Finalizado.
+           <i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Este trabajo ya no admite cambios del subcontratista.
          </div>`
       : '';
 

@@ -76,6 +76,12 @@ export const routes: Routes = [
                     )
             },
             {
+                path: 'asignaciones',
+                canActivate: [roleGuard],
+                data: { role: 'ROLE_ADMIN', heading: 'Control de asignaciones' },
+                loadComponent: () => import('./admin/asignaciones/asignaciones.component').then(m => m.AsignacionesComponent)
+            },
+            {
                 path: 'trabajos',
                 canActivate: [roleGuard],
                 data: { role: 'ROLE_ADMIN', heading: 'Gestión de Trabajos' },
@@ -146,6 +152,12 @@ export const routes: Routes = [
                     import('./jefe/usuarios/usuarios.component').then(
                         (c) => c.UsuariosJefeComponent
                     )
+            },
+            {
+                path: 'asignaciones',
+                canActivate: [roleGuard],
+                data: { role: 'ROLE_JEFE', heading: 'Control de asignaciones' },
+                loadComponent: () => import('./admin/asignaciones/asignaciones.component').then(m => m.AsignacionesComponent)
             },
             {
                 path: 'trabajos',

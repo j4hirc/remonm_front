@@ -15,8 +15,8 @@
                 <select id="filterStatusInput" class="input-field" [value]="statusFilter()" (change)="onStatus($event)">
                     <option value="ALL">Todos los Estados</option>
                     <option value="PENDING">Pendiente</option>
-                    <option value="IN_PROGRESS">En Progreso</option>
-                    <option value="REVIEW">Revisión</option>
+                    <option value="REVIEW">En Revisión</option>
+                    <option value="IN_PROGRESS">En Progreso (Pago)</option>
                     <option value="COMPLETED">Completado</option>
                     <option value="CANCELLED">Cancelado</option>
                 </select>
@@ -322,8 +322,7 @@
         }
 
         <p style="background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 6px; font-size: 13px; text-align: left; margin-bottom: 16px;">
-          <i class="fa-solid fa-circle-info"></i> Las nuevas asignaciones con plazo envían un correo
-          para aceptar o rechazar, incluso al elegir Guardar.
+          <i class="fa-solid fa-circle-info"></i> El subcontratista puede responder desde la asignación. El plazo se cuenta de 8:00 a. m. a 8:00 a. m. del día siguiente, hora de Minnesota.
         </p>
 
         @if (editingId() !== null && !isDuplicating()) {
@@ -596,7 +595,8 @@
             <label for="jobStatus">Estado del Trabajo</label>
             <select id="jobStatus" class="input-field" formControlName="status" [disabled]="isSaving()">
                 <option value="PENDING">Pendiente</option>
-                <option value="IN_PROGRESS">En Progreso</option>
+                <option value="REVIEW">En Revisión</option>
+                <option value="IN_PROGRESS">En Progreso (Pago)</option>
                 <option value="COMPLETED">Completado</option>
                 <option value="CANCELLED">Cancelado</option>
             </select>

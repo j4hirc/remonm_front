@@ -1,0 +1,46 @@
+<section aria-label="Seguimiento de asignaciones">
+  <header class="filters">
+    <label>Buscar trabajo o subcontratista
+      <input #query type="search" (input)="search.set(query.value)" placeholder="Número, cliente o nombre">
+    </label>
+    <label>Estado de asignación
+      <select #state (change)="filter.set(state.value)">
+        <option value="">Todos</option>
+        @for (s of states; track s) {
+          <option [value]="s">{{ s === 'EXPIRED' ? 'Con vencimiento' : s === 'REJECTED' ? 'Con rechazo' : label(s) }}</option>
+        }
+      </select>
+    </label>
+  </header>
+  <p class="meta">Hora de Minnesota · {{ visible().length }} trabajos</p>
+  @if (error()) { <p role="alert">No se pudo actualizar la lista. Se reintentará en unos segundos.</p> }
+  @if (loading()) { <p>Cargando trabajos…</p> }
+  @for (j of visible(); track j.jobId) {
+    <article>
+      <header><h2>#{{ j.jobId }} · {{ j.client }}</h2><span class="badge" [attr.data-state]="status(current(j))">{{ label(status(current(j))) }}</span></header>
+      <dl>
+        <div><dt>Subcontratista actual</dt><dd>{{ j.employee || 'Sin asignar' }}</dd></div>
+        <div><dt>Siguiente si rechaza o vence</dt><dd>{{ j.nextEmployee || '—' }}</dd></div>
+        <div><dt>Estado del trabajo</dt><dd>{{ jobLabels[j.jobStatus] || j.jobStatus }}</dd></div>
+        @if (current(j); as a) {
+          <div><dt>Fecha de asignación</dt><dd>{{ date(a.assignedAt) }}</dd></div>
+          <div><dt>Inicio del plazo</dt><dd>{{ date(a.publishesAt) }}</dd></div>
+          <div><dt>Vencimiento</dt><dd>{{ date(a.expiresAt) }}</dd></div>
+          @if (a.respondedAt) { <div><dt>Respuesta o cierre</dt><dd>{{ date(a.respondedAt) }}</dd></div> }
+        }
+      </dl>
+      @if (current(j); as a) { @if (remaining(a); as counter) { <p class="counter">{{ counter }}</p> } }
+      @if (j.history.length) {
+        <details><summary>Historial de asignaciones ({{ j.history.length }})</summary>
+          @for (item of j.history; track item.id) {
+            <div class="attempt"><strong>{{ item.employeeName }} · {{ label(status(item)) }}</strong>
+              <p>Asignado {{ date(item.assignedAt) }} · Inicio del plazo {{ date(item.publishesAt) }} · Vencimiento {{ date(item.expiresAt) }}</p>
+              @if (item.respondedAt) { <p>Respuesta o cierre {{ date(item.respondedAt) }}</p> }
+              <p>{{ item.reason }}</p>
+            </div>
+          }
+        </details>
+      }
+    </article>
+  } @empty { @if (!loading() && !error()) { <p>No hay trabajos con estos filtros.</p> } }
+</section>

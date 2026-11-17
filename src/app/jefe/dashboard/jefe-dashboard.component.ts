@@ -53,6 +53,7 @@ export class JefeDashboardComponent {
     
     // 5. Trabajos
     { title: 'Trabajos y Proyectos', description: 'Asignación de obras y seguimiento.', icon: 'fa-solid fa-hammer', className: 'card card-purple', route: '/jefe/trabajos' },
+    { title: 'Control de asignaciones', description: 'Plazos, respuestas e historial por trabajo.', icon: 'fa-solid fa-clock', className: 'card card-green', route: '/jefe/asignaciones' },
     // 6. Evidencias
     { title: 'Evidencias', description: 'Revisión visual de los avances de obra.', icon: 'fa-solid fa-camera', className: 'card card-blue', route: '/jefe/evidencias' },
     // 7. Calendario

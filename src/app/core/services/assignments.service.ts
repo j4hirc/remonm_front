@@ -11,13 +11,26 @@ export interface Assignment {
     address: string;
     status: string;
     assignedAt: string;
+    publishesAt: string | null;
     expiresAt: string | null;
     respondedAt: string | null;
     reason: string;
 }
 
+export interface TrackedJob {
+    jobId: number;
+    client: string;
+    jobStatus: string;
+    employee: string | null;
+    currentId: number | null;
+    nextEmployee: string | null;
+    history: Assignment[];
+}
+
 export function assignmentLabel(status: string): string {
     const labels: Record<string, string> = {
+        SCHEDULED: 'Programada',
+        NONE: 'Sin registro',
         PENDING: 'Esperando respuesta',
         ACCEPTED: 'Aceptado',
         REJECTED: 'Rechazado',
@@ -38,6 +51,10 @@ export class AssignmentsService {
 
     private readonly url =
         `${environment.apiUrl.replace(/\/$/, '')}/job-assignments`;
+
+    overview() {
+        return this.http.get<{now: string; jobs: TrackedJob[]}>(this.url + '/overview');
+    }
 
     mine() {
         return this.http.get<Assignment[]>(`${this.url}/mine`);

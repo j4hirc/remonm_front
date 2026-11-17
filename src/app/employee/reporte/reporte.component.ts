@@ -53,7 +53,6 @@ export class ReporteEmployeeComponent
   readonly employeeId = signal<number | null>(null);
   readonly employeeName = signal('');
 
-  status = 'IN_PROGRESS';
   comment = '';
   private manualModifications = false;
   get hasModifications(): boolean { return this.manualModifications || this.materialsChanged(); }
@@ -109,10 +108,11 @@ export class ReporteEmployeeComponent
         void this.router.navigate(['/employee/calendario']);
         return;
       }
-      if (job.status === 'COMPLETED' || job.status === 'CANCELLED') {
+      if (['REVIEW', 'COMPLETED', 'CANCELLED'].includes(job.status) ||
+        job.updateJob?.some(reporte => reporte.status === 'REVIEW')) {
         await Swal.fire(
           'Bloqueado',
-          'Este proyecto ya está finalizado.',
+          'Este trabajo ya no admite cambios del subcontratista.',
           'info'
         );
         void this.router.navigate(['/employee/calendario']);
@@ -295,7 +295,7 @@ export class ReporteEmployeeComponent
       apartment: job.apartment?.trim() || 'No registrado',
       clientPhone: job.clientPhone?.trim() || 'No registrado',
       employeeName: this.employeeName(),
-      status: this.getReportedStatus(),
+      status: 'REVIEW',
       comment,
       total,
       initialTotal: job.originalAssignmentAvailable ? job.initialPay ?? null : null,
@@ -306,14 +306,6 @@ export class ReporteEmployeeComponent
       signature: this.canvasRef()?.nativeElement.toDataURL('image/png') || '',
       logoUrl: new URL('img/logonegro.png', document.baseURI).href
     });
-  }
-
-  getReportedStatus(): string {
-    if (this.hasModifications || this.job()?.status === 'REVIEW') {
-      return 'REVIEW';
-    }
-
-    return this.status;
   }
 
   async submit(): Promise<void> {
@@ -341,6 +333,19 @@ export class ReporteEmployeeComponent
     }
 
     this.saving.set(true);
+    const respuesta = await Swal.fire({
+      icon: 'warning',
+      title: '¿Enviar el trabajo a revisión?',
+      text: 'Recuerde que no podrá hacer cambios al trabajo una vez enviado a revisión.',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, enviar a revisión',
+      cancelButtonText: 'Seguir editando',
+      focusCancel: true
+    });
+    if (!respuesta.isConfirmed) {
+      this.saving.set(false);
+      return;
+    }
     void Swal.fire({
       title: 'Procesando...',
       text: 'Generando PDF y guardando avance...',
@@ -379,7 +384,7 @@ export class ReporteEmployeeComponent
         jobId: job.jobId,
         employeeId: empId,
         hasModifications: this.hasModifications,
-        status: this.getReportedStatus(),
+        status: 'REVIEW',
         materials,
         materialIds,
         newPrice

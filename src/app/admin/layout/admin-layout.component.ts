@@ -88,6 +88,11 @@ readonly menuItems: readonly AdminMenuItem[] = [
     route: '/admin/clientes-frecuentes' 
   },
   {
+    label: 'Control de asignaciones',
+    icon: 'fa-solid fa-clock',
+    route: '/admin/asignaciones'
+  },
+  {
     label: 'Trabajos',
     icon: 'fa-solid fa-hammer',
     route: '/admin/trabajos'

@@ -38,6 +38,7 @@ export class AdminDashboardComponent {
         { title: 'Materiales', description: 'Control de Materiales e Inventario.', icon: 'fa-solid fa-boxes-stacked', className: 'card card-green', route: '/admin/materiales' },
         { title: 'Clientes frecuentes', description: 'Gestión de clientes frecuentes', icon: 'fa-solid fa-address-book', className: 'card card-blue', route: '/admin/clientes-frecuentes' },
         
+        { title: 'Control de asignaciones', description: 'Plazos, respuestas e historial por trabajo.', icon: 'fa-solid fa-clock', className: 'card card-green', route: '/admin/asignaciones' },
         // Proyectos y Seguimiento
         { title: 'Trabajos y Proyectos', description: 'Asignación de obras y seguimiento.', icon: 'fa-solid fa-hammer', className: 'card card-purple', route: '/admin/trabajos' },
         { title: 'Evidencias', description: 'Revisión visual de los avances de obra.', icon: 'fa-solid fa-camera', className: 'card card-blue', route: '/admin/evidencias' },

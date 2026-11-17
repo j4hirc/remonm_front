@@ -67,6 +67,7 @@ export class JefeLayoutComponent {
   { label: 'Clientes frecuentes', icon: 'fa-solid fa-address-book', route: '/jefe/clientes-frecuentes' },
   { label: 'Bodega', icon: 'fa-solid fa-truck-fast', route: '/jefe/bodega' },
   { label: 'Nómina', icon: 'fa-solid fa-money-check-dollar', route: '/jefe/nomina' },
+  { label: 'Control de asignaciones', icon: 'fa-solid fa-clock', route: '/jefe/asignaciones' },
   { label: 'Trabajos', icon: 'fa-solid fa-hammer', route: '/jefe/trabajos' },
   { label: 'Evidencias', icon: 'fa-solid fa-camera', route: '/jefe/evidencias' },
   { label: 'Calendario', icon: 'fa-solid fa-calendar-days', route: '/jefe/calendario' }

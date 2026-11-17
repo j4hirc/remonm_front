@@ -11,21 +11,7 @@
     </p>
   </header>
 
-  <label class="field">
-    <span>Estado del trabajo</span>
-    @if (hasModifications || j.status === 'REVIEW') {
-    <input type="text" value="Revisión" readonly />
-    <small>
-      El trabajo quedará en Revisión hasta que oficina lo revise
-      y cambie su estado.
-    </small>
-    } @else {
-    <select [(ngModel)]="status" [disabled]="saving()">
-      <option value="IN_PROGRESS">En Progreso</option>
-      <option value="COMPLETED">Completado</option>
-    </select>
-    }
-  </label>
+  <p>Al enviar el reporte, el trabajo pasará a <strong>En revisión</strong>.</p>
 
   <label class="field">
     <span>Comentario / avance</span>

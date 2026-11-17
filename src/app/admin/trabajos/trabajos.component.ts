@@ -1453,7 +1453,7 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             case 'PENDING':
                 return { label: 'Pendiente', className: 'badge badge-pending' };
             case 'IN_PROGRESS':
-                return { label: 'En Progreso', className: 'badge badge-progress' };
+                return { label: 'En Progreso (Pago)', className: 'badge badge-progress' };
             case 'REVIEW':
                 return { label: 'Revisión', className: 'badge badge-review' };
             case 'COMPLETED':
