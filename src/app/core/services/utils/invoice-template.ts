@@ -1,5 +1,5 @@
 import { Job, JobUpdate } from '../../models/job.model';
-import { escapeLocationHtml as escape, jobLocation } from '../../utils/job-location';
+import { escapeLocationHtml as escape } from '../../utils/job-location';
 import { formatDay, parseJobDay } from '../../utils/report-calculations';
 import { lineTotal } from './report-material-comparison';
 
@@ -33,11 +33,23 @@ export function buildInvoiceElement(job: Job): HTMLElement {
     ? jobMaterials
     : (snapshot ?? []).filter((m: any) => (m.quantity ?? 0) > 0);
 
-  const completed = day(job.completedDate);
-  const reported = day(report?.date);
-  const date = completed ?? reported ?? day(job.jobDate);
-  const dateLabel = completed !== null ? 'Fecha de finalización' :
-    reported !== null ? 'Fecha del reporte' : 'Fecha programada';
+  const displayText = (value?: string | null): string =>
+    escape(value?.trim() || 'Sin registrar');
+  const displayDate = (value?: string | number[] | null): string => {
+    const parsed = day(value);
+    return parsed === null ? 'Sin fecha registrada' : formatDay(parsed);
+  };
+  const details: Array<[string, string]> = [
+    ['Número del trabajo', escape(String(job.jobId))],
+    ['Cliente', displayText(job.clientName)],
+    ['Dirección', displayText(job.address)],
+    ['Edificio', displayText(job.buildingNumber)],
+    ['Unidad / departamento', displayText(job.apartment)],
+    ['Fecha programada', displayDate(job.jobDate)],
+    ['Fecha de finalización', displayDate(job.completedDate)],
+    ['Subcontratista', displayText(job.nameEmployee)],
+    ['Encargado', displayText(job.nameManager)]
+  ];
 
   // Título según de dónde salieron los datos
   const title = jobMaterials.length > 0
@@ -52,12 +64,19 @@ export function buildInvoiceElement(job: Job): HTMLElement {
   element.innerHTML = `
     <div style="border-bottom:3px solid #15516b;padding-bottom:14px;">
       <img src="img/logonegro.png" alt="Rojas Remodeling" style="max-width:140px;max-height:60px;">
-      <h1 style="margin:14px 0 4px;font-size:26px;">Nota de venta</h1>
+      <h1 style="margin:14px 0 4px;font-size:26px;">Reporte de Trabajo Realizado</h1>
       <strong>RemoMN · Trabajo #${job.jobId}</strong>
     </div>
-    <p><strong>${dateLabel}</strong> · ${date === null ? 'Sin fecha registrada' : formatDay(date)}</p>
-    <p><strong>Cliente</strong> · ${escape(job.clientName || 'Sin registrar')}<br>
-      ${escape(jobLocation(job))}${job.clientPhone ? '<br>' + escape(job.clientPhone) : ''}</p>
+    <h2 style="font-size:17px;margin-top:24px;">Datos del trabajo</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tbody>${details.map(([label, value]) => `<tr>
+        <th scope="row" style="${cell}text-align:left;vertical-align:top;width:35%;">${label}</th>
+        <td style="${cell}">${value}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+    <h2 style="font-size:17px;margin-top:20px;">Descripción del trabajo</h2>
+    <p style="white-space:pre-wrap;line-height:1.5;">${displayText(job.description)}</p>
+    ${job.clientPhone ? '<p><strong>Teléfono del cliente</strong> · ' + escape(job.clientPhone) + '</p>' : ''}
     ${job.quickbooksInvoice ? '<p>Referencia QuickBooks · ' + escape(job.quickbooksInvoice) + '</p>' : ''}
     <h2 style="font-size:17px;margin-top:24px;">${title}</h2>
     <table style="width:100%;border-collapse:collapse;font-size:13px;">

@@ -8,7 +8,7 @@ export class InvoicePdfService {
   private readonly pdf = inject(PdfExportService);
 
   async download(job: Job): Promise<void> {
-    const filename = `Nota_de_venta_RemoMN_${job.jobId}.pdf`;
+    const filename = `Reporte_de_Trabajo_Realizado_RemoMN_${job.jobId}.pdf`;
     const blob = await this.pdf.create(buildInvoiceElement(job), filename);
     this.pdf.download(blob, filename);
   }
