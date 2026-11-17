@@ -1,4 +1,4 @@
-import { findAddress } from '../../core/utils/address-search';
+import { findAddress, findAddressAtPoint } from '../../core/utils/address-search';
 import { Cliente } from '../../core/models/cliente.model';
 import { lineTotal } from '../../core/services/utils/report-material-comparison';
 import { ClientesService } from '../../core/services/clientes.service';
@@ -1419,7 +1419,7 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
             const lat = Number(coords[1]), lon = Number(coords[2]);
             if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
                 this.setMapPosition(lat, lon);
-                this.confirmedAddress = original;
+                await this.reverseGeocode(lat, lon);
             } else {
                 this.addressStatus.set({ kind: 'warn', text: 'Coordenadas fuera de rango.' });
             }
@@ -1459,17 +1459,35 @@ export class TrabajosJefeComponent implements OnInit, OnDestroy {
         if (manual) this.reverseGeocode(lat, lng);
     }
 
-    // Lo llaman los eventos click/dragend existentes del mapa.
-    // Conserva el texto escrito, sin sustituirlo por una dirección vecina.
-    private reverseGeocode(lat: number, lng: number): void {
-        this.searchToken++;
-        this.addressSearching.set(false);
-        const address = this.form.controls.address.value?.trim() ||
-            `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    private async reverseGeocode(lat: number, lng: number): Promise<void> {
+      const token = ++this.searchToken;
+      this.confirmedAddress = '';
+      this.lastSearchedAddress = '';
+      this.form.controls.address.setValue('');
+      this.addressSearching.set(true);
+      this.addressStatus.set({ kind: 'info', text: 'Buscando la dirección del punto seleccionado…' });
+      try {
+        const address = await findAddressAtPoint(lat, lng, () =>
+          token === this.searchToken && !this.destroyRef.destroyed
+        );
+        if (token !== this.searchToken || this.destroyRef.destroyed) return;
+        if (!address) {
+          this.addressStatus.set({
+            kind: 'warn',
+            text: 'No se pudo obtener una dirección para este punto. Selecciona otro punto o escribe la dirección y búscala antes de guardar.'
+          });
+          return;
+        }
         this.form.controls.address.setValue(address);
         this.lastSearchedAddress = address;
         this.confirmedAddress = address;
-        this.addressStatus.set({ kind: 'info', text: 'Ubicación seleccionada manualmente.' });
+        this.addressStatus.set({
+          kind: 'info',
+          text: 'Dirección encontrada. Comprueba el número y la calle antes de guardar; el mapa puede devolver una dirección cercana.'
+        });
+      } finally {
+        if (token === this.searchToken) this.addressSearching.set(false);
+      }
     }
 
     private validateAddressLocation(): boolean {

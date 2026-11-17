@@ -212,3 +212,58 @@ export async function findAddress(
 
   return null;
 }
+
+const reverseCache = new Map<string, string>();
+
+/** Resolve the selected point without moving it to the provider's nearest object. */
+export async function findAddressAtPoint(
+  lat: number,
+  lon: number,
+  isCurrent: () => boolean = () => true
+): Promise<string | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) ||
+      Math.abs(lat) > 90 || Math.abs(lon) > 180 || !isCurrent()) return null;
+
+  const key = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+  const cached = reverseCache.get(key);
+  if (cached) return cached;
+
+  // Share the forward-search queue to avoid bursts against Nominatim.
+  const task = queue.then(async () => {
+    if (!isCurrent()) return null;
+    const wait = Math.max(0, 1100 - (Date.now() - lastRequest));
+    if (wait) await new Promise(resolve => setTimeout(resolve, wait));
+    if (!isCurrent()) return null;
+    lastRequest = Date.now();
+    try {
+      const params = new URLSearchParams({
+        format: 'jsonv2', lat: String(lat), lon: String(lon),
+        addressdetails: '1', zoom: '18', layer: 'address'
+      });
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?${params}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (!response.ok || !isCurrent()) return null;
+      const data = await response.json();
+      if (!isCurrent() || data?.error) return null;
+      const a = data?.address;
+      const text = (value: unknown): string => typeof value === 'string' ? value.trim() : '';
+      const street = text(a?.road) || text(a?.pedestrian) || text(a?.residential);
+      // An administrative region alone is not a street address.
+      if (!street) return null;
+      const address = [
+        [text(a?.house_number), street].filter(Boolean).join(' '),
+        text(a?.city) || text(a?.town) || text(a?.village) || text(a?.municipality),
+        text(a?.state), text(a?.postcode)
+      ].filter(Boolean).join(', ');
+      if (reverseCache.size >= 100) reverseCache.delete(reverseCache.keys().next().value!);
+      reverseCache.set(key, address);
+      return address;
+    } catch {
+      return null;
+    }
+  });
+  queue = task.catch(() => undefined);
+  return task;
+}
