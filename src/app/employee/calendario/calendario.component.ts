@@ -1,8 +1,10 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { jobLocation, escapeLocationHtml } from '../../core/utils/job-location';
 import { formatDate as angularFormatDate } from '@angular/common';
 import {
   AfterViewInit,
   Component,
+  DestroyRef,
   ElementRef,
   inject,
   OnDestroy,
@@ -12,7 +14,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { firstValueFrom, forkJoin } from 'rxjs';
+import { firstValueFrom, forkJoin, Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { Calendar, EventClickArg, EventContentArg } from '@fullcalendar/core';
@@ -40,6 +42,7 @@ declare const L: any;
   styleUrl: './calendario.component.css',
 })
 export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly jobsService = inject(JobsService);
   private readonly usersService = inject(UsersService);
   private readonly authService = inject(AuthService);
@@ -52,7 +55,8 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
   private myEmployeeId: number | null = null;
   private myJobs: Job[] = [];
   private currentJob: Job | null = null;
-  private viewReady = false;
+  private dataSubscription?: Subscription;
+    private viewReady = false;
   private dataReady = false;
 
   readonly loading = signal(true);
@@ -63,6 +67,8 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
   private openingAssignment = false;
 
   ngOnInit(): void {
+    this.jobsService.watchChanges().pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadData());
     this.loadData();
   }
 
@@ -72,6 +78,7 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
   }
 
   ngOnDestroy(): void {
+        this.dataSubscription?.unsubscribe();
     this.destroyMap();
     this.calendar?.destroy();
   }
@@ -82,6 +89,7 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
   }
 
   private loadData(): void {
+    this.dataSubscription?.unsubscribe();
     this.loading.set(true);
 
     void Swal.fire({
@@ -90,10 +98,10 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
       didOpen: () => Swal.showLoading(),
     });
 
-    forkJoin({
+    this.dataSubscription = forkJoin({
       jobs: this.jobsService.getAll(),
       users: this.usersService.getAll(true),
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: ({ jobs, users }) => {
         const email = (this.authService.email() || '').toLowerCase().trim();
         const yo = users.find((u: User) => (u.email || '').toLowerCase().trim() === email);

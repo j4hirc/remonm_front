@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { Calendar, EventContentArg, EventClickArg } from '@fullcalendar/core';
@@ -55,6 +55,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     filterEmployeeId = '';
 
     private allJobs: Job[] = [];
+    private dataSubscription?: Subscription;
     private viewReady = false;
     private dataReady = false;
 
@@ -63,6 +64,8 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
 
 
     ngOnInit(): void {
+        this.jobsService.watchChanges().pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.loadData());
         const saved = this.calendarState.get(this.calendarKey);
 
         this.filterEmployeeId = saved?.employeeId ?? '';
@@ -76,6 +79,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     ngOnDestroy(): void {
+        this.dataSubscription?.unsubscribe();
         if (this.calendar) {
             const date = this.calendar.getDate();
 
@@ -95,6 +99,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     }
 
     loadData(): void {
+    this.dataSubscription?.unsubscribe();
     this.error.set('');
     this.loading.set(true);
 
@@ -104,7 +109,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
         didOpen: () => Swal.showLoading()
     });
 
-    forkJoin({
+    this.dataSubscription = forkJoin({
         jobs: this.jobsService.getAll(false),
         users: this.usersService.getAll(true)
     })

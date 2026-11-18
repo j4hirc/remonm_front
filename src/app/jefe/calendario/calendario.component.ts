@@ -1,6 +1,8 @@
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { jobLocation, escapeLocationHtml } from '../../core/utils/job-location';
 import {
     Component,
+    DestroyRef,
     OnInit,
     OnDestroy,
     inject,
@@ -12,7 +14,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { Calendar, EventContentArg, EventClickArg } from '@fullcalendar/core';
@@ -36,6 +38,7 @@ import { User } from '../../core/models/user.model';
     styleUrl: './calendario.component.css'
 })
 export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy {
+    private readonly destroyRef = inject(DestroyRef);
     private readonly jobsService = inject(JobsService);
     private readonly usersService = inject(UsersService);
     private readonly router = inject(Router);
@@ -51,6 +54,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     filterEmployeeId = '';
 
     private allJobs: Job[] = [];
+    private dataSubscription?: Subscription;
     private viewReady = false;
     private dataReady = false;
     private colorByEmployeeId: Record<number, string> = {};
@@ -58,6 +62,8 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     private hierarchyByEmployeeId: Record<number, number> = {};
 
     ngOnInit(): void {
+        this.jobsService.watchChanges().pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.loadData());
     const saved = this.calendarState.get(this.calendarKey);
 
     this.filterEmployeeId = saved?.employeeId ?? '';
@@ -71,6 +77,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     }
 
     ngOnDestroy(): void {
+        this.dataSubscription?.unsubscribe();
     if (this.calendar) {
         const date = this.calendar.getDate();
 
@@ -90,6 +97,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
 }
 
     private loadData(): void {
+    this.dataSubscription?.unsubscribe();
     this.loading.set(true);
 
     void Swal.fire({
@@ -98,10 +106,10 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
         didOpen: () => Swal.showLoading()
     });
 
-    forkJoin({
+    this.dataSubscription = forkJoin({
         jobs: this.jobsService.getAll(false),
         users: this.usersService.getAll(true)
-    }).subscribe({
+    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: ({ jobs, users }) => {
             this.allJobs = jobs;
 

@@ -13,7 +13,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
 import { Calendar, EventContentArg, EventClickArg } from '@fullcalendar/core';
@@ -50,12 +50,15 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
     filterEmployeeId = '';
 
     private allJobs: Job[] = [];
+    private dataSubscription?: Subscription;
     private viewReady = false;
     private dataReady = false;
     private colorByEmployeeId: Record<number, string> = {};
     private hierarchyByEmployeeId: Record<number, number> = {};
 
     ngOnInit(): void {
+        this.jobsService.watchChanges().pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.loadData());
         this.loadData();
     }
 
@@ -65,11 +68,13 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
     }
 
     ngOnDestroy(): void {
+        this.dataSubscription?.unsubscribe();
         this.calendar?.destroy();
         Swal.close();
     }
 
     loadData(): void {
+    this.dataSubscription?.unsubscribe();
     this.error.set('');
     this.loading.set(true);
 
@@ -79,7 +84,7 @@ export class CalendarioBodegueroComponent implements OnInit, AfterViewInit, OnDe
         didOpen: () => Swal.showLoading()
     });
 
-    forkJoin({
+    this.dataSubscription = forkJoin({
         jobs: this.jobsService.getAll(true),
         users: this.usersService.getAll(true)
     })
