@@ -64,6 +64,7 @@ interface NecessaryMaterialRow {
 })
 export class TrabajosComponent implements OnInit, OnDestroy {
     private expectedAssignmentId: number | null = null;
+    private pendingEditorDeleteId: number | null = null;
     private readonly clientesService = inject(ClientesService);
     readonly clientes = signal<Cliente[]>([]);
     readonly clientesLoading = signal(false);
@@ -798,7 +799,26 @@ export class TrabajosComponent implements OnInit, OnDestroy {
             this.editorOptions = editorCmp.swalOptions;
             this.editorOpen.set(true);
 
-            const result = await editorCmp.fire();
+            // Resolve the editor before opening another SweetAlert.
+            // Cancellation returns to the same form without losing unsaved changes.
+            let result;
+            while (!this.destroyRef.destroyed) {
+                result = await editorCmp.fire();
+                const deleteId = this.pendingEditorDeleteId;
+                this.pendingEditorDeleteId = null;
+                if (deleteId === null) break;
+                if (this.destroyRef.destroyed) return;
+
+                const deleted = await this.deleteJobFromEditor(deleteId);
+                if (this.destroyRef.destroyed) return;
+                if (deleted) {
+                    this.editingId.set(null);
+                    this.editorOpen.set(false);
+                    await this.volverAlCalendario();
+                    return;
+                }
+            }
+            if (!result || this.destroyRef.destroyed) return;
 
             this.editorOpen.set(false);
 
@@ -1102,28 +1122,24 @@ export class TrabajosComponent implements OnInit, OnDestroy {
      */
     async deleteFromEditor(): Promise<void> {
         const id = this.editingId();
-        if (id === null || this.isSaving() || this.isDuplicating()) return;
+        if (
+            id === null || this.isSaving() || this.isDuplicating()
+            || this.deletingId() !== null || this.pendingEditorDeleteId !== null
+            || !this.editorOpen()
+        ) return;
 
-        const job = this.jobs().find((j) => j.jobId === id);
-        if (!job) return;
-
-        const deleted = await this.deleteJobFromEditor(job);
-        if (deleted && !this.destroyRef.destroyed) {
-            if (Swal.isVisible()) {
-                Swal.close();
-            }
-            this.editorOpen.set(false);
-            this.editingId.set(null);
-        }
+        // The editor can be opened from the calendar without this job in the table.
+        this.pendingEditorDeleteId = id;
+        Swal.close();
     }
 
     /**
      * Confirmación + borrado desde el modal. Devuelve true si se eliminó correctamente.
      */
-    private async deleteJobFromEditor(job: Job): Promise<boolean> {
+    private async deleteJobFromEditor(jobId: number): Promise<boolean> {
         if (this.deletingId() !== null) return false;
 
-        this.deletingId.set(job.jobId);
+        this.deletingId.set(jobId);
         try {
             const result = await Swal.fire({
                 title: '¿Eliminar Trabajo?',
@@ -1135,25 +1151,29 @@ export class TrabajosComponent implements OnInit, OnDestroy {
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#2E3238',
                 showLoaderOnConfirm: true,
+                allowOutsideClick: false,
+                allowEscapeKey: () => !Swal.isLoading(),
                 preConfirm: async () => {
                     try {
                         await firstValueFrom(
                             this.jobsService
-                                .delete(job.jobId)
+                                .delete(jobId)
                                 .pipe(takeUntilDestroyed(this.destroyRef))
                         );
                         this.jobs.update((list) =>
-                            list.filter((j) => j.jobId !== job.jobId)
+                            list.filter((j) => j.jobId !== jobId)
                         );
                         return true;
                     } catch (error: unknown) {
-                        Swal.showValidationMessage(this.getErrorMessage(error, true));
+                        if (!this.destroyRef.destroyed) {
+                            Swal.showValidationMessage(this.getErrorMessage(error, true));
+                        }
                         return false;
                     }
                 }
             });
 
-            if (result.isConfirmed) {
+            if (result.isConfirmed && !this.destroyRef.destroyed) {
                 await Swal.fire({
                     icon: 'success',
                     title: '¡Eliminado!',
