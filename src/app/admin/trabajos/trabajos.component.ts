@@ -177,6 +177,9 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     readonly selectedMaterialIds = signal<Set<number>>(new Set());
     readonly blueprintFiles = signal<File[]>([]);
     readonly existingBlueprintUrls = signal<string[]>([]);
+    readonly pendingBlueprintDelete = signal<string | null>(null);
+    readonly deletingBlueprintUrl = signal<string | null>(null);
+    readonly blueprintDeleteError = signal('');
 
     private map: any = null;
     private marker: any = null;
@@ -239,6 +242,8 @@ export class TrabajosComponent implements OnInit, OnDestroy {
     }
 
     onEditorDidOpen(): void {
+        this.pendingBlueprintDelete.set(null);
+        this.blueprintDeleteError.set('');
         this.addressStatus.set(null);
         this.lastSearchedAddress = this.form.controls.address.value?.trim() ?? '';
         this.searchToken++;
@@ -899,6 +904,41 @@ export class TrabajosComponent implements OnInit, OnDestroy {
         }
         this.blueprintFiles.set(current);
         input.value = '';
+    }
+
+    requestBlueprintDelete(url: string): void {
+        if (this.isSaving() || this.editingId() === null || this.isDuplicating()) return;
+        this.blueprintDeleteError.set('');
+        this.pendingBlueprintDelete.set(url);
+    }
+
+    async confirmBlueprintDelete(url: string): Promise<void> {
+        const jobId = this.editingId();
+        if (jobId === null || this.isSaving() || this.isDuplicating()
+            || this.pendingBlueprintDelete() !== url) return;
+        this.isSaving.set(true);
+        this.deletingBlueprintUrl.set(url);
+        this.blueprintDeleteError.set('');
+        Swal.disableButtons();
+        try {
+            const remaining = await firstValueFrom(
+                this.jobsService.deleteBlueprint(jobId, url)
+                    .pipe(takeUntilDestroyed(this.destroyRef))
+            );
+            if (this.destroyRef.destroyed) return;
+            this.existingBlueprintUrls.set(remaining);
+            this.jobs.update(list => list.map(job => job.jobId === jobId
+                ? { ...job, blueprintUrls: remaining } : job));
+            this.pendingBlueprintDelete.set(null);
+        } catch (error: unknown) {
+            if (!this.destroyRef.destroyed) {
+                this.blueprintDeleteError.set(this.getErrorMessage(error));
+            }
+        } finally {
+            this.isSaving.set(false);
+            this.deletingBlueprintUrl.set(null);
+            if (!this.destroyRef.destroyed && this.editorOpen()) Swal.enableButtons();
+        }
     }
 
     removeBlueprintFile(index: number): void {

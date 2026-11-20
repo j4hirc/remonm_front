@@ -90,6 +90,12 @@ export class JobsService {
       );
   }
 
+  deleteBlueprint(jobId: number, url: string): Observable<string[]> {
+    return this.http.delete<string[]>(`${this.apiUrl}/${jobId}/blueprints`, {
+      body: { url }
+    }).pipe(tap(() => this.changed.next()));
+  }
+
   private toFormData(request: JobRequest, files: File[]): FormData {
     const formData = new FormData();
 

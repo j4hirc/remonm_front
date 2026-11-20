@@ -630,11 +630,30 @@
                 <i class="fa-solid fa-check-circle" aria-hidden="true"></i>
                 <strong>Planos guardados:</strong>
                 <div class="blueprint-links">
-                    @for (url of existingBlueprintUrls(); track $index) {
-                    <a [href]="url" target="_blank" rel="noopener noreferrer">
-                        <i class="fa-solid fa-file-image" aria-hidden="true"></i>
-                        Plano {{ $index + 1 }}
-                    </a>
+                    @for (url of existingBlueprintUrls(); track url) {
+                    <div class="saved-blueprint-row">
+                        <a [href]="url" target="_blank" rel="noopener noreferrer">
+                            <i class="fa-solid fa-file-image" aria-hidden="true"></i>
+                            Plano {{ $index + 1 }}
+                        </a>
+                        @if (pendingBlueprintDelete() === url) {
+                        <div class="blueprint-delete-confirm" role="group" aria-label="Confirmar eliminación de plano">
+                            <span>Se eliminará definitivamente. Esta acción no se puede deshacer.</span>
+                            <button type="button" [disabled]="isSaving()" (click)="confirmBlueprintDelete(url)">
+                                {{ deletingBlueprintUrl() === url ? 'Eliminando…' : 'Sí, eliminar' }}
+                            </button>
+                            <button type="button" [disabled]="isSaving()" (click)="pendingBlueprintDelete.set(null)">Cancelar</button>
+                        </div>
+                        } @else {
+                        <button type="button" class="blueprint-delete-button" [disabled]="isSaving()"
+                            (click)="requestBlueprintDelete(url)" [attr.aria-label]="'Eliminar plano ' + ($index + 1)">
+                            <i class="fa-solid fa-trash" aria-hidden="true"></i> Eliminar
+                        </button>
+                        }
+                    </div>
+                    }
+                    @if (blueprintDeleteError()) {
+                    <p class="blueprint-delete-error" role="alert">{{ blueprintDeleteError() }}</p>
                     }
                 </div>
             </div>

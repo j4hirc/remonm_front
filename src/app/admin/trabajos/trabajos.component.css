@@ -939,3 +939,10 @@ input.nec-price {
     opacity: 0.6 !important;
     cursor: not-allowed !important;
 }
+
+.saved-blueprint-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:8px 0; width:100%; }
+.blueprint-delete-button, .blueprint-delete-confirm button { border:1px solid #c62828; border-radius:6px; background:white; color:#a51d1d; padding:7px 10px; cursor:pointer; }
+.blueprint-delete-confirm { display:flex; flex-wrap:wrap; align-items:center; gap:8px; width:100%; padding:10px; background:#fff3f0; border-radius:6px; }
+.blueprint-delete-confirm span { flex-basis:100%; }
+.blueprint-delete-confirm button:disabled, .blueprint-delete-button:disabled { opacity:.6; cursor:wait; }
+.blueprint-delete-error { color:#a51d1d; width:100%; }
