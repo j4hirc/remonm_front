@@ -50,6 +50,7 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     private calendar: Calendar | null = null;
 
     readonly loading = signal(true);
+    readonly error = signal('');
     readonly employees = signal<{ id: number; name: string }[]>([]);
     filterEmployeeId = '';
 
@@ -99,12 +100,9 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
     private loadData(): void {
     this.dataSubscription?.unsubscribe();
     this.loading.set(true);
+    this.error.set('');
 
-    void Swal.fire({
-        title: 'Armando cronograma...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
+    // La carga se indica en la página: no reemplazar el detalle abierto.
 
     this.dataSubscription = forkJoin({
         jobs: this.jobsService.getAll(false),
@@ -158,17 +156,14 @@ export class CalendarioJefeComponent implements OnInit, AfterViewInit, OnDestroy
             this.employees.set(empleados);
             this.loading.set(false);
             this.dataReady = true;
-            Swal.close();
+
             this.tryRender();
         },
         error: () => {
+            this.error.set('No se pudieron cargar los datos del calendario.');
             this.loading.set(false);
-            Swal.close();
-            void Swal.fire(
-                'Error',
-                'No se pudieron cargar los datos del calendario.',
-                'error'
-            );
+
+
         }
     });
 }

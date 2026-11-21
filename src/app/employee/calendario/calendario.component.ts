@@ -60,6 +60,7 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
   private dataReady = false;
 
   readonly loading = signal(true);
+  readonly error = signal('');
 
   private readonly assignmentsService = inject(AssignmentsService);
   private readonly route = inject(ActivatedRoute);
@@ -91,12 +92,9 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
   private loadData(): void {
     this.dataSubscription?.unsubscribe();
     this.loading.set(true);
+    this.error.set('');
 
-    void Swal.fire({
-      title: 'Cargando tus trabajos...',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-    });
+    // La carga se indica en la página: no reemplazar el detalle abierto.
 
     this.dataSubscription = forkJoin({
       jobs: this.jobsService.getAll(),
@@ -113,7 +111,7 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
 
         this.loading.set(false);
         this.dataReady = true;
-        Swal.close();
+
         this.tryRender();
         const previewId = Number(this.route.snapshot.queryParamMap.get('previewAssignment'));
 
@@ -129,9 +127,10 @@ export class CalendarioEmployeeComponent implements OnInit, AfterViewInit, OnDes
         }
       },
       error: () => {
+        this.error.set('No se pudieron cargar tus trabajos.');
         this.loading.set(false);
-        Swal.close();
-        void Swal.fire('Error', 'No se pudieron cargar tus trabajos.', 'error');
+
+
       },
     });
   }
@@ -406,7 +405,7 @@ private formatDate(
             <span style="background:${badgeColor};color:#fff;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:bold;">Estado: ${estadoTxt}</span>
           </div>
           <div style="text-align:center;margin:12px 0 18px;">${prioridadHTML}</div>
-          
+
           ${assignment
           ? `
             <div style="margin:10px 0;padding:10px;background:#fff7e6;border:1px solid #ffe0a3;border-radius:8px;font-size:13px;">
@@ -426,25 +425,25 @@ private formatDate(
           `
           : ''
         }
-          
+
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-regular fa-calendar" style="color:#00B8A9;width:20px;"></i> Fecha:</strong> ${p.fechaHermosa}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-house" style="color:#00B8A9;width:20px;"></i> Propiedad:</strong> ${job.clientName}</p>
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-phone" style="color:#00B8A9;width:20px;"></i> Teléfono:</strong> ${job.clientPhone || 'No registrado'}</p>
-          
+
           <!-- DIRECCIÓN SIN DUPLICADOS -->
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-location-dot" style="color:#00B8A9;width:20px;"></i> Dirección:</strong> ${direccionLimpia}</p>
-          
+
           ${edificioHtml}
           ${deptoHtml}
           ${empleadoHtml}
           ${managerHtml}
           ${qbHtml}
           ${cajaHtml}
-          
+
           <p style="margin:8px 0;font-size:14px;color:#2B3674;"><strong><i class="fa-solid fa-sack-dollar" style="color:#00B8A9;width:20px;"></i> Pago:</strong> $${Number(job.pay || 0).toFixed(2)}</p>
-          
+
           ${planoHtml}
-          
+
           <div style="margin-top:16px;">
             <h4 style="margin:0 0 8px;font-size:14px;color:#111C44;border-bottom:2px solid #F4F7FE;padding-bottom:5px;">
               <i class="fa-regular fa-comments" style="color:#00B8A9;"></i> Instrucciones

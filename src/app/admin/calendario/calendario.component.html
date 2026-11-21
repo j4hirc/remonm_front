@@ -94,5 +94,9 @@
         </p>
     }
 
+    @if (error()) {
+        <p role="alert" style="color: #b91c1c;">{{ error() }}</p>
+    }
+
     <div #calendar id="calendar"></div>
 </div>

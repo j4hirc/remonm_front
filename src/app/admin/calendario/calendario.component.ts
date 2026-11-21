@@ -103,11 +103,7 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
     this.error.set('');
     this.loading.set(true);
 
-    void Swal.fire({
-        title: 'Armando cronograma...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
-    });
+    // La carga se indica en la página: no reemplazar el detalle abierto.
 
     this.dataSubscription = forkJoin({
         jobs: this.jobsService.getAll(false),
@@ -163,18 +159,14 @@ export class CalendarioAdminComponent implements OnInit, AfterViewInit, OnDestro
                 this.employees.set(empleados);
                 this.loading.set(false);
                 this.dataReady = true;
-                Swal.close();
+
                 this.tryRender();
             },
             error: () => {
                 this.loading.set(false);
                 this.error.set('No se pudieron cargar los datos del calendario.');
-                Swal.close();
-                void Swal.fire(
-                    'Error',
-                    'No se pudieron cargar los datos del calendario.',
-                    'error'
-                );
+
+
             }
         });
 }
