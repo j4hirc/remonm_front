@@ -12,9 +12,10 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import Swal from 'sweetalert2';
-import { HttpErrorResponse } from '@angular/common/http';
+
 import { JobsService } from '../../core/services/jobs.service';
 import { UsersService } from '../../core/services/users.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -24,9 +25,12 @@ import {
 } from '../../core/services/job-updates.service';
 import { Job } from '../../core/models/job.model';
 import { User } from '../../core/models/user.model';
-
-
-import { buildReportMaterialRows, lineTotal, materialChanged, ReportMaterialRow } from '../../core/services/utils/report-material-comparison';
+import {
+  buildReportMaterialRows,
+  lineTotal,
+  materialChanged,
+  ReportMaterialRow
+} from '../../core/services/utils/report-material-comparison';
 
 @Component({
   selector: 'app-employee-reporte',
@@ -35,8 +39,7 @@ import { buildReportMaterialRows, lineTotal, materialChanged, ReportMaterialRow 
   templateUrl: './reporte.component.html',
   styleUrl: './reporte.component.css'
 })
-export class ReporteEmployeeComponent
-  implements OnInit, AfterViewInit, OnDestroy {
+export class ReporteEmployeeComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly jobsService = inject(JobsService);
@@ -55,8 +58,14 @@ export class ReporteEmployeeComponent
 
   comment = '';
   private manualModifications = false;
-  get hasModifications(): boolean { return this.manualModifications || this.materialsChanged(); }
-  set hasModifications(value: boolean) { this.manualModifications = value; }
+
+  get hasModifications(): boolean {
+    return this.manualModifications || this.materialsChanged();
+  }
+
+  set hasModifications(value: boolean) {
+    this.manualModifications = value;
+  }
 
   readonly necessary = signal<ReportMaterialRow[]>([]);
   readonly materialsChanged = computed(() => this.necessary().some(materialChanged));
@@ -78,16 +87,18 @@ export class ReporteEmployeeComponent
   }
 
   ngOnDestroy(): void {
-    this.photoPreviews().forEach((u) => URL.revokeObjectURL(u));
+    this.photoPreviews().forEach(url => URL.revokeObjectURL(url));
   }
 
   private async bootstrap(): Promise<void> {
     this.loading.set(true);
+
     try {
       const jobId = parseInt(
         this.route.snapshot.queryParamMap.get('jobId') || '',
         10
       );
+
       if (!jobId) {
         await Swal.fire('Error', 'Falta el trabajo a reportar.', 'error');
         void this.router.navigate(['/employee/calendario']);
@@ -95,6 +106,7 @@ export class ReporteEmployeeComponent
       }
 
       const email = (this.authService.email() || '').toLowerCase().trim();
+
       const [users, job] = await Promise.all([
         firstValueFrom(this.usersService.getAll()),
         firstValueFrom(this.jobsService.getById(jobId))
@@ -103,13 +115,17 @@ export class ReporteEmployeeComponent
       const yo = users.find(
         (u: User) => (u.email || '').toLowerCase().trim() === email
       );
+
       if (!yo || job.employeeId !== yo.userId) {
         await Swal.fire('Error', 'Este trabajo no te pertenece.', 'error');
         void this.router.navigate(['/employee/calendario']);
         return;
       }
-      if (['REVIEW', 'COMPLETED', 'CANCELLED'].includes(job.status) ||
-        job.updateJob?.some(reporte => reporte.status === 'REVIEW')) {
+
+      if (
+        ['REVIEW', 'COMPLETED', 'CANCELLED'].includes(job.status) ||
+        job.updateJob?.some(reporte => reporte.status === 'REVIEW')
+      ) {
         await Swal.fire(
           'Bloqueado',
           'Este trabajo ya no admite cambios del subcontratista.',
@@ -124,7 +140,6 @@ export class ReporteEmployeeComponent
         `${yo.firstName ?? ''} ${yo.lastName ?? ''}`.trim() || yo.email
       );
       this.job.set(job);
-
       this.necessary.set(buildReportMaterialRows(job));
     } catch {
       await Swal.fire('Error', 'No se pudo cargar el trabajo.', 'error');
@@ -137,30 +152,26 @@ export class ReporteEmployeeComponent
 
   necessaryTotal(): number {
     const totalCents = this.necessary().reduce(
-      (sum, row) =>
-        sum + Math.round(
-          lineTotal(row.quantity, row.price) * 100
-        ),
+      (sum, row) => sum + Math.round(lineTotal(row.quantity, row.price) * 100),
       0
     );
-
     return totalCents / 100;
   }
 
   updateQty(materialId: number, qty: number): void {
     if (this.saving()) return;
+
     const cantidadSegura = Number.isFinite(qty) && qty >= 0 ? qty : 0;
-    this.necessary.update((rows) =>
-      rows.map((r) =>
-        r.materialId === materialId
-          ? { ...r, quantity: cantidadSegura }
-          : r
+
+    this.necessary.update(rows =>
+      rows.map(row =>
+        row.materialId === materialId ? { ...row, quantity: cantidadSegura } : row
       )
     );
   }
 
   removeNec(materialId: number): void {
-    // Keep the original row for comparison and allow restoring its quantity.
+    // Conservar la fila original permite comparar o restaurar su cantidad.
     this.updateQty(materialId, 0);
   }
 
@@ -170,12 +181,7 @@ export class ReporteEmployeeComponent
     const input = event.target as HTMLInputElement;
     const files = input.files ? Array.from(input.files) : [];
 
-    this.photoFiles.update(current => [
-      ...current,
-      ...files
-    ]);
-
-    // Crear vistas previas únicamente para los archivos nuevos.
+    this.photoFiles.update(current => [...current, ...files]);
     this.photoPreviews.update(current => [
       ...current,
       ...files.map(file => URL.createObjectURL(file))
@@ -187,28 +193,34 @@ export class ReporteEmployeeComponent
   removePhoto(index: number): void {
     const files = [...this.photoFiles()];
     const previews = [...this.photoPreviews()];
+
     URL.revokeObjectURL(previews[index]);
     files.splice(index, 1);
     previews.splice(index, 1);
+
     this.photoFiles.set(files);
     this.photoPreviews.set(previews);
   }
 
   private waitForCanvasAndInit(maxTries = 30, intervalMs = 50): void {
     if (this.canvasReady) return;
+
     let tries = 0;
 
     const tick = () => {
       const canvas = this.canvasRef()?.nativeElement;
+
       if (canvas && canvas.offsetWidth > 0) {
         this.initCanvas(canvas);
         return;
       }
+
       tries++;
       if (tries >= maxTries) {
         if (canvas) this.initCanvas(canvas);
         return;
       }
+
       requestAnimationFrame(() => setTimeout(tick, intervalMs));
     };
 
@@ -228,35 +240,40 @@ export class ReporteEmployeeComponent
 
     this.ctx = canvas.getContext('2d');
     if (!this.ctx) return;
+
     this.ctx.lineWidth = 2.5;
     this.ctx.lineCap = 'round';
     this.ctx.strokeStyle = '#0F2D4A';
 
-    const pos = (e: MouseEvent | TouchEvent) => {
+    const pos = (event: MouseEvent | TouchEvent) => {
       const rect = canvas.getBoundingClientRect();
-      const clientX =
-        'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-      const clientY =
-        'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-      return { x: clientX - rect.left, y: clientY - rect.top };
+      const point = 'touches' in event ? event.touches[0] : event;
+
+      return {
+        x: point.clientX - rect.left,
+        y: point.clientY - rect.top
+      };
     };
 
-    const start = (e: Event) => {
-      e.preventDefault();
+    const start = (event: Event) => {
+      event.preventDefault();
       this.drawing = true;
-      const p = pos(e as MouseEvent | TouchEvent);
+      const point = pos(event as MouseEvent | TouchEvent);
       this.ctx?.beginPath();
-      this.ctx?.moveTo(p.x, p.y);
+      this.ctx?.moveTo(point.x, point.y);
     };
-    const move = (e: Event) => {
+
+    const move = (event: Event) => {
       if (!this.drawing || !this.ctx) return;
-      e.preventDefault();
-      const p = pos(e as MouseEvent | TouchEvent);
-      this.ctx.lineTo(p.x, p.y);
+
+      event.preventDefault();
+      const point = pos(event as MouseEvent | TouchEvent);
+      this.ctx.lineTo(point.x, point.y);
       this.ctx.stroke();
       this.ctx.beginPath();
-      this.ctx.moveTo(p.x, p.y);
+      this.ctx.moveTo(point.x, point.y);
     };
+
     const end = () => {
       this.drawing = false;
       this.ctx?.beginPath();
@@ -280,14 +297,18 @@ export class ReporteEmployeeComponent
   private isCanvasBlank(): boolean {
     const canvas = this.canvasRef()?.nativeElement;
     if (!canvas) return true;
+
     const blank = document.createElement('canvas');
     blank.width = canvas.width;
     blank.height = canvas.height;
+
     return canvas.toDataURL() === blank.toDataURL();
   }
 
-  private async buildPdfBlob(job: Job, comment: string, total: number): Promise<Blob> {
-    const { buildEvidenceReportPdf } = await import('../../core/services/utils/evidence-report-pdf');
+  private async prepareReport(job: Job, comment: string, total: number) {
+    const { buildEvidenceReportPdf } =
+      await import('../../core/services/utils/evidence-report-pdf');
+
     return buildEvidenceReportPdf({
       clientName: job.clientName?.trim() || 'Sin asignar',
       address: job.address?.trim() || 'No registrada',
@@ -301,7 +322,10 @@ export class ReporteEmployeeComponent
       initialTotal: job.originalAssignmentAvailable ? job.initialPay ?? null : null,
       originalAssignmentAvailable: job.originalAssignmentAvailable === true,
       date: new Date(),
-      materials: this.necessary().map(row => ({ ...row, changed: materialChanged(row) })),
+      materials: this.necessary().map(row => ({
+        ...row,
+        changed: materialChanged(row)
+      })),
       photos: [...this.photoFiles()],
       signature: this.canvasRef()?.nativeElement.toDataURL('image/png') || '',
       logoUrl: new URL('img/logonegro.png', document.baseURI).href
@@ -322,6 +346,7 @@ export class ReporteEmployeeComponent
       });
       return;
     }
+
     if (this.photoFiles().length === 0) {
       await Swal.fire({
         icon: 'warning',
@@ -333,6 +358,7 @@ export class ReporteEmployeeComponent
     }
 
     this.saving.set(true);
+
     const respuesta = await Swal.fire({
       icon: 'warning',
       title: '¿Enviar el trabajo a revisión?',
@@ -342,10 +368,12 @@ export class ReporteEmployeeComponent
       cancelButtonText: 'Seguir editando',
       focusCancel: true
     });
+
     if (!respuesta.isConfirmed) {
       this.saving.set(false);
       return;
     }
+
     void Swal.fire({
       title: 'Procesando...',
       text: 'Generando PDF y guardando avance...',
@@ -354,27 +382,28 @@ export class ReporteEmployeeComponent
     });
 
     let stage: 'pdf' | 'upload' = 'pdf';
+
     try {
       let comment = this.comment.trim();
+
       if (this.hasModifications) {
         comment =
           '⚠️ [ALERTA DE OFICINA]: Se hicieron modificaciones a la orden original que requieren revisión del Manager.\n\n' +
           comment;
       }
 
-      const materials = this.necessary().map((r) => ({
-        materialId: r.materialId,
-        quantity: r.quantity,
-        unit: r.unit || 'N/A'
+      const materials = this.necessary().map(row => ({
+        materialId: row.materialId,
+        quantity: row.quantity,
+        unit: row.unit || 'N/A'
       }));
-      const materialIds = materials.map((m) => m.materialId);
+
+      const materialIds = materials.map(material => material.materialId);
       const newPrice = this.necessaryTotal();
 
-      const pdfBlob = await this.buildPdfBlob(job, comment, newPrice);
-      const safeName = (job.clientName || 'Trabajo').replace(
-        /[^a-zA-Z0-9]/g,
-        '_'
-      );
+      const { pdfBlob, photos } = await this.prepareReport(job, comment, newPrice);
+
+      const safeName = (job.clientName || 'Trabajo').replace(/[^a-zA-Z0-9]/g, '_');
       const pdfFile = new File([pdfBlob], `Reporte_${safeName}.pdf`, {
         type: 'application/pdf'
       });
@@ -390,13 +419,11 @@ export class ReporteEmployeeComponent
         newPrice
       };
 
-      const files = [...this.photoFiles(), pdfFile];
-
+      // Enviar los adjuntos preparados junto con el PDF firmado.
+      const files = [...photos, pdfFile];
       stage = 'upload';
 
-      await firstValueFrom(
-        this.updatesService.create(payload, files)
-      );
+      await firstValueFrom(this.updatesService.create(payload, files));
 
       await Swal.fire({
         icon: 'success',
@@ -412,37 +439,32 @@ export class ReporteEmployeeComponent
         confirmButtonText: 'Cerrar',
         confirmButtonColor: '#0F2D4A',
         didOpen: () => {
-          document
-            .getElementById('btnSharePdf')
-            ?.addEventListener('click', async () => {
-              const isIOS =
-                /iPad|iPhone|iPod/.test(navigator.userAgent) &&
-                !(window as any).MSStream;
+          document.getElementById('btnSharePdf')?.addEventListener('click', async () => {
+            const isIOS =
+              /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+              !(window as any).MSStream;
 
-              if (isIOS) {
-                try {
-                  if (
-                    navigator.canShare &&
-                    navigator.canShare({ files: [pdfFile] })
-                  ) {
-                    await navigator.share({
-                      files: [pdfFile],
-                      title: pdfFile.name
-                    });
-                    return;
-                  }
-                } catch (e) {
-                  console.warn('Compartir cancelado o no soportado', e);
+            if (isIOS) {
+              try {
+                if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                  await navigator.share({
+                    files: [pdfFile],
+                    title: pdfFile.name
+                  });
+                  return;
                 }
+              } catch (error) {
+                console.warn('Compartir cancelado o no soportado', error);
               }
+            }
 
-              const url = URL.createObjectURL(pdfBlob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = pdfFile.name;
-              a.click();
-              URL.revokeObjectURL(url);
-            });
+            const url = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = pdfFile.name;
+            link.click();
+            URL.revokeObjectURL(url);
+          });
         }
       });
 
@@ -456,24 +478,18 @@ export class ReporteEmployeeComponent
         error: err
       });
 
-      let message =
-        stage === 'pdf'
-          ? 'No se pudo generar el PDF. Tus fotos y firma siguen en el formulario.'
-          : 'No se pudo confirmar el guardado. Revisa Mis Evidencias antes de volver a enviar.';
+      let message = stage === 'pdf'
+        ? 'No se pudo generar el PDF. Tus fotos y firma siguen en el formulario.'
+        : 'No se pudo confirmar el guardado. Revisa Mis Evidencias antes de volver a enviar.';
 
-      if (
-        stage === 'pdf' &&
-        err instanceof Error &&
-        !err.message.includes('http')
-      ) {
+      if (stage === 'pdf' && err instanceof Error && !err.message.includes('http')) {
         message += ` ${err.message}`;
       }
 
       if (err instanceof HttpErrorResponse) {
         const body = err.error;
-        const rawMessage = body && typeof body === 'object'
-          ? body.message
-          : undefined;
+        const rawMessage = body && typeof body === 'object' ? body.message : undefined;
+
         const serverMessage = typeof rawMessage === 'string'
           ? rawMessage
           : rawMessage && typeof rawMessage === 'object'
@@ -486,36 +502,34 @@ export class ReporteEmployeeComponent
           body?.code === 'MISSING_REPORT_PART' ||
           serverMessage.includes("Required part 'data' is not present")
         ) {
-          message = 'El servidor no recibió una parte obligatoria del reporte. '
-            + 'Conserva tus fotos y firma y comunica este error a soporte.';
+          message = 'El servidor no recibió una parte obligatoria del reporte. ' +
+            'Conserva tus fotos y firma y comunica este error a soporte.';
         } else if (err.status === 0) {
-          message = 'El navegador no recibió una respuesta HTTP accesible. '
-            + 'Puede ser una interrupción de conexión, del servidor o un bloqueo de acceso. '
-            + 'No se puede confirmar si el reporte quedó guardado.';
+          message = 'El navegador no recibió una respuesta HTTP accesible. ' +
+            'Puede ser una interrupción de conexión, del servidor o un bloqueo de acceso. ' +
+            'No se puede confirmar si el reporte quedó guardado.';
         } else if (err.status === 413) {
           message = 'El envío supera el tamaño permitido. Reduce el tamaño de las fotos.';
         } else if ([400, 401, 403, 404, 409, 422].includes(err.status)) {
-          // Mensajes de validación del servidor, mostrados como texto, no HTML.
           message = serverMessage.slice(0, 700) ||
             (err.status === 401
               ? 'La sesión expiró. Vuelve a iniciar sesión.'
               : 'El servidor rechazó el reporte. Comunica este código a soporte.');
-        } else if (err.status === 502 || err.status === 503 || err.status === 504) {
-          message = 'El servidor o su intermediario no pudo completar la respuesta. '
-            + 'No se puede confirmar si el reporte quedó guardado.';
+        } else if ([502, 503, 504].includes(err.status)) {
+          message = 'El servidor o su intermediario no pudo completar la respuesta. ' +
+            'No se puede confirmar si el reporte quedó guardado.';
         } else if (err.status >= 500) {
-          // No exponer SQL, rutas internas o respuestas completas de terceros.
           if (/completed_date/i.test(serverMessage)) {
-            message = 'El servidor informó un error relacionado con completed_date. '
-              + 'Soporte debe comprobar la columna y la actualización de la base de datos.';
+            message = 'El servidor informó un error relacionado con completed_date. ' +
+              'Soporte debe comprobar la columna y la actualización de la base de datos.';
           } else if (/supabase|error procesando el archivo|error al subir/i.test(serverMessage)) {
             message = 'El servidor informó un error al subir una evidencia al almacenamiento.';
           } else {
             message = 'El servidor encontró un error interno al procesar el reporte.';
           }
         } else if (err.status >= 200 && err.status < 300) {
-          message = 'El servidor respondió, pero la aplicación no pudo interpretar la respuesta. '
-            + 'El reporte puede haberse guardado.';
+          message = 'El servidor respondió, pero la aplicación no pudo interpretar la respuesta. ' +
+            'El reporte puede haberse guardado.';
         } else {
           message = 'El servidor devolvió una respuesta inesperada al enviar el reporte.';
         }
@@ -523,15 +537,15 @@ export class ReporteEmployeeComponent
         if (stage === 'upload') {
           message += '\n\nRevisa Mis Evidencias antes de volver a enviar.';
         }
+
         message += `\n\nCódigo: HTTP ${err.status} · Trabajo: ${job.jobId}`;
       }
 
       await Swal.fire({
         icon: 'error',
-        title:
-          stage === 'pdf'
-            ? 'No se pudo preparar el reporte'
-            : 'No se pudo guardar el reporte',
+        title: stage === 'pdf'
+          ? 'No se pudo preparar el reporte'
+          : 'No se pudo guardar el reporte',
         text: message,
         confirmButtonColor: '#00B8A9'
       });
