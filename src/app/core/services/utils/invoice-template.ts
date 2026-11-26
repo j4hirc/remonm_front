@@ -56,7 +56,7 @@ export function buildInvoiceElement(job: Job): HTMLElement {
     ? 'Materiales registrados en el trabajo'
     : 'Materiales utilizados';
 
-  const cell = 'padding:8px 5px;border-bottom:1px solid #d8e2e8;';
+  const cell = 'padding:6px 5px;border-bottom:1px solid #d8e2e8;';
   const amounts = rows.map(m => lineTotal(m.quantity, m.unitPrice));
   const total = amounts.reduce((sum, amount) => sum + Math.round(amount * 100), 0) / 100;
   const element = document.createElement('div');
@@ -90,6 +90,6 @@ export function buildInvoiceElement(job: Job): HTMLElement {
         <td style="${cell}">${money.format(m.unitPrice)}</td><td style="${cell}">${money.format(amounts[i])}</td>
       </tr>`).join('') || '<tr><td colspan="5" style="padding:12px 0;">Sin materiales registrados con cantidad mayor a cero.</td></tr>'}</tbody>
     </table>
-    <p style="text-align:right;font-size:18px;font-weight:bold;">Total de materiales (USD) · ${money.format(total)}</p>`;
+    <div class="invoice-total" style="break-inside:avoid;page-break-inside:avoid;padding-top:18px;text-align:right;font-size:18px;line-height:1.5;font-weight:bold;">Total de materiales (USD) · ${money.format(total)}</div>`;
   return element;
 }
